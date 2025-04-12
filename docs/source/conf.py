@@ -9,7 +9,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../../gen_surv'))
 
-project = 'gen_suv'
+project = 'gen_suvr'
 copyright = '2025, Diogo Ribeiro'
 author = 'Diogo Ribeiro'
 release = '0.2.0'
