@@ -18,6 +18,7 @@ It includes generators for:
 :caption: Contents
 
 modules
+theory
 ```
 
 
