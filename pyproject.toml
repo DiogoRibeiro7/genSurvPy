@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{ include = "gen_surv" }]
 homepage = "https://github.com/DiogoRibeiro7/genSurvPy"
 repository = "https://github.com/DiogoRibeiro7/genSurvPy"
-documentation = "https://gen-surv.readthedocs.io/en/stable/"
+documentation = "https://gensurvpy.readthedocs.io/en/stable/"
 
 [tool.poetry.dependencies]
 python = "^3.9"

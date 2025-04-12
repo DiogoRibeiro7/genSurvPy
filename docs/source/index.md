@@ -30,6 +30,21 @@ df = gen_cphm(n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
 print(df.head())
 ```
 
+```python
+from gen_surv import generate
+
+df = generate(
+    model="cphm",
+    n=100,
+    model_cens="uniform",
+    cens_par=1.0,
+    beta=0.5,
+    covar=2.0
+)
+
+print(df.head())
+```
+
 ## 🔗 Project Links
 
 - [Source Code](https://github.com/DiogoRibeiro7/genSurvPy)
