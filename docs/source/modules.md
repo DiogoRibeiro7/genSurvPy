@@ -23,4 +23,4 @@
 ::: gen_surv.interface
     options:
       members: true
-      undoc-members: true
+      undoc-members: tru
