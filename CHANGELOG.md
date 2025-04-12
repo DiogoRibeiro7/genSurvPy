@@ -1,12 +1,33 @@
 # CHANGELOG
 
 
+## v0.3.1 (2025-04-12)
+
+### Bug Fixes
+
+- Bump version
+  ([`5cc649d`](https://github.com/DiogoRibeiro7/genSurvPy/commit/5cc649da03bbc57fbaf80494e63543012e1e849d))
+
+### Chores
+
+- Bump version
+  ([`2e269f5`](https://github.com/DiogoRibeiro7/genSurvPy/commit/2e269f50737a5b497718f55e1e42a1501e0d398f))
+
+- Bump version
+  ([`081ce3d`](https://github.com/DiogoRibeiro7/genSurvPy/commit/081ce3db093410ea96f8d594201d26f81f6b35ec))
+
+
 ## v0.3.0 (2025-04-12)
 
 ### Bug Fixes
 
 - Fix git hub actions
   ([`c9559ba`](https://github.com/DiogoRibeiro7/genSurvPy/commit/c9559ba319684e5b9de59bfa7ad23e42ee6f8bf9))
+
+### Chores
+
+- Bump version
+  ([`e111826`](https://github.com/DiogoRibeiro7/genSurvPy/commit/e11182609d99094d8b02fa2e142ac983f42dc5b3))
 
 
 ## v0.2.1 (2025-04-12)
