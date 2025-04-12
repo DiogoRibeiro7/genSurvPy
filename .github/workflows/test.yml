@@ -29,3 +29,9 @@ jobs:
 
       - name: Run tests
         run: poetry run pytest
+        
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}  # optional if public repo

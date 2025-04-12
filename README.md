@@ -1,5 +1,7 @@
 # gen_surv
 
+![Coverage](https://codecov.io/gh/DiogoRibeiro7/genSurvPy/branch/main/graph/badge.svg)
+
 **gen_surv** is a Python package for simulating survival data under a variety of models, inspired by the R package [`genSurv`](https://cran.r-project.org/package=genSurv). It supports data generation for:
 
 - Cox Proportional Hazards Models (CPHM)
@@ -48,19 +50,30 @@ print(df.head())
 
 ```text
 genSurvPy/
-gen_surv/
-├── cphm.py
-├── cmm.py
-├── tdcm.py
-├── thmm.py
-├── censoring.py
-├── validate.py
-examples/
-├── run_cphm.py
-├── run_cmm.py
-├── run_tdcm.py
-├── run_thmm.py
-└── utils.py         # optional for shared config (e.g. seeding)
+├── gen_surv/             # Pacote principal
+│   ├── __main__.py       # Interface CLI via python -m
+│   ├── cphm.py
+│   ├── cmm.py
+│   ├── tdcm.py
+│   ├── thmm.py
+│   ├── censoring.py
+│   ├── bivariate.py
+│   ├── validate.py
+│
+├── tests/                # Testes automatizados
+│   ├── test_cphm.py
+│   ├── test_cmm.py
+│   ├── test_tdcm.py
+│   ├── test_thmm.py
+│
+├── examples/             # Exemplos de uso
+│   ├── run_cphm.py
+│   ├── ...
+│
+├── pyproject.toml        # Configurado com Poetry
+├── README.md
+├── LICENSE
+├── .gitignore
 ```
 
 ## 🧠 License
