@@ -3,7 +3,7 @@ import pandas as pd
 from gen_surv.validate import validate_gen_cphm_inputs
 from gen_surv.censoring import runifcens, rexpocens
 
-def generate_cphm_data(n, rfunc, cens_par, beta, covar):
+def generate_cphm_data(n, rfunc, cens_par, beta, covariate_range):
     """
     Generate data from a Cox Proportional Hazards Model (CPHM).
 
@@ -20,7 +20,7 @@ def generate_cphm_data(n, rfunc, cens_par, beta, covar):
     data = np.zeros((n, 3))
 
     for k in range(n):
-        z = np.random.uniform(0, covar)
+        z = np.random.uniform(0, covariate_range)
         c = rfunc(1, cens_par)[0]
         x = np.random.exponential(scale=1 / np.exp(beta * z))
 
