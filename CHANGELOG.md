@@ -1,12 +1,30 @@
 # CHANGELOG
 
 
+## v0.7.0 (2025-04-12)
+
+### Chores
+
+- Update documentation
+  ([`d34e32f`](https://github.com/DiogoRibeiro7/genSurvPy/commit/d34e32f9e2181f3ed5bf23fbee60a6a0a977c738))
+
+### Features
+
+- **docs**: Document generic interface `generate()` and update examples
+  ([`55e22a4`](https://github.com/DiogoRibeiro7/genSurvPy/commit/55e22a4a9ad4ac1af48f0fbb176c9c474a590182))
+
+
 ## v0.6.1 (2025-04-12)
 
 ### Bug Fixes
 
 - Fix pyproject toml
   ([`a06f58a`](https://github.com/DiogoRibeiro7/genSurvPy/commit/a06f58aded7336b3a14d2f48db2efd160ab31323))
+
+### Chores
+
+- Fix readme
+  ([`f4897cd`](https://github.com/DiogoRibeiro7/genSurvPy/commit/f4897cdc19cf0a43f0fb6490ff068b55c436a2e2))
 
 ### Documentation
 
