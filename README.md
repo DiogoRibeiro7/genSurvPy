@@ -1,5 +1,7 @@
 # gen_surv
 
+![Coverage](https://codecov.io/gh/<your-user>/<your-repo>/branch/main/graph/badge.svg)
+
 **gen_surv** is a Python package for simulating survival data under a variety of models, inspired by the R package [`genSurv`](https://cran.r-project.org/package=genSurv). It supports data generation for:
 
 - Cox Proportional Hazards Models (CPHM)
