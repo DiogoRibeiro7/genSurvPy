@@ -43,9 +43,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: poetry run semantic-release publish
 
-      - name: Push changes
+      - name: Push version bump commit and tags
         run: |
-          git push --follow-tags
+          git pull --ff-only origin main
+          git push origin main --follow-tags
 
       - name: "Determine version bump type"
         run: |
