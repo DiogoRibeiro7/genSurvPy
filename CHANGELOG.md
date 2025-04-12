@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.2.1 (2025-04-12)
+
+### Bug Fixes
+
+- Fix pyproject toml
+  ([`8537f63`](https://github.com/DiogoRibeiro7/genSurvPy/commit/8537f63d01249e8db29e9e7353831d0b894bbc3d))
+
+- Github address
+  ([`43f9d93`](https://github.com/DiogoRibeiro7/genSurvPy/commit/43f9d93e21a285df6d5ea27d296ac489782b6b13))
+
+### Chores
+
+- Code coverage
+  ([`56a3453`](https://github.com/DiogoRibeiro7/genSurvPy/commit/56a345302c50be21cc05a5afa0ac406224dd77a0))
+
+- Update pyproject
+  ([`a4b25e4`](https://github.com/DiogoRibeiro7/genSurvPy/commit/a4b25e470954091254b1384a44a991a47341bf80))
+
+### Documentation
+
+- Add Sphinx configuration with Markdown support and index.md setup
+  ([`75d4653`](https://github.com/DiogoRibeiro7/genSurvPy/commit/75d46530cf894263b3e98cf8667ff52c7863f646))
+
+- Add Sphinx documentation with MyST and autodoc integration
+  ([`f58feea`](https://github.com/DiogoRibeiro7/genSurvPy/commit/f58feeae82cb2b9073d936412a494a4a74ff9df1))
+
+
 ## v0.2.0 (2025-04-12)
 
 ### Continuous Integration
