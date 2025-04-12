@@ -1,5 +1,6 @@
+# .github/workflows/bump-version.yml
 name: Bump Version on Merge to Main
-
+ 
 on:
   push:
     branches:
@@ -13,27 +14,17 @@ jobs:
       id-token: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - run: pip install python-semantic-release
 
-      - name: Install dependencies
-        run: |
-          poetry install
-          poetry add --group dev python-semantic-release
-
-      - name: Configure Git user
+      - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -41,9 +32,8 @@ jobs:
       - name: Run Semantic Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: poetry run semantic-release publish
+        run: semantic-release version
 
-      - name: Push version bump commit and tags
+      - name: Push changes
         run: |
-          git pull --ff-only origin main
-          git push origin main --follow-tags
+          git push --follow-tags
