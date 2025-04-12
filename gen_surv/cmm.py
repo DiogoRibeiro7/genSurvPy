@@ -2,7 +2,30 @@ import pandas as pd
 import numpy as np
 from gen_surv.validate import validate_gen_cmm_inputs
 from gen_surv.censoring import runifcens, rexpocens
-from gen_surv.cmm import generate_event_times
+
+
+def generate_event_times(z1: float, beta: list, rate: list) -> dict:
+    """
+    Generate event times for a continuous-time multi-state Markov model.
+
+    Parameters:
+    - z1 (float): Covariate value
+    - beta (list of float): List of 3 beta coefficients
+    - rate (list of float): List of 6 transition rate parameters
+
+    Returns:
+    - dict: {'t12': float, 't13': float, 't23': float}
+    """
+    u = np.random.uniform()
+    t12 = (-np.log(1 - u) / (rate[0] * np.exp(beta[0] * z1)))**(1 / rate[1])
+
+    u = np.random.uniform()
+    t13 = (-np.log(1 - u) / (rate[2] * np.exp(beta[1] * z1)))**(1 / rate[3])
+
+    u = np.random.uniform()
+    t23 = (-np.log(1 - u) / (rate[4] * np.exp(beta[2] * z1)))**(1 / rate[5])
+
+    return {"t12": t12, "t13": t13, "t23": t23}
 
 def gen_cmm(n, model_cens, cens_par, beta, covar, rate):
     """
