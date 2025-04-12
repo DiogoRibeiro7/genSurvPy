@@ -61,6 +61,7 @@ jobs:
         run: |
             git add pyproject.toml
             git commit -m "Update version to $(poetry version -s)"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+            git pull --ff-only origin main
+            git push origin main --follow-tags
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
