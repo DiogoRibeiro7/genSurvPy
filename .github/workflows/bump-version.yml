@@ -41,11 +41,11 @@ jobs:
       - name: Run Semantic Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release publish
+        run: poetry run semantic-release publish
 
-    #   - name: Push changes
-    #     run: |
-    #       git push --follow-tags
+      - name: Push changes
+        run: |
+          git push --follow-tags
 
       - name: "Determine version bump type"
         run: |
