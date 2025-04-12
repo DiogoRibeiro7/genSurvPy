@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.2.0 (2025-04-12)
+
+### Continuous Integration
+
+- Add GitHub Actions workflow for test automation
+  ([`0d57884`](https://github.com/DiogoRibeiro7/genSurvPy/commit/0d57884f84e3d8e09a130e1eb87895cd168ab1e0))
+
+- Add GitHub Actions workflow for test automation
+  ([`33e1e40`](https://github.com/DiogoRibeiro7/genSurvPy/commit/33e1e400ace7b491d88138331df496f7b7ab02c9))
+
+### Features
+
+- Implement THMM data generator and finalize full model suite
+  ([`1e667ba`](https://github.com/DiogoRibeiro7/genSurvPy/commit/1e667babf28892c3a85c43477562f2de85f07f3c))
+
+
 ## v0.1.0 (2025-04-12)
 
 ### Bug Fixes
