@@ -37,10 +37,10 @@ jobs:
       - name: Push changes
         run: |
           git push --follow-tags
-          - name: "Install Poetry"
-          run: pip install poetry
+      - name: "Install Poetry"
+        run: pip install poetry
       - name: "Determine version bump type"
-          run: |
+        run: |
             git fetch --tags
             # This defaults to a patch type, unless a feature commit was pushed, then set type to minor
             LAST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
@@ -52,15 +52,15 @@ jobs:
             git log --no-merges --pretty=format:"%s" $LAST_TAG...$LAST_COMMIT | grep -q ^feat: && BUMP_TYPE="minor" || BUMP_TYPE="patch"
             echo "Version bump type: $BUMP_TYPE"
             echo "BUMP_TYPE=$BUMP_TYPE" >> $GITHUB_ENV
-          env:
+        env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Version bump"
-          run: |
+        run: |
             poetry version $BUMP_TYPE
       - name: "Push new version"
-          run: |
+        run: |
             git add pyproject.toml
             git commit -m "Update version to $(poetry version -s)"
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          env:
+        env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
