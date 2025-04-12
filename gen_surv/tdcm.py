@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from gen_surv.validate import validate_gen_tdcm_inputs
+from gen_surv.bivariate import sample_bivariate_distribution
 from gen_surv.censoring import runifcens, rexpocens
 
 def generate_censored_observations(n, dist_par, model_cens, cens_par, beta, lam, b):
@@ -36,7 +37,7 @@ def generate_censored_observations(n, dist_par, model_cens, cens_par, beta, lam,
         else:
             t = (
                 -np.log(1 - u)
-                + lam * b[k, 0] * np.exp(beta[0] * z1) * (1 - np.exp(beta[2]))
+                + lam * b[k, 0] * np.exp(beta[0] * z1) * (1 - np.exp(beta[1]))
             ) / (lam * np.exp(beta[0] * z1 + beta[1]))
             z2 = 1
 
@@ -67,10 +68,8 @@ def gen_tdcm(n, dist, corr, dist_par, model_cens, cens_par, beta, lam):
     """
     validate_gen_tdcm_inputs(n, dist, corr, dist_par, model_cens, cens_par, beta, lam)
 
-    # Generate covariate matrix with correlation structure
-    mean = [0, 0]
-    cov_matrix = [[1, corr], [corr, 1]]
-    b = np.random.multivariate_normal(mean, cov_matrix, size=n)
+    # Generate covariate matrix from bivariate distribution
+    b = sample_bivariate_distribution(n, dist, corr, dist_par)
 
     data = generate_censored_observations(n, dist_par, model_cens, cens_par, beta, lam, b)
 

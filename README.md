@@ -55,6 +55,12 @@ gen_surv/
 ├── thmm.py
 ├── censoring.py
 ├── validate.py
+examples/
+├── run_cphm.py
+├── run_cmm.py
+├── run_tdcm.py
+├── run_thmm.py
+└── utils.py         # optional for shared config (e.g. seeding)
 ```
 
 ## 🧠 License
