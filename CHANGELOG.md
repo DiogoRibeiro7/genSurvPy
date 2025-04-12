@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.5.0 (2025-04-12)
+
+### Features
+
+- Add documentation to readthedocs
+  ([`1b00d74`](https://github.com/DiogoRibeiro7/genSurvPy/commit/1b00d740a1613e42138510dfa01331074bd97a22))
+
+
 ## v0.4.0 (2025-04-12)
 
 ### Features
