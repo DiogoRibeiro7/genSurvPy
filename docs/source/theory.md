@@ -81,6 +81,37 @@ $$
 
 ---
 
+
+## 5. Accelerated Failure Time (AFT) Models
+
+AFT models assume that the effect of covariates accelerates or decelerates time to event directly, rather than the hazard.
+
+### Log-Normal AFT
+
+The model assumes:
+
+$$
+\log(T_i) = X_i \beta + \varepsilon_i, \quad \varepsilon_i \sim \mathcal{N}(0, \sigma^2)
+$$
+
+Thus:
+
+$$
+T_i \sim \text{Log-Normal}(X_i \beta, \sigma^2)
+$$
+
+The survival function is:
+
+$$
+S(t \mid X) = 1 - \Phi\left(\frac{\log(t) - X \beta}{\sigma}\right)
+$$
+
+Where:
+
+- \( \Phi \) is the standard normal cumulative distribution function (CDF)
+
+This model is especially useful when the proportional hazards assumption is not valid and provides interpretable effects in the time domain.
+
 ## Notes
 
 All models support censoring:

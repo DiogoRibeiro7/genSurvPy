@@ -61,3 +61,16 @@ This document outlines future enhancements, features, and ideas for improving th
 - [ ] Add performance benchmarks for each model
 - [ ] Improve PyPI discoverability (add keywords)
 - [ ] Create a Streamlit or Gradio live demo
+
+---
+
+## 🧠 8. New Survival Models to Implement
+
+- [ ] Accelerated Failure Time (AFT) models:
+  - [ ] Log-Normal AFT
+  - [ ] Log-Logistic AFT
+  - [ ] Weibull AFT formulation
+- [ ] Piecewise Exponential Model
+- [ ] Competing Risks simulation
+- [ ] Recurrent Events simulation
+- [ ] Mixture Cure Model
