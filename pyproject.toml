@@ -16,6 +16,10 @@ pytest-cov = "^6.1.1"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 
+
+[tool.poetry.group.docs.dependencies]
+myst-parser = "<4.0.0"
+
 [tool.semantic_release]
 version_source = "tag"
 version_variable = ["pyproject.toml:project.version"]
