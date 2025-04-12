@@ -11,7 +11,7 @@ packages = [{ include = "gen_surv" }]
 python = "^3.9"
 numpy = "^1.26"
 pandas = "^2.2.3"
-
+pytest-cov = "^6.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
