@@ -174,3 +174,20 @@ def validate_dg_biv_inputs(n: int, dist: str, corr: float, dist_par: list):
 
     if dist == "weibull" and len(dist_par) != 4:
         raise ValueError("Weibull distribution requires exactly 4 positive parameters.")
+
+
+def validate_gen_aft_log_normal_inputs(n, beta, sigma, model_cens, cens_par):
+    if not isinstance(n, int) or n <= 0:
+        raise ValueError("n must be a positive integer")
+
+    if not isinstance(beta, (list, tuple)) or not all(isinstance(b, (int, float)) for b in beta):
+        raise ValueError("beta must be a list of numbers")
+
+    if not isinstance(sigma, (int, float)) or sigma <= 0:
+        raise ValueError("sigma must be a positive number")
+
+    if model_cens not in ("uniform", "exponential"):
+        raise ValueError("model_cens must be 'uniform' or 'exponential'")
+
+    if not isinstance(cens_par, (int, float)) or cens_par <= 0:
+        raise ValueError("cens_par must be a positive number")

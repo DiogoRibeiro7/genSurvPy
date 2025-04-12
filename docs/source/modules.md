@@ -24,3 +24,8 @@
     options:
       members: true
       undoc-members: tru
+
+::: gen_surv.aft
+    options:
+      members: true
+      undoc-members: true

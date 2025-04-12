@@ -10,6 +10,7 @@ from gen_surv.cphm import gen_cphm
 from gen_surv.cmm import gen_cmm
 from gen_surv.tdcm import gen_tdcm
 from gen_surv.thmm import gen_thmm
+from gen_surv.aft import gen_aft_log_normal
 
 
 _model_map = {
@@ -17,6 +18,7 @@ _model_map = {
     "cmm": gen_cmm,
     "tdcm": gen_tdcm,
     "thmm": gen_thmm,
+    "aft_ln": gen_aft_log_normal,
 }
 
 

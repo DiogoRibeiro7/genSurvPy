@@ -67,7 +67,7 @@ This document outlines future enhancements, features, and ideas for improving th
 ## 🧠 8. New Survival Models to Implement
 
 - [ ] Accelerated Failure Time (AFT) models:
-  - [ ] Log-Normal AFT
+  - [X] Log-Normal AFT
   - [ ] Log-Logistic AFT
   - [ ] Weibull AFT formulation
 - [ ] Piecewise Exponential Model
