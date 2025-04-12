@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.6.1 (2025-04-12)
+
+### Bug Fixes
+
+- Fix pyproject toml
+  ([`a06f58a`](https://github.com/DiogoRibeiro7/genSurvPy/commit/a06f58aded7336b3a14d2f48db2efd160ab31323))
+
+### Documentation
+
+- Docs
+  ([`75417f1`](https://github.com/DiogoRibeiro7/genSurvPy/commit/75417f184dd067f0bd8bd0b7351eb3b0d1f0d336))
+
+
 ## v0.6.0 (2025-04-12)
 
 
