@@ -2,7 +2,7 @@
 name = "gen_surv"
 version = "0.1.0"
 description = "A Python package for simulating survival data, inspired by the R package genSurv"
-authors = ["Your Name <you@example.com>"]
+authors = ["Diogo Ribeiro <diogo_dj@hotmail.com>"]
 license = "MIT"
 readme = "README.md"
 packages = [{ include = "gen_surv" }]
