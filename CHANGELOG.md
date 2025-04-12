@@ -1,6 +1,9 @@
 # CHANGELOG
 
 
+## v0.6.0 (2025-04-12)
+
+
 ## v0.5.0 (2025-04-12)
 
 ### Features
@@ -11,7 +14,23 @@
 
 ## v0.4.0 (2025-04-12)
 
+### Bug Fixes
+
+- Fix codecoverage
+  ([`16bc525`](https://github.com/DiogoRibeiro7/genSurvPy/commit/16bc525138e6a2b4370f951cab896ae8476b1775))
+
+### Chores
+
+- Delete file
+  ([`ba2043e`](https://github.com/DiogoRibeiro7/genSurvPy/commit/ba2043eb3b891c6fe8d062e655002573cfb2e6fa))
+
+- Fix documentation
+  ([`4231eca`](https://github.com/DiogoRibeiro7/genSurvPy/commit/4231eca916b50eabaa0e79472ce4481910d02a96))
+
 ### Features
+
+- Add documentation to readthedocs
+  ([`d1a0d29`](https://github.com/DiogoRibeiro7/genSurvPy/commit/d1a0d29e38f61a4366b8e845415fc60bee3b7ca2))
 
 - Add documentation to readthedocs
   ([`78eb448`](https://github.com/DiogoRibeiro7/genSurvPy/commit/78eb4485ff801ba9e951ba5f2a1e51e6c3d1d468))
