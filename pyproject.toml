@@ -14,6 +14,15 @@ numpy = "^1.26"
 [tool.poetry.dev-dependencies]
 pytest = "^8.0"
 
+[tool.semantic_release]
+version_source = "tag"
+version_variable = ["pyproject.toml:project.version"]
+commit_version_number = true
+changelog_file = "CHANGELOG.md"
+upload_to_repository = false
+branch = "main"
+build_command = ""
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
