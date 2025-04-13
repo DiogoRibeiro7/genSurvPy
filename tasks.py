@@ -1,4 +1,5 @@
 from invoke.tasks import task
+import shlex
 
 @task
 def test(c):
