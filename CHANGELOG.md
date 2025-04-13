@@ -1,6 +1,42 @@
 # CHANGELOG
 
 
+## v0.7.1 (2025-04-13)
+
+### Bug Fixes
+
+- Fix import
+  ([`3cdb59a`](https://github.com/DiogoRibeiro7/genSurvPy/commit/3cdb59acda5e60328d1d9abd57ee49252f3044fe))
+
+### Chores
+
+- Add tasks.py with Invoke CLI for project automation
+  ([`87868b8`](https://github.com/DiogoRibeiro7/genSurvPy/commit/87868b86aec04a0e9254cee78036ac20056731e7))
+
+- Badges
+  ([`79c1d0d`](https://github.com/DiogoRibeiro7/genSurvPy/commit/79c1d0de79bfc20cfa92da6dda5eaed192bf7dc4))
+
+- Docs
+  ([`4b2704e`](https://github.com/DiogoRibeiro7/genSurvPy/commit/4b2704e7179396a1d41c60f914a327e81bd45f6b))
+
+- Update pyproject
+  ([`127d1f6`](https://github.com/DiogoRibeiro7/genSurvPy/commit/127d1f6dff84056e859d9b92e87403e34816853e))
+
+### Documentation
+
+- Add mathematical foundations page for all survival models
+  ([`8472ff1`](https://github.com/DiogoRibeiro7/genSurvPy/commit/8472ff181ee3b882a44bc2c48c094de4db4a70fb))
+
+- Add roadmap for advanced survival models and extend TODO
+  ([`1990109`](https://github.com/DiogoRibeiro7/genSurvPy/commit/1990109f3ea0f7a4351cfdcf8880dd87108c8181))
+
+- Add usage examples for all models in index.md
+  ([`57c5fb0`](https://github.com/DiogoRibeiro7/genSurvPy/commit/57c5fb025b2cfe2eaae613e064bcd17c900ee4fc))
+
+- Fix version number in pyproject
+  ([`6cff868`](https://github.com/DiogoRibeiro7/genSurvPy/commit/6cff868bb504256918eecfad9d5d0bad3bcc97bb))
+
+
 ## v0.7.0 (2025-04-12)
 
 ### Chores
