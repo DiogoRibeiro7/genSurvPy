@@ -1,0 +1,6 @@
+from gen_surv.bivariate import sample_bivariate_distribution as sample_bivariate_distribution
+from gen_surv.censoring import rexpocens as rexpocens, runifcens as runifcens
+from gen_surv.validate import validate_gen_tdcm_inputs as validate_gen_tdcm_inputs
+
+def generate_censored_observations(n, dist_par, model_cens, cens_par, beta, lam, b): ...
+def gen_tdcm(n, dist, corr, dist_par, model_cens, cens_par, beta, lam): ...

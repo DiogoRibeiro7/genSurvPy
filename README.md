@@ -31,31 +31,27 @@ poetry install
 ## 🧪 Example
 
 ```python
-from gen_surv.cphm import gen_cphm
-
-df = gen_cphm(
-    n=100,
-    model_cens="uniform",
-    cens_par=1.0,
-    beta=0.5,
-    covar=2.0
-)
-print(df.head())
-```
-
-```python
 from gen_surv import generate
 
-df = generate(
-    model="cphm",
-    n=100,
-    model_cens="uniform",
-    cens_par=1.0,
-    beta=0.5,
-    covar=2.0
-)
+# CPHM
+generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
 
-print(df.head())
+# AFT Log-Normal
+generate(model="aft_ln", n=100, beta=[0.5, -0.3], sigma=1.0, model_cens="exponential", cens_par=3.0)
+
+# CMM
+generate(model="cmm", n=100, model_cens="exponential", cens_par=2.0,
+         qmat=[[0, 0.1], [0.05, 0]], p0=[1.0, 0.0])
+
+# TDCM
+generate(model="tdcm", n=100, dist="weibull", corr=0.5,
+         dist_par=[1, 2, 1, 2], model_cens="uniform", cens_par=1.0,
+         beta=[0.1, 0.2, 0.3], lam=1.0)
+
+# THMM
+generate(model="thmm", n=100, qmat=[[0, 0.2, 0], [0.1, 0, 0.1], [0, 0.3, 0]],
+         emission_pars={"mu": [0.0, 1.0, 2.0], "sigma": [0.5, 0.5, 0.5]},
+         p0=[1.0, 0.0, 0.0], model_cens="exponential", cens_par=3.0)
 ```
 
 ## 🔧 Available Generators
