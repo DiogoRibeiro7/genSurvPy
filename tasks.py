@@ -40,7 +40,8 @@ def git_push(c):
             print("Aborting: empty commit message.")
             return
 
-        c.run(f'git commit -S -m "{message}"')
+        sanitized_message = shlex.quote(message)
+        c.run(f"git commit -S -m {sanitized_message}")
         c.run("git push")
     except KeyboardInterrupt:
         print("\nAborted by user.")
