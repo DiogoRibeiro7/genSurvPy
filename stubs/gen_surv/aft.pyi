@@ -1,3 +1,0 @@
-from _typeshed import Incomplete
-
-def gen_aft_log_normal(n, beta, sigma, model_cens, cens_par, seed: Incomplete | None = None): ...
