@@ -6,24 +6,25 @@ This document outlines future enhancements, features, and ideas for improving th
 
 ## 📦 1. Interface and UX
 
-- [ ] Create a `generate(..., return_type="df" | "dict")` interface
+- [✅] Create a `generate(..., return_type="df" | "dict")` interface
 - [ ] Add `__version__` using `importlib.metadata` or `poetry-dynamic-versioning`
 - [ ] Build a CLI with `typer` or `click`
-- [ ] Add example notebooks for each model (`notebooks/` folder)
+- [✅] Add example notebooks or scripts for each model (`examples/` folder)
 
 ---
 
 ## 📚 2. Documentation
 
-- [ ] Add a "Model Comparison Guide" section
-- [ ] Add "How It Works" sections for each model
-- [ ] Include usage tutorials in Jupyter format on RTD
+- [✅] Add a "Model Comparison Guide" section (`index.md` + `theory.md`)
+- [✅] Add "How It Works" sections for each model (`theory.md`)
+- [✅] Include usage examples in index with real calls
 - [ ] Optional: add multilingual docs using `sphinx-intl`
 
 ---
 
 ## 🧪 3. Testing and Quality
 
+- [✅] Add tests for each model (e.g., `test_tdcm.py`, `test_thmm.py`, `test_aft.py`)
 - [ ] Add property-based tests with `hypothesis`
 - [ ] Cover edge cases (e.g., invalid parameters, n=0, negative censoring)
 - [ ] Run tests on multiple Python versions (CI matrix)
@@ -34,7 +35,8 @@ This document outlines future enhancements, features, and ideas for improving th
 
 - [ ] Add Piecewise Exponential Model support
 - [ ] Add competing risks / multi-event simulation
-- [ ] Implement parametric AFT models (log-normal, log-logistic)
+- [✅] Implement parametric AFT models (log-normal)
+- [ ] Implement parametric AFT models (log-logistic, weibull)
 - [ ] Simulate time-varying hazards
 - [ ] Add informative or covariate-dependent censoring
 
@@ -59,18 +61,32 @@ This document outlines future enhancements, features, and ideas for improving th
 ## 🔁 7. Other Ideas
 
 - [ ] Add performance benchmarks for each model
-- [ ] Improve PyPI discoverability (add keywords)
+- [✅] Improve PyPI discoverability (added tags, keywords, docs)
 - [ ] Create a Streamlit or Gradio live demo
 
 ---
 
 ## 🧠 8. New Survival Models to Implement
 
-- [ ] Accelerated Failure Time (AFT) models:
-  - [X] Log-Normal AFT
-  - [ ] Log-Logistic AFT
-  - [ ] Weibull AFT formulation
-- [ ] Piecewise Exponential Model
-- [ ] Competing Risks simulation
-- [ ] Recurrent Events simulation
+- [✅] Log-Normal AFT
+- [ ] Log-Logistic AFT
+- [ ] Weibull AFT
+- [ ] Piecewise Exponential
+- [ ] Competing Risks
+- [ ] Recurrent Events
 - [ ] Mixture Cure Model
+
+---
+
+## 🧬 9. Advanced Data Simulation Features
+
+- [ ] Recurrent events (multiple events per individual)
+- [ ] Frailty models (random effects)
+- [ ] Time-varying hazard functions
+- [ ] Multi-line start-stop formatted data
+- [ ] Competing risks with cause-specific hazards
+- [ ] Simulate violations of PH assumption
+- [ ] Grouped / clustered data generation
+- [ ] Mixed covariates: categorical, continuous, binary
+- [ ] Joint models (longitudinal + survival outcome)
+- [ ] Controlled scenarios for robustness tests
