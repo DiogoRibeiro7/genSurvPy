@@ -50,7 +50,3 @@ dist/
 # Temporary
 *.log
 *.tmp
-
-
-tasks.py
-TODO.md
