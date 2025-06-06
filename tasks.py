@@ -3,8 +3,6 @@ from invoke import Context, task
 from typing import Any
 import shlex
 
-from invoke import Context, task
-from typing import Any
 
 
 @task
@@ -39,14 +37,16 @@ def test(c: Context) -> None:
     result = c.run(command, warn=True, pty=False)
 
     # Check the exit code and report accordingly.
-    if result.ok:
+    if result is not None and getattr(result, "ok", False):
         print("✔️  All tests passed.")
     else:
         print("❌  Some tests failed.")
-        print(f"Exit code: {result.exited}")
-        if result.stderr:
+        exit_code = result.exited if result is not None and hasattr(result, "exited") else "Unknown"
+        print(f"Exit code: {exit_code}")
+        stderr_output = result.stderr if result is not None and hasattr(result, "stderr") else None
+        if stderr_output:
             print("Error output:")
-            print(result.stderr)
+            print(stderr_output)
 
 
 @task
@@ -76,17 +76,16 @@ def docs(c: Context) -> None:
     result = c.run(command, warn=True, pty=False)
 
     # Report on the result of the documentation build.
-    if result.ok:
+    if result is not None and getattr(result, "ok", False):
         print("✔️  Documentation built successfully.")
     else:
         print("❌  Documentation build failed.")
-        print(f"Exit code: {result.exited}")
-        if result.stderr:
+        exit_code = result.exited if result is not None and hasattr(result, "exited") else "Unknown"
+        print(f"Exit code: {exit_code}")
+        stderr_output = result.stderr if result is not None and hasattr(result, "stderr") else None
+        if stderr_output:
             print("Error output:")
-            print(result.stderr)
-
-from invoke import Context, task
-from typing import Any
+            print(stderr_output)
 
 
 @task
@@ -114,14 +113,16 @@ def stubs(c: Context) -> None:
     result = c.run(command, warn=True, pty=False)
 
     # Report on the outcome of stub generation.
-    if result.ok:
+    if result is not None and getattr(result, "ok", False):
         print("✔️  Type stubs generated successfully in 'stubs/'.")
     else:
         print("❌  Stub generation failed.")
-        print(f"Exit code: {result.exited}")
-        if result.stderr:
+        exit_code = result.exited if result is not None and hasattr(result, "exited") else "Unknown"
+        print(f"Exit code: {exit_code}")
+        stderr_output = result.stderr if result is not None and hasattr(result, "stderr") else None
+        if stderr_output:
             print("Error output:")
-            print(result.stderr)
+            print(stderr_output)
 
 
 @task
@@ -149,14 +150,16 @@ def build(c: Context) -> None:
     result = c.run(command, warn=True, pty=False)
 
     # Report the result of the build process.
-    if result.ok:
+    if result is not None and getattr(result, "ok", False):
         print("✔️  Build completed successfully. Artifacts are in the 'dist/' directory.")
     else:
         print("❌  Build failed.")
-        print(f"Exit code: {result.exited}")
-        if result.stderr:
+        exit_code = result.exited if result is not None and hasattr(result, "exited") else "Unknown"
+        print(f"Exit code: {exit_code}")
+        stderr_output = result.stderr if result is not None and hasattr(result, "stderr") else None
+        if stderr_output:
             print("Error output:")
-            print(result.stderr)
+            print(stderr_output)
 
 @task
 def publish(c: Context) -> None:
@@ -264,12 +267,14 @@ def gitpush(c: Context) -> None:
 
     # Stage all changes.
     result_add = c.run("git add .", warn=True, pty=False)
-    if not result_add.ok:
+    if result_add is None or not getattr(result_add, "ok", False):
         print("❌ Failed to stage changes (git add).")
-        print(f"Exit code: {result_add.exited}")
-        if result_add.stderr:
+        exit_code = result_add.exited if result_add is not None and hasattr(result_add, "exited") else "Unknown"
+        print(f"Exit code: {exit_code}")
+        stderr_output = result_add.stderr if result_add is not None and hasattr(result_add, "stderr") else None
+        if stderr_output:
             print("Error output:")
-            print(result_add.stderr)
+            print(stderr_output)
         return
 
     try:
@@ -288,23 +293,27 @@ def gitpush(c: Context) -> None:
             warn=True,
             pty=True,
         )
-        if not result_commit.ok:
+        if result_commit is None or not getattr(result_commit, "ok", False):
             print("❌ Commit failed.")
-            print(f"Exit code: {result_commit.exited}")
-            if result_commit.stderr:
+            exit_code = getattr(result_commit, "exited", "Unknown")
+            print(f"Exit code: {exit_code}")
+            stderr_output = getattr(result_commit, "stderr", None)
+            if stderr_output:
                 print("Error output:")
-                print(result_commit.stderr)
+                print(stderr_output)
             return
 
         # Push to the remote repository.
         result_push = c.run("git push", warn=True, pty=False)
-        if result_push.ok:
+        if result_push is not None and getattr(result_push, "ok", False):
             print("✔️  Changes pushed successfully.")
         else:
             print("❌ Push failed.")
-            print(f"Exit code: {result_push.exited}")
-            if result_push.stderr:
+            exit_code = getattr(result_push, "exited", "Unknown") if result_push is not None else "Unknown"
+            print(f"Exit code: {exit_code}")
+            stderr_output = getattr(result_push, "stderr", None) if result_push is not None else None
+            if stderr_output:
                 print("Error output:")
-                print(result_push.stderr)
+                print(stderr_output)
     except KeyboardInterrupt:
         print("\nAborted by user.")
