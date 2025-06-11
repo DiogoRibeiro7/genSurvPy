@@ -95,3 +95,11 @@ genSurvPy/
 ## 🧠 License
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+
+## 🔖 Release Process
+
+This project uses Git tags to manage releases. A GitHub Actions workflow
+(`version-check.yml`) verifies that the version declared in `pyproject.toml`
+matches the latest Git tag. If they diverge, the workflow fails and prompts a
+correction before merging.

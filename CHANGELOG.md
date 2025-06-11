@@ -1,6 +1,12 @@
 # CHANGELOG
 
 
+## v1.0.0 (2025-06-06)
+
+### Misc
+
+- Align pyproject version with GitHub tag
+
 ## v0.7.1 (2025-04-13)
 
 ### Bug Fixes
