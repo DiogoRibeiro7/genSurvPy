@@ -23,10 +23,11 @@ poetry install
 ```
 ## ✨ Features
 
-- Consistent interface across models  
-- Censoring support (`uniform` or `exponential`)  
-- Easy integration with `pandas` and `NumPy`  
-- Suitable for benchmarking survival algorithms and teaching 
+- Consistent interface across models
+- Censoring support (`uniform` or `exponential`)
+- Easy integration with `pandas` and `NumPy`
+- Suitable for benchmarking survival algorithms and teaching
+- Accelerated Failure Time (Log-Normal) model generator
 
 ## 🧪 Example
 
@@ -62,6 +63,7 @@ generate(model="thmm", n=100, qmat=[[0, 0.2, 0], [0.1, 0, 0.1], [0, 0.3, 0]],
 | `gen_cmm()`  | Continuous-Time Multi-State Markov Model   |
 | `gen_tdcm()` | Time-Dependent Covariate Model             |
 | `gen_thmm()` | Time-Homogeneous Markov Model              |
+| `gen_aft_log_normal()` | Accelerated Failure Time Log-Normal  |
 
 
 ```text
@@ -102,7 +104,8 @@ MIT License. See [LICENSE](LICENSE) for details.
 This project uses Git tags to manage releases. A GitHub Actions workflow
 (`version-check.yml`) verifies that the version declared in `pyproject.toml`
 matches the latest Git tag. If they diverge, the workflow fails and prompts a
-correction before merging.
+correction before merging. Run `python scripts/check_version_match.py` locally
+before creating a tag to catch issues early.
 
 ## 🌟 Code of Conduct
 
