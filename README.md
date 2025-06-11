@@ -104,6 +104,11 @@ This project uses Git tags to manage releases. A GitHub Actions workflow
 matches the latest Git tag. If they diverge, the workflow fails and prompts a
 correction before merging.
 
+## 🌟 Code of Conduct
+
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) to learn about the
+expectations for participants in this project.
+
 ## 🤝 Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on setting up your environment, running tests, and submitting pull requests.

@@ -6,6 +6,7 @@
 ### Misc
 
 - Align pyproject version with GitHub tag
+- Add project Code of Conduct
 
 ## v0.7.1 (2025-04-13)
 
