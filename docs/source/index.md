@@ -53,3 +53,4 @@ generate(model="thmm", n=100, qmat=[[0, 0.2, 0], [0.1, 0, 0.1], [0, 0.3, 0]],
 
 - [Source Code](https://github.com/DiogoRibeiro7/genSurvPy)
 - [License](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/LICENSE)
+- [Code of Conduct](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/CODE_OF_CONDUCT.md)
