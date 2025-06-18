@@ -4,6 +4,17 @@ This document outlines future enhancements, features, and ideas for improving th
 
 ---
 
+## ✨ Priority Items
+
+- [✅] Add property-based tests using Hypothesis to cover edge cases
+- [✅] Build a CLI for generating datasets from the terminal
+- [ ] Expand documentation with multilingual support and more usage examples
+- [ ] Implement Weibull and log-logistic AFT models and add visualization utilities
+- [✅] Provide CITATION metadata for proper referencing
+- [ ] Ensure all functions include Google-style docstrings with inline comments
+
+---
+
 ## 📦 1. Interface and UX
 
 - [✅] Create a `generate(..., return_type="df" | "dict")` interface
