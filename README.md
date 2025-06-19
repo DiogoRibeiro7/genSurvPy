@@ -131,3 +131,11 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on setting up your
 If you use **gen_surv** in your work, please cite it using the metadata in
 [`CITATION.cff`](CITATION.cff). Many reference managers can import this file
 directly.
+
+## Author
+
+**Diogo Ribeiro** — [ESMAD - Instituto Politécnico do Porto](https://esmad.ipp.pt)
+
+- ORCID: <https://orcid.org/0009-0001-2022-7072>
+- Professional email: <dfr@esmad.ipp.pt>
+- Personal email: <diogo.debastos.ribeiro@gmail.com>

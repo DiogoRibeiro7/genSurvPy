@@ -62,3 +62,16 @@ python -m gen_surv dataset aft_ln --n 100 > data.csv
 - [Source Code](https://github.com/DiogoRibeiro7/genSurvPy)
 - [License](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/LICENSE)
 - [Code of Conduct](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/CODE_OF_CONDUCT.md)
+
+## Citation
+
+If you use **gen_surv** in your work, please cite it using the metadata in
+[CITATION.cff](../../CITATION.cff).
+
+## Author
+
+**Diogo Ribeiro** — [ESMAD - Instituto Politécnico do Porto](https://esmad.ipp.pt)
+
+- ORCID: <https://orcid.org/0009-0001-2022-7072>
+- Professional email: <dfr@esmad.ipp.pt>
+- Personal email: <diogo.debastos.ribeiro@gmail.com>

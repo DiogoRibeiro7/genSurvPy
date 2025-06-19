@@ -9,10 +9,10 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../../gen_surv'))
 
-project = 'gen_suvr'
+project = 'gen_surv'
 copyright = '2025, Diogo Ribeiro'
 author = 'Diogo Ribeiro'
-release = '0.6.3'
+release = '1.0.3'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
