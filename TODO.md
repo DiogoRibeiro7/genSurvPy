@@ -18,8 +18,8 @@ This document outlines future enhancements, features, and ideas for improving th
 ## 📦 1. Interface and UX
 
 - [✅] Create a `generate(..., return_type="df" | "dict")` interface
-- [ ] Add `__version__` using `importlib.metadata` or `poetry-dynamic-versioning`
-- [ ] Build a CLI with `typer` or `click`
+- [✅] Add `__version__` using `importlib.metadata` or `poetry-dynamic-versioning`
+- [✅] Build a CLI with `typer` or `click`
 - [✅] Add example notebooks or scripts for each model (`examples/` folder)
 
 ---
@@ -36,7 +36,7 @@ This document outlines future enhancements, features, and ideas for improving th
 ## 🧪 3. Testing and Quality
 
 - [✅] Add tests for each model (e.g., `test_tdcm.py`, `test_thmm.py`, `test_aft.py`)
-- [ ] Add property-based tests with `hypothesis`
+- [✅] Add property-based tests with `hypothesis`
 - [ ] Cover edge cases (e.g., invalid parameters, n=0, negative censoring)
 - [ ] Run tests on multiple Python versions (CI matrix)
 

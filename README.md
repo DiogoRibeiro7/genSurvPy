@@ -55,6 +55,15 @@ generate(model="thmm", n=100, qmat=[[0, 0.2, 0], [0.1, 0, 0.1], [0, 0.3, 0]],
          p0=[1.0, 0.0, 0.0], model_cens="exponential", cens_par=3.0)
 ```
 
+## ⌨️ Command-Line Usage
+
+Install the package and use ``python -m gen_surv`` to generate datasets without
+writing Python code:
+
+```bash
+python -m gen_surv dataset aft_ln --n 100 > data.csv
+```
+
 ## 🔧 Available Generators
 
 | Function     | Description                                |
