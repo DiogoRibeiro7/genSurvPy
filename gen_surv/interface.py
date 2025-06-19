@@ -6,6 +6,9 @@ Example:
     >>> df = generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
 """
 
+from typing import Any
+import pandas as pd
+
 from gen_surv.cphm import gen_cphm
 from gen_surv.cmm import gen_cmm
 from gen_surv.tdcm import gen_tdcm
@@ -22,13 +25,13 @@ _model_map = {
 }
 
 
-def generate(model: str, **kwargs):
-    """
-    Generic interface to generate survival data from various models.
+def generate(model: str, **kwargs: Any) -> pd.DataFrame:
+    """Generate survival data from a specific model.
 
-    Parameters:
-        model (str): One of ["cphm", "cmm", "tdcm", "thmm"]
-        **kwargs: Arguments forwarded to the selected model generator.
+    Args:
+        model: Name of the generator to run. Must be one of ``cphm``, ``cmm``,
+            ``tdcm``, ``thmm`` or ``aft_ln``.
+        **kwargs: Arguments forwarded to the chosen generator.
 
     Returns:
         pd.DataFrame: Simulated survival data.
