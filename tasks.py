@@ -51,7 +51,7 @@ def test(c: Context) -> None:
 
 
 @task
-def check_version(c: Context) -> None:
+def checkversion(c: Context) -> None:
     """Validate that ``pyproject.toml`` matches the latest git tag.
 
     This task runs the ``scripts/check_version_match.py`` helper using Poetry

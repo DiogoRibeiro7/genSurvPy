@@ -3,7 +3,8 @@
 from pathlib import Path
 import subprocess
 import sys
-import tomllib
+import tomli
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -11,18 +12,18 @@ ROOT = Path(__file__).resolve().parents[1]
 def pyproject_version() -> str:
     pyproject_path = ROOT / "pyproject.toml"
     with pyproject_path.open("rb") as f:
-        data = tomllib.load(f)
+        data = tomli.load(f)
     return data["tool"]["poetry"]["version"]
 
 
-def latest_tag() -> str | None:
+def latest_tag() -> str:
     try:
         tag = subprocess.check_output(
             ["git", "describe", "--tags", "--abbrev=0"], cwd=ROOT, text=True
         ).strip()
         return tag.lstrip("v")
     except subprocess.CalledProcessError:
-        return None
+        return "0.0.0"
 
 
 def main() -> int:
