@@ -87,26 +87,34 @@ genSurvPy/
 │   ├── censoring.py
 │   ├── bivariate.py
 │   ├── validate.py
-│
+│   └── interface.py
 ├── tests/                # Testes automatizados
 │   ├── test_cphm.py
 │   ├── test_cmm.py
 │   ├── test_tdcm.py
 │   ├── test_thmm.py
-│
 ├── examples/             # Exemplos de uso
+│   ├── run_aft.py
+│   ├── run_cmm.py
 │   ├── run_cphm.py
-│   ├── ...
-│
+│   ├── run_tdcm.py
+│   └── run_thmm.py
+├── docs/                 # Documentação Sphinx
+│   ├── source/
+│   └── ...
+├── scripts/              # Utilidades diversas
+│   └── check_version_match.py
+├── tasks.py              # Tarefas automatizadas com Invoke
+├── TODO.md               # Roadmap de desenvolvimento
 ├── pyproject.toml        # Configurado com Poetry
 ├── README.md
-├── LICENSE
-├── .gitignore
+├── LICENCE
+└── .gitignore
 ```
 
 ## 🧠 License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENCE](LICENCE) for details.
 
 
 ## 🔖 Release Process
@@ -125,6 +133,15 @@ expectations for participants in this project.
 ## 🤝 Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on setting up your environment, running tests, and submitting pull requests.
+
+## 🔧 Development Tasks
+
+Common project commands are defined in [`tasks.py`](tasks.py) and can be executed with [Invoke](https://www.pyinvoke.org/):
+
+```bash
+poetry run inv -l  # list available tasks
+poetry run inv test  # run the test suite
+```
 
 ## 📑 Citation
 
