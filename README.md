@@ -28,6 +28,7 @@ poetry install
 - Easy integration with `pandas` and `NumPy`
 - Suitable for benchmarking survival algorithms and teaching
 - Accelerated Failure Time (Log-Normal) model generator
+- Command-line interface powered by `Typer`
 
 ## 🧪 Example
 
@@ -124,3 +125,9 @@ expectations for participants in this project.
 ## 🤝 Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on setting up your environment, running tests, and submitting pull requests.
+
+## 📑 Citation
+
+If you use **gen_surv** in your work, please cite it using the metadata in
+[`CITATION.cff`](CITATION.cff). Many reference managers can import this file
+directly.
