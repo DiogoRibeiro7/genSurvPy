@@ -28,6 +28,7 @@ poetry install
 - Easy integration with `pandas` and `NumPy`
 - Suitable for benchmarking survival algorithms and teaching
 - Accelerated Failure Time (Log-Normal) model generator
+- Command-line interface powered by `Typer`
 
 ## 🧪 Example
 
@@ -53,6 +54,15 @@ generate(model="tdcm", n=100, dist="weibull", corr=0.5,
 generate(model="thmm", n=100, qmat=[[0, 0.2, 0], [0.1, 0, 0.1], [0, 0.3, 0]],
          emission_pars={"mu": [0.0, 1.0, 2.0], "sigma": [0.5, 0.5, 0.5]},
          p0=[1.0, 0.0, 0.0], model_cens="exponential", cens_par=3.0)
+```
+
+## ⌨️ Command-Line Usage
+
+Install the package and use ``python -m gen_surv`` to generate datasets without
+writing Python code:
+
+```bash
+python -m gen_surv dataset aft_ln --n 100 > data.csv
 ```
 
 ## 🔧 Available Generators
@@ -115,3 +125,9 @@ expectations for participants in this project.
 ## 🤝 Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on setting up your environment, running tests, and submitting pull requests.
+
+## 📑 Citation
+
+If you use **gen_surv** in your work, please cite it using the metadata in
+[`CITATION.cff`](CITATION.cff). Many reference managers can import this file
+directly.

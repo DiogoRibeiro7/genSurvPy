@@ -5,6 +5,7 @@ import shlex
 
 
 
+
 @task
 def test(c: Context) -> None:
     """
@@ -48,6 +49,33 @@ def test(c: Context) -> None:
             print("Error output:")
             print(stderr_output)
 
+
+@task
+def check_version(c: Context) -> None:
+    """Validate that ``pyproject.toml`` matches the latest git tag.
+
+    This task runs the ``scripts/check_version_match.py`` helper using Poetry
+    and reports whether the version numbers are aligned.
+
+    Args:
+        c: Invoke context used to run shell commands.
+
+    Returns:
+        None
+    """
+    if not isinstance(c, Context):
+        raise TypeError(f"Expected Invoke Context, got {type(c).__name__!r}")
+
+    # Execute the version check script with Poetry.
+    cmd = "poetry run python scripts/check_version_match.py"
+    result = c.run(cmd, warn=True, pty=False)
+
+    # Report based on the exit code from the script.
+    if result.ok:
+        print("✔️  pyproject version matches the latest git tag.")
+    else:
+        print("❌  Version mismatch detected.")
+        print(result.stderr)
 
 @task
 def docs(c: Context) -> None:

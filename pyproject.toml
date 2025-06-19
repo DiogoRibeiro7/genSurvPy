@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gen_surv"
-version = "1.0.1"
+version = "1.0.0"
 description = "A Python package for simulating survival data, inspired by the R package genSurv"
 authors = ["Diogo Ribeiro <diogo.debastos.ribeiro@gmail.com>"]
 license = "MIT"
@@ -16,12 +16,14 @@ numpy = "^1.26"
 pandas = "^2.2.3"
 pytest-cov = "^6.1.1"
 invoke = "^2.2.0"
+typer = "^0.12.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 python-semantic-release = "^9.21.0"
 mypy = "^1.15.0"
 invoke = "^2.2.0"
+hypothesis = "^6.98"
 
 
 [tool.poetry.group.docs.dependencies]
