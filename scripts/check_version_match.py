@@ -3,7 +3,10 @@
 from pathlib import Path
 import subprocess
 import sys
-import tomli
+if sys.version_info >= (3, 11):
+    import tomllib as tomli
+else:
+    import tomli
 
 
 ROOT = Path(__file__).resolve().parents[1]
