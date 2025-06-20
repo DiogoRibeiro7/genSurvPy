@@ -8,16 +8,15 @@ import shlex
 
 @task
 def test(c: Context) -> None:
-    """
-    Run pytest via Poetry with coverage reporting for the 'gen_surv' package.
+    """Run the test suite with coverage reporting.
 
-    This task will:
-      1. Execute 'pytest' through Poetry.
-      2. Generate a terminal coverage report.
-      3. Write an XML coverage report to 'coverage.xml'.
+    This task executes ``pytest`` and generates a coverage report.
 
-    :param c: Invoke context used to run shell commands.
-    :raises TypeError: If 'c' is not an Invoke Context.
+    Args:
+        c: Invoke context used to run shell commands.
+
+    Raises:
+        TypeError: If ``c`` is not an Invoke :class:`Context`.
     """
     # Ensure we were passed a valid Context object.
     if not isinstance(c, Context):
@@ -52,16 +51,16 @@ def test(c: Context) -> None:
 
 @task
 def checkversion(c: Context) -> None:
-    """Validate that ``pyproject.toml`` matches the latest git tag.
+    """Check that ``pyproject.toml`` matches the latest Git tag.
 
-    This task runs the ``scripts/check_version_match.py`` helper using Poetry
-    and reports whether the version numbers are aligned.
+    This task executes ``scripts/check_version_match.py`` to ensure the version
+    declared in ``pyproject.toml`` agrees with the most recent tag.
 
     Args:
         c: Invoke context used to run shell commands.
 
-    Returns:
-        None
+    Raises:
+        TypeError: If ``c`` is not an Invoke :class:`Context`.
     """
     if not isinstance(c, Context):
         raise TypeError(f"Expected Invoke Context, got {type(c).__name__!r}")
@@ -79,17 +78,13 @@ def checkversion(c: Context) -> None:
 
 @task
 def docs(c: Context) -> None:
-    """
-    Build Sphinx documentation for the project using Poetry.
+    """Build the Sphinx documentation.
 
-    This task will:
-      1. Run 'sphinx-build' via Poetry.
-      2. Read source files from 'docs/source'.
-      3. Output HTML (or other format) into 'docs/build'.
+    Args:
+        c: Invoke context used to run shell commands.
 
-    :param c: Invoke context, used to run shell commands.
-    :type c: Context
-    :raises TypeError: If 'c' is not an Invoke Context.
+    Raises:
+        TypeError: If ``c`` is not an Invoke :class:`Context`.
     """
     # Verify we have a proper Invoke Context.
     if not isinstance(c, Context):
@@ -118,15 +113,13 @@ def docs(c: Context) -> None:
 
 @task
 def stubs(c: Context) -> None:
-    """
-    Generate type stubs for the 'gen_surv' package using stubgen and Poetry.
+    """Generate type stubs for the ``gen_surv`` package.
 
-    This task will:
-      1. Run 'stubgen' via Poetry to analyze 'gen_surv'.
-      2. Output the generated stubs into the 'stubs' directory.
+    Args:
+        c: Invoke context used to run shell commands.
 
-    :param c: Invoke context used to run shell commands.
-    :raises TypeError: If 'c' is not an Invoke Context.
+    Raises:
+        TypeError: If ``c`` is not an Invoke :class:`Context`.
     """
     # Verify that 'c' is the correct Invoke Context.
     if not isinstance(c, Context):
@@ -155,15 +148,13 @@ def stubs(c: Context) -> None:
 
 @task
 def build(c: Context) -> None:
-    """
-    Build the project distributions using Poetry.
+    """Build distribution artifacts using Poetry.
 
-    This task will:
-      1. Run 'poetry build' to create source and wheel packages.
-      2. Place the built artifacts in the 'dist/' directory.
+    Args:
+        c: Invoke context used to run shell commands.
 
-    :param c: Invoke context used to run shell commands.
-    :raises TypeError: If 'c' is not an Invoke Context.
+    Raises:
+        TypeError: If ``c`` is not an Invoke :class:`Context`.
     """
     # Verify that we received a valid Invoke Context.
     if not isinstance(c, Context):
@@ -191,16 +182,10 @@ def build(c: Context) -> None:
 
 @task
 def publish(c: Context) -> None:
-    """
-    Build and publish the package to PyPI using Poetry.
+    """Build and upload the package to PyPI.
 
-    This task will:
-      1. Build the distribution via 'poetry publish --build'.
-      2. Attach to a pseudo-TTY so you can enter credentials or confirm prompts.
-      3. Not abort immediately if an error occurs; instead, it will print diagnostics.
-
-    :param c: Invoke context, used to run shell commands.
-    :type c: Context
+    Args:
+        c: Invoke context used to run shell commands.
     """
     # Run the poetry publish command.
     # - warn=True: do not abort on non-zero exit, so we can inspect and report.
@@ -227,17 +212,13 @@ def publish(c: Context) -> None:
 
 @task
 def clean(c: Context) -> None:
-    """
-    Remove build artifacts, caches, and generated files.
+    """Remove build artifacts and caches.
 
-    This task will:
-      1. Delete the 'dist' and 'build' directories.
-      2. Remove generated documentation in 'docs/build'.
-      3. Clear pytest and mypy caches.
-      4. Delete coverage reports and stub files.
+    Args:
+        c: Invoke context used to run shell commands.
 
-    :param c: Invoke context used to run shell commands.
-    :raises TypeError: If 'c' is not an Invoke Context.
+    Raises:
+        TypeError: If ``c`` is not an Invoke :class:`Context`.
     """
     # Verify the argument is an Invoke Context.
     if not isinstance(c, Context):
@@ -276,18 +257,13 @@ def clean(c: Context) -> None:
     
 @task
 def gitpush(c: Context) -> None:
-    """
-    Stage all changes, prompt for a commit message, create a signed commit, and push to the remote repository.
+    """Commit and push all staged changes.
 
-    This task will:
-      1. Verify that 'c' is an Invoke Context.
-      2. Run 'git add .' to stage all unstaged changes.
-      3. Prompt the user for a commit message; abort if empty.
-      4. Sanitize the message, then run 'git commit -S -m <message>'.
-      5. Run 'git push' to publish commits.
+    Args:
+        c: Invoke context used to run shell commands.
 
-    :param c: Invoke Context used to run shell commands.
-    :raises TypeError: If 'c' is not an Invoke Context.
+    Raises:
+        TypeError: If ``c`` is not an Invoke :class:`Context`.
     """
     # Verify the argument is a valid Invoke Context.
     if not isinstance(c, Context):
