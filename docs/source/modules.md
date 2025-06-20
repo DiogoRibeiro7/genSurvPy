@@ -23,7 +23,7 @@
 ::: gen_surv.interface
     options:
       members: true
-      undoc-members: tru
+      undoc-members: true
 
 ::: gen_surv.aft
     options:
