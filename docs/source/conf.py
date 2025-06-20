@@ -21,6 +21,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "myst_parser",
+    "sphinx.ext.viewcode",
 ]
 
 # Point to index.md or index.rst as the root document
