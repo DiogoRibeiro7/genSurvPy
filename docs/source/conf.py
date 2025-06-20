@@ -9,7 +9,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../../gen_surv'))
 
-project = 'gen_suvr'
+project = 'gen_surv'
 copyright = '2025, Diogo Ribeiro'
 author = 'Diogo Ribeiro'
 release = '0.6.3'
@@ -22,7 +22,10 @@ extensions = [
     "sphinx.ext.napoleon",
     "myst_parser",
     "sphinx.ext.viewcode",
+    "sphinx.ext.autosectionlabel",
 ]
+
+autosectionlabel_prefix_document = True
 
 # Point to index.md or index.rst as the root document
 master_doc = "index"
@@ -35,4 +38,5 @@ exclude_patterns = []
 
 html_theme = 'alabaster'
 html_static_path = ['_static']
+
 

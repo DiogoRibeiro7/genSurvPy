@@ -65,15 +65,19 @@ writing Python code:
 python -m gen_surv dataset aft_ln --n 100 > data.csv
 ```
 
-## 🔧 Available Generators
+## 🔧 API Overview
 
-| Function     | Description                                |
-|--------------|--------------------------------------------|
-| `gen_cphm()` | Cox Proportional Hazards Model             |
-| `gen_cmm()`  | Continuous-Time Multi-State Markov Model   |
-| `gen_tdcm()` | Time-Dependent Covariate Model             |
-| `gen_thmm()` | Time-Homogeneous Markov Model              |
-| `gen_aft_log_normal()` | Accelerated Failure Time Log-Normal  |
+| Function | Description |
+|----------|-------------|
+| `generate()` | Unified interface that calls any generator |
+| `gen_cphm()` | Cox Proportional Hazards Model |
+| `gen_cmm()`  | Continuous-Time Multi-State Markov Model |
+| `gen_tdcm()` | Time-Dependent Covariate Model |
+| `gen_thmm()` | Time-Homogeneous Markov Model |
+| `gen_aft_log_normal()` | Accelerated Failure Time Log-Normal |
+| `sample_bivariate_distribution()` | Sample correlated Weibull or exponential times |
+| `runifcens()` | Generate uniform censoring times |
+| `rexpocens()` | Generate exponential censoring times |
 
 
 ```text

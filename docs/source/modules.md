@@ -23,9 +23,29 @@
 ::: gen_surv.interface
     options:
       members: true
-      undoc-members: tru
+      undoc-members: true
 
 ::: gen_surv.aft
+    options:
+      members: true
+      undoc-members: true
+
+::: gen_surv.bivariate
+    options:
+      members: true
+      undoc-members: true
+
+::: gen_surv.censoring
+    options:
+      members: true
+      undoc-members: true
+
+::: gen_surv.cli
+    options:
+      members: true
+      undoc-members: true
+
+::: gen_surv.validate
     options:
       members: true
       undoc-members: true

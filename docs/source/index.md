@@ -10,7 +10,13 @@ It includes generators for:
 - **Time-Homogeneous Hidden Markov Models (THMM)**
 - **Accelerated Failure Time (AFT) Log-Normal Models**
 
+Key functions include `generate()`, `gen_cphm()`, `gen_cmm()`, `gen_tdcm()`,
+`gen_thmm()`, `gen_aft_log_normal()`, `sample_bivariate_distribution()`,
+`runifcens()`, and `rexpocens()`.
+
 ---
+
+See the [Getting Started](usage) guide for installation instructions.
 
 ## 📚 Modules
 
@@ -18,6 +24,7 @@ It includes generators for:
 :maxdepth: 2
 :caption: Contents
 
+usage
 modules
 theory
 ```
@@ -62,3 +69,4 @@ python -m gen_surv dataset aft_ln --n 100 > data.csv
 - [Source Code](https://github.com/DiogoRibeiro7/genSurvPy)
 - [License](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/LICENSE)
 - [Code of Conduct](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/CODE_OF_CONDUCT.md)
+
