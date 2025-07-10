@@ -22,7 +22,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install python-semantic-release
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install python-semantic-release
+        run: pip install python-semantic-release
 
       - name: Configure Git
         run: |
@@ -32,36 +36,10 @@ jobs:
       - name: Run Semantic Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: semantic-release version
+        run: |
+          # Run semantic-release to get the next version
+          semantic-release version
 
       - name: Push changes
         run: |
           git push --follow-tags
-      - name: "Install Poetry"
-        run: pip install poetry
-      - name: "Determine version bump type"
-        run: |
-            git fetch --tags
-            # This defaults to a patch type, unless a feature commit was pushed, then set type to minor
-            LAST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-            LAST_COMMIT=$(git log -1 --format='%H')
-            echo "Last git tag: $LAST_TAG"
-            echo "Last git commit: $LAST_COMMIT"
-            echo "Commits:"
-            git log --no-merges --pretty=oneline $LAST_TAG...$LAST_COMMIT
-            git log --no-merges --pretty=format:"%s" $LAST_TAG...$LAST_COMMIT | grep -q ^feat: && BUMP_TYPE="minor" || BUMP_TYPE="patch"
-            echo "Version bump type: $BUMP_TYPE"
-            echo "BUMP_TYPE=$BUMP_TYPE" >> $GITHUB_ENV
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Version bump"
-        run: |
-            poetry version $BUMP_TYPE
-      - name: "Push new version"
-        run: |
-            git add pyproject.toml
-            git commit -m "Update version to $(poetry version -s)"
-            git pull --ff-only origin main
-            git push origin main --follow-tags
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

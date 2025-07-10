@@ -9,26 +9,45 @@ packages = [{ include = "gen_surv" }]
 homepage = "https://github.com/DiogoRibeiro7/genSurvPy"
 repository = "https://github.com/DiogoRibeiro7/genSurvPy"
 documentation = "https://gensurvpy.readthedocs.io/en/stable/"
+keywords = ["survival-analysis", "simulation", "cox-model", "markov-model", "time-dependent", "statistics"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
 numpy = "^1.26"
 pandas = "^2.2.3"
-pytest-cov = "^6.1.1"
-invoke = "^2.2.0"
 typer = "^0.12.3"
-tomli = "^2.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
+pytest-cov = "^6.1.1"
 python-semantic-release = "^9.21.0"
 mypy = "^1.15.0"
 invoke = "^2.2.0"
 hypothesis = "^6.98"
 tomli = "^2.2.1"
+black = "^24.1.0"
+isort = "^5.13.2"
+flake8 = "^6.1.0"
 
 [tool.poetry.group.docs.dependencies]
+sphinx = "^7.2.6"
 myst-parser = "<4.0.0"
+sphinx-rtd-theme = "^1.3.0"
+
+[tool.poetry.scripts]
+gen_surv = "gen_surv.cli:app"
 
 [tool.semantic_release]
 version_source = "tag"
@@ -38,6 +57,22 @@ changelog_file = "CHANGELOG.md"
 upload_to_repository = false
 branch = "main"
 build_command = ""
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 
 [build-system]
 requires = ["poetry-core"]

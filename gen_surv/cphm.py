@@ -1,22 +1,51 @@
+"""
+Cox Proportional Hazards Model (CPHM) data generation.
+
+This module provides functions to generate survival data following the
+Cox Proportional Hazards Model with various censoring mechanisms.
+"""
+
 import numpy as np
 import pandas as pd
+from typing import Callable, Literal, Optional
+
 from gen_surv.validate import validate_gen_cphm_inputs
 from gen_surv.censoring import runifcens, rexpocens
 
-def generate_cphm_data(n, rfunc, cens_par, beta, covariate_range):
+def generate_cphm_data(
+    n: int, 
+    rfunc: Callable[[int, float], np.ndarray], 
+    cens_par: float, 
+    beta: float, 
+    covariate_range: float,
+    seed: Optional[int] = None
+) -> np.ndarray:
     """
     Generate data from a Cox Proportional Hazards Model (CPHM).
 
-    Parameters:
-    - n (int): Number of samples to generate.
-    - rfunc (callable): Function to generate censoring times, must accept (size, cens_par).
-    - cens_par (float): Parameter passed to the censoring function.
-    - beta (float): Coefficient for the covariate.
-    - covar (float): Range for the covariate (uniformly sampled from [0, covar]).
+    Parameters
+    ----------
+    n : int
+        Number of samples to generate.
+    rfunc : callable
+        Function to generate censoring times, must accept (size, cens_par).
+    cens_par : float
+        Parameter passed to the censoring function.
+    beta : float
+        Coefficient for the covariate.
+    covariate_range : float
+        Range for the covariate (uniformly sampled from [0, covar]).
+    seed : int, optional
+        Random seed for reproducibility.
 
-    Returns:
-    - np.ndarray: Array with shape (n, 3): [time, status, covariate]
+    Returns
+    -------
+    np.ndarray
+        Array with shape (n, 3): [time, status, covariate]
     """
+    if seed is not None:
+        np.random.seed(seed)
+        
     data = np.zeros((n, 3))
 
     for k in range(n):
@@ -32,19 +61,49 @@ def generate_cphm_data(n, rfunc, cens_par, beta, covariate_range):
     return data
 
 
-def gen_cphm(n: int, model_cens: str, cens_par: float, beta: float, covar: float) -> pd.DataFrame:
+def gen_cphm(
+    n: int, 
+    model_cens: Literal["uniform", "exponential"], 
+    cens_par: float, 
+    beta: float, 
+    covar: float,
+    seed: Optional[int] = None
+) -> pd.DataFrame:
     """
-    Convenience wrapper to generate CPHM survival data.
+    Generate survival data following a Cox Proportional Hazards Model.
 
-    Parameters:
-    - n (int): Number of observations.
-    - model_cens (str): "uniform" or "exponential".
-    - cens_par (float): Parameter for the censoring model.
-    - beta (float): Coefficient for the covariate.
-    - covar (float): Covariate range (uniform between 0 and covar).
+    Parameters
+    ----------
+    n : int
+        Number of observations.
+    model_cens : {"uniform", "exponential"}
+        Type of censoring mechanism.
+    cens_par : float
+        Parameter for the censoring model.
+    beta : float
+        Coefficient for the covariate.
+    covar : float
+        Covariate range (uniform between 0 and covar).
+    seed : int, optional
+        Random seed for reproducibility.
 
-    Returns:
-    - pd.DataFrame: Columns are ["time", "status", "covariate"]
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ["time", "status", "covariate"]
+        - time: observed event or censoring time
+        - status: event indicator (1=event, 0=censored)
+        - covariate: predictor variable
+
+    Examples
+    --------
+    >>> from gen_surv.cphm import gen_cphm
+    >>> df = gen_cphm(n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
+    >>> df.head()
+       time  status  covariate
+    0  0.23     1.0       1.42
+    1  0.78     0.0       0.89
+    ...
     """
     validate_gen_cphm_inputs(n, model_cens, cens_par, covar)
 
@@ -53,6 +112,6 @@ def gen_cphm(n: int, model_cens: str, cens_par: float, beta: float, covar: float
         "exponential": rexpocens
     }[model_cens]
 
-    data = generate_cphm_data(n, rfunc, cens_par, beta, covar)
+    data = generate_cphm_data(n, rfunc, cens_par, beta, covar, seed)
 
     return pd.DataFrame(data, columns=["time", "status", "covariate"])
