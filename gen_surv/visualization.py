@@ -82,7 +82,8 @@ def plot_survival_curve(
     # Create separate KM curves for each group (if specified)
     if group_col is not None:
         groups = data[group_col].unique()
-        colors = plt.cm.tab10.colors[: len(groups)]
+        cmap = plt.get_cmap("tab10")
+        colors = [cmap(i) for i in range(len(groups))]
 
         for i, group in enumerate(groups):
             mask = data[group_col] == group

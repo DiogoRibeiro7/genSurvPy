@@ -6,7 +6,7 @@ Example:
     >>> df = generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
 """
 
-from typing import Any, Dict, Literal, Optional, Union, List, Tuple, cast
+from typing import Any, Literal
 import pandas as pd
 
 from gen_surv.cphm import gen_cphm

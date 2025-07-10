@@ -4,7 +4,6 @@ Tests for Accelerated Failure Time (AFT) models.
 
 import pandas as pd
 import pytest
-import numpy as np
 from hypothesis import given, strategies as st
 
 from gen_surv.aft import gen_aft_log_normal, gen_aft_weibull, gen_aft_log_logistic

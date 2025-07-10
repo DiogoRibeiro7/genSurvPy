@@ -7,7 +7,7 @@ competing risks under different hazard specifications.
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union, Literal
+from typing import Dict, List, Optional, Tuple, Union, Literal, Any
 
 
 def gen_competing_risks(
