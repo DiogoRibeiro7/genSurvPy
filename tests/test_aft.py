@@ -1,11 +1,13 @@
 """
 Tests for Accelerated Failure Time (AFT) models.
 """
-
+import os
+import sys
 import pandas as pd
 import pytest
 from hypothesis import given, strategies as st
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from gen_surv.aft import gen_aft_log_normal, gen_aft_weibull, gen_aft_log_logistic
 
 

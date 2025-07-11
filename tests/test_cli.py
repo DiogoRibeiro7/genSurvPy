@@ -1,10 +1,19 @@
-import pandas as pd
-from gen_surv.cli import dataset
+import sys
+import os
 import runpy
+
+import pandas as pd
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from gen_surv.cli import dataset
 
 
 def test_cli_dataset_stdout(monkeypatch, capsys):
-    """Dataset command prints CSV to stdout when no output file is given."""
+    """
+    Test that the 'dataset' CLI command prints the generated CSV data to stdout when no output file is specified.
+    This test patches the 'generate' function to return a simple DataFrame, invokes the CLI command directly,
+    and asserts that the expected CSV header appears in the captured standard output.
+    """
 
     def fake_generate(model: str, n: int):
         return pd.DataFrame({"time": [1.0], "status": [1], "X0": [0.1], "X1": [0.2]})

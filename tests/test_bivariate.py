@@ -1,4 +1,8 @@
+import os
+import sys
 import numpy as np
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from gen_surv.bivariate import sample_bivariate_distribution
 import pytest
 
