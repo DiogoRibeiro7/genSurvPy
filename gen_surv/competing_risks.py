@@ -7,6 +7,7 @@ competing risks under different hazard specifications.
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from typing import Dict, List, Optional, Tuple, Union, Literal, Any
 
 

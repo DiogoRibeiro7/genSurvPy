@@ -4,8 +4,6 @@ from typing import Any
 import shlex
 
 
-
-
 @task
 def test(c: Context) -> None:
     """Run the test suite with coverage reporting.
