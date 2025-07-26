@@ -47,8 +47,8 @@ def summarize_survival_dataset(
     >>> from gen_surv.summary import summarize_survival_dataset
     >>> 
     >>> # Generate example data
-    >>> df = generate(model="cphm", n=100, model_cens="uniform", 
-    ...               cens_par=1.0, beta=0.5, covar=2.0)
+    >>> df = generate(model="cphm", n=100, model_cens="uniform",
+    ...               cens_par=1.0, beta=0.5, covariate_range=2.0)
     >>> 
     >>> # Summarize the dataset
     >>> summary = summarize_survival_dataset(df)
@@ -200,8 +200,8 @@ def check_survival_data_quality(
     >>> from gen_surv.summary import check_survival_data_quality
     >>> 
     >>> # Generate example data with some issues
-    >>> df = generate(model="cphm", n=100, model_cens="uniform", 
-    ...               cens_par=1.0, beta=0.5, covar=2.0)
+    >>> df = generate(model="cphm", n=100, model_cens="uniform",
+    ...               cens_par=1.0, beta=0.5, covariate_range=2.0)
     >>> # Introduce some issues
     >>> df.loc[0, "time"] = np.nan
     >>> df.loc[1, "status"] = 2  # Invalid status
@@ -320,7 +320,7 @@ def _print_summary(
         List of covariate column names.
     """
     print("=" * 60)
-    print(f"SURVIVAL DATASET SUMMARY")
+    print("SURVIVAL DATASET SUMMARY")
     print("=" * 60)
     
     # Dataset info
@@ -373,12 +373,12 @@ def _print_summary(
         for col, stats in summary['covariates'].items():
             print(f"  {col}:")
             if stats['type'] == 'numeric':
-                print(f"    Type:         Numeric")
+                print("    Type:         Numeric")
                 print(f"    Range:        {stats['min']:.2f} to {stats['max']:.2f}")
                 print(f"    Mean:         {stats['mean']:.2f}")
                 print(f"    Missing:      {stats['missing']}")
             else:
-                print(f"    Type:         Categorical")
+                print("    Type:         Categorical")
                 print(f"    Categories:   {stats['n_categories']}")
                 print(f"    Missing:      {stats['missing']}")
     
@@ -417,8 +417,8 @@ def compare_survival_datasets(
     >>> 
     >>> # Generate datasets with different parameters
     >>> datasets = {
-    ...     "CPHM": generate(model="cphm", n=100, model_cens="uniform", 
-    ...                    cens_par=1.0, beta=0.5, covar=2.0),
+    ...     "CPHM": generate(model="cphm", n=100, model_cens="uniform",
+    ...                    cens_par=1.0, beta=0.5, covariate_range=2.0),
     ...     "Weibull AFT": generate(model="aft_weibull", n=100, beta=[0.5], 
     ...                           shape=1.5, scale=1.0, model_cens="uniform", cens_par=1.0)
     ... }

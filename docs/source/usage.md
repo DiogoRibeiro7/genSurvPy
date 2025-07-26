@@ -20,7 +20,7 @@ Generate datasets directly in Python:
 from gen_surv import generate
 
 # Cox Proportional Hazards example
-generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
+generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
 ```
 
 You can also generate data from the command line:

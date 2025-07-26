@@ -116,5 +116,24 @@ This model is especially useful when the proportional hazards assumption is not 
 
 All models support censoring:
 
-- **Uniform:** \( C_i \\sim U(0, \\text{cens\\_par}) \)
-- **Exponential:** \( C_i \\sim \\text{Exp}(\\text{cens\\_par}) \)
+- **Uniform:** \( C_i \sim U(0, \text{cens\_par}) \)
+- **Exponential:** \( C_i \sim \text{Exp}(\text{cens\_par}) \)
+
+## 6. Competing Risks Models
+
+These models simulate multiple mutually exclusive event types. Each cause has its
+own hazard function, and the observed status indicates which event occurred
+(1, 2, ...). The package includes constant-hazard and Weibull-hazard versions.
+
+## 7. Mixture Cure Models
+
+Mixture cure models assume a proportion of subjects are immune to the event. The
+generator mixes a logistic cure component with an exponential hazard for the
+uncured, returning a ``cured`` indicator column alongside the usual time and
+status.
+
+## 8. Piecewise Exponential Model
+
+This model divides the time axis into intervals defined by user-supplied
+breakpoints. Each interval has its own hazard rate, allowing flexible hazard
+shapes over time.

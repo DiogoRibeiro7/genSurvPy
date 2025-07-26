@@ -34,14 +34,14 @@ def generate_cphm_data(
     beta : float
         Coefficient for the covariate.
     covariate_range : float
-        Range for the covariate (uniformly sampled from [0, covar]).
+        Range for the covariate (uniformly sampled from [0, covariate_range]).
     seed : int, optional
         Random seed for reproducibility.
 
     Returns
     -------
     np.ndarray
-        Array with shape (n, 3): [time, status, covariate]
+        Array with shape (n, 3): [time, status, X0]
     """
     if seed is not None:
         np.random.seed(seed)
@@ -66,7 +66,7 @@ def gen_cphm(
     model_cens: Literal["uniform", "exponential"], 
     cens_par: float, 
     beta: float, 
-    covar: float,
+    covariate_range: float,
     seed: Optional[int] = None
 ) -> pd.DataFrame:
     """
@@ -82,36 +82,35 @@ def gen_cphm(
         Parameter for the censoring model.
     beta : float
         Coefficient for the covariate.
-    covar : float
-        Covariate range (uniform between 0 and covar).
+    covariate_range : float
+        Upper bound for the covariate values (uniform between 0 and covariate_range).
     seed : int, optional
         Random seed for reproducibility.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns ["time", "status", "covariate"]
+        DataFrame with columns ["time", "status", "X0"]
         - time: observed event or censoring time
         - status: event indicator (1=event, 0=censored)
-        - covariate: predictor variable
+        - X0: predictor variable
 
     Examples
     --------
     >>> from gen_surv.cphm import gen_cphm
-    >>> df = gen_cphm(n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
+    >>> df = gen_cphm(n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
     >>> df.head()
-       time  status  covariate
+       time  status        X0
     0  0.23     1.0       1.42
     1  0.78     0.0       0.89
     ...
     """
-    validate_gen_cphm_inputs(n, model_cens, cens_par, covar)
+    validate_gen_cphm_inputs(n, model_cens, cens_par, covariate_range)
 
     rfunc = {
         "uniform": runifcens,
         "exponential": rexpocens
     }[model_cens]
 
-    data = generate_cphm_data(n, rfunc, cens_par, beta, covar, seed)
-
-    return pd.DataFrame(data, columns=["time", "status", "covariate"])
+    data = generate_cphm_data(n, rfunc, cens_par, beta, covariate_range, seed)
+    return pd.DataFrame(data, columns=["time", "status", "X0"])

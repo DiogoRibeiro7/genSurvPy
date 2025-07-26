@@ -27,7 +27,7 @@ def generate_event_times(z1: float, beta: list, rate: list) -> dict:
 
     return {"t12": t12, "t13": t13, "t23": t23}
 
-def gen_cmm(n, model_cens, cens_par, beta, covar, rate):
+def gen_cmm(n, model_cens, cens_par, beta, covariate_range, rate):
     """
     Generate survival data using a continuous-time Markov model (CMM).
 
@@ -36,19 +36,19 @@ def gen_cmm(n, model_cens, cens_par, beta, covar, rate):
     - model_cens (str): "uniform" or "exponential".
     - cens_par (float): Parameter for censoring.
     - beta (list): Regression coefficients (length 3).
-    - covar (float): Covariate range (uniformly sampled from [0, covar]).
+    - covariate_range (float): Upper bound for the covariate values.
     - rate (list): Transition rates (length 6).
 
     Returns:
-    - pd.DataFrame with columns: id, start, stop, status, covariate, transition
+    - pd.DataFrame with columns: id, start, stop, status, X0, transition
     """
-    validate_gen_cmm_inputs(n, model_cens, cens_par, beta, covar, rate)
+    validate_gen_cmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
 
     rfunc = runifcens if model_cens == "uniform" else rexpocens
     rows = []
 
     for k in range(n):
-        z1 = np.random.uniform(0, covar)
+        z1 = np.random.uniform(0, covariate_range)
         c = rfunc(1, cens_par)[0]
         events = generate_event_times(z1, beta, rate)
 
@@ -66,5 +66,5 @@ def gen_cmm(n, model_cens, cens_par, beta, covar, rate):
             # Censored before any event
             rows.append([k + 1, 0, c, 0, z1, np.nan])
 
-    return pd.DataFrame(rows, columns=["id", "start", "stop", "status", "covariate", "transition"])
+    return pd.DataFrame(rows, columns=["id", "start", "stop", "status", "X0", "transition"])
 

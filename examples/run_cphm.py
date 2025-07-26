@@ -10,7 +10,7 @@ df = generate(
     model_cens="uniform",
     cens_par=1.0,
     beta=0.5,
-    covar=2.0,
+    covariate_range=2.0,
     seed=42
 )
 

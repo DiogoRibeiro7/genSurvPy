@@ -8,7 +8,7 @@ def test_validate_gen_cphm_inputs_valid():
 
 
 @pytest.mark.parametrize(
-    "n, model_cens, cens_par, covar",
+    "n, model_cens, cens_par, covariate_range",
     [
         (0, "uniform", 0.5, 1.0),
         (1, "bad", 0.5, 1.0),
@@ -16,10 +16,10 @@ def test_validate_gen_cphm_inputs_valid():
         (1, "uniform", 0.5, -1.0),
     ],
 )
-def test_validate_gen_cphm_inputs_invalid(n, model_cens, cens_par, covar):
+def test_validate_gen_cphm_inputs_invalid(n, model_cens, cens_par, covariate_range):
     """Invalid parameter combinations should raise ValueError."""
     with pytest.raises(ValueError):
-        v.validate_gen_cphm_inputs(n, model_cens, cens_par, covar)
+        v.validate_gen_cphm_inputs(n, model_cens, cens_par, covariate_range)
 
 
 def test_validate_dg_biv_inputs_invalid():
@@ -36,7 +36,7 @@ def test_validate_gen_cmm_inputs_invalid_beta_length():
             "uniform",
             0.5,
             [0.1, 0.2],
-            covar=1.0,
+            covariate_range=1.0,
             rate=[0.1] * 6,
         )
 

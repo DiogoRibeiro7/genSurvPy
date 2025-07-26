@@ -28,6 +28,8 @@ poetry install
 - Easy integration with `pandas` and `NumPy`
 - Suitable for benchmarking survival algorithms and teaching
 - Accelerated Failure Time (Log-Normal) model generator
+- Mixture cure and piecewise exponential models
+- Competing risks generators (constant and Weibull hazards)
 - Command-line interface powered by `Typer`
 
 ## 🧪 Example
@@ -36,7 +38,7 @@ poetry install
 from gen_surv import generate
 
 # CPHM
-generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
+generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
 
 # AFT Log-Normal
 generate(model="aft_ln", n=100, beta=[0.5, -0.3], sigma=1.0, model_cens="exponential", cens_par=3.0)
@@ -54,6 +56,18 @@ generate(model="tdcm", n=100, dist="weibull", corr=0.5,
 generate(model="thmm", n=100, qmat=[[0, 0.2, 0], [0.1, 0, 0.1], [0, 0.3, 0]],
          emission_pars={"mu": [0.0, 1.0, 2.0], "sigma": [0.5, 0.5, 0.5]},
          p0=[1.0, 0.0, 0.0], model_cens="exponential", cens_par=3.0)
+
+# Mixture Cure
+generate(model="mixture_cure", n=100, cure_fraction=0.3, seed=42)
+
+# Piecewise Exponential
+generate(
+    model="piecewise_exponential",
+    n=100,
+    breakpoints=[1.0, 3.0],
+    hazard_rates=[0.2, 0.5, 1.0],
+    seed=0
+)
 ```
 
 ## ⌨️ Command-Line Usage
@@ -75,6 +89,12 @@ python -m gen_surv dataset aft_ln --n 100 > data.csv
 | `gen_tdcm()` | Time-Dependent Covariate Model |
 | `gen_thmm()` | Time-Homogeneous Markov Model |
 | `gen_aft_log_normal()` | Accelerated Failure Time Log-Normal |
+| `gen_aft_log_logistic()` | AFT model with log-logistic baseline |
+| `gen_competing_risks()` | Competing risks with constant hazards |
+| `gen_competing_risks_weibull()` | Competing risks with Weibull hazards |
+| `gen_mixture_cure()` | Mixture cure model |
+| `cure_fraction_estimate()` | Estimate cure fraction |
+| `gen_piecewise_exponential()` | Piecewise exponential model |
 | `sample_bivariate_distribution()` | Sample correlated Weibull or exponential times |
 | `runifcens()` | Generate uniform censoring times |
 | `rexpocens()` | Generate exponential censoring times |
