@@ -13,7 +13,10 @@ from .cphm import gen_cphm
 from .cmm import gen_cmm
 from .tdcm import gen_tdcm
 from .thmm import gen_thmm
-from .aft import gen_aft_log_normal, gen_aft_weibull
+from .aft import gen_aft_log_normal, gen_aft_weibull, gen_aft_log_logistic
+from .competing_risks import gen_competing_risks, gen_competing_risks_weibull
+from .mixture import gen_mixture_cure, cure_fraction_estimate
+from .piecewise import gen_piecewise_exponential
 
 # Helper functions
 from .bivariate import sample_bivariate_distribution
@@ -25,8 +28,9 @@ try:
         plot_survival_curve,
         plot_hazard_comparison,
         plot_covariate_effect,
-        describe_survival
+        describe_survival,
     )
+
     _has_visualization = True
 except ImportError:
     _has_visualization = False
@@ -40,7 +44,6 @@ __all__ = [
     # Main interface
     "generate",
     "__version__",
-    
     # Individual generators
     "gen_cphm",
     "gen_cmm",
@@ -48,7 +51,12 @@ __all__ = [
     "gen_thmm",
     "gen_aft_log_normal",
     "gen_aft_weibull",
-    
+    "gen_aft_log_logistic",
+    "gen_competing_risks",
+    "gen_competing_risks_weibull",
+    "gen_mixture_cure",
+    "cure_fraction_estimate",
+    "gen_piecewise_exponential",
     # Helpers
     "sample_bivariate_distribution",
     "runifcens",
@@ -57,10 +65,11 @@ __all__ = [
 
 # Add visualization tools to __all__ if available
 if _has_visualization:
-    __all__.extend([
-        "plot_survival_curve",
-        "plot_hazard_comparison",
-        "plot_covariate_effect",
-        "describe_survival"
-    ])
-    
+    __all__.extend(
+        [
+            "plot_survival_curve",
+            "plot_hazard_comparison",
+            "plot_covariate_effect",
+            "describe_survival",
+        ]
+    )

@@ -7,8 +7,7 @@ including Kaplan-Meier survival curves and other commonly used plots in
 survival analysis.
 """
 
-from typing import Dict, Optional, Tuple, Union, Any
-import numpy as np
+from typing import Dict, Optional, Tuple
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -60,7 +59,7 @@ def plot_survival_curve(
     >>> from gen_surv.visualization import plot_survival_curve
     >>>
     >>> # Generate data
-    >>> df = generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
+    >>> df = generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
     >>>
     >>> # Create a categorical group based on covariate
     >>> df["group"] = pd.cut(df["covariate"], bins=2, labels=["Low", "High"])
@@ -167,7 +166,7 @@ def plot_hazard_comparison(
     >>>
     >>> # Generate data from multiple models
     >>> models = {
-    >>>     "CPHM": generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0),
+    >>>     "CPHM": generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0),
     >>>     "AFT Weibull": generate(model="aft_weibull", n=100, beta=[0.5], shape=1.5, scale=2.0,
     >>>                            model_cens="uniform", cens_par=1.0)
     >>> }
@@ -254,7 +253,7 @@ def plot_covariate_effect(
     >>> from gen_surv.visualization import plot_covariate_effect
     >>>
     >>> # Generate data with a continuous covariate
-    >>> df = generate(model="cphm", n=200, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
+    >>> df = generate(model="cphm", n=200, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
     >>>
     >>> # Visualize the effect of the covariate on survival
     >>> fig, ax = plot_covariate_effect(df, covariate_col="covariate", n_groups=3)
@@ -318,7 +317,7 @@ def describe_survival(
     >>> from gen_surv.visualization import describe_survival
     >>>
     >>> # Generate data
-    >>> df = generate(model="cphm", n=200, model_cens="uniform", cens_par=1.0, beta=0.5, covar=2.0)
+    >>> df = generate(model="cphm", n=200, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
     >>>
     >>> # Get survival summary
     >>> summary = describe_survival(df)

@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath('../../gen_surv'))
 project = 'gen_surv'
 copyright = '2025, Diogo Ribeiro'
 author = 'Diogo Ribeiro'
-release = '1.0.3'
+release = '1.0.8'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
