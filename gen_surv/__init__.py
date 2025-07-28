@@ -17,6 +17,7 @@ from .aft import gen_aft_log_normal, gen_aft_weibull, gen_aft_log_logistic
 from .competing_risks import gen_competing_risks, gen_competing_risks_weibull
 from .mixture import gen_mixture_cure, cure_fraction_estimate
 from .piecewise import gen_piecewise_exponential
+from .export import export_dataset
 
 # Helper functions
 from .bivariate import sample_bivariate_distribution
@@ -61,6 +62,7 @@ __all__ = [
     "sample_bivariate_distribution",
     "runifcens",
     "rexpocens",
+    "export_dataset",
 ]
 
 # Add visualization tools to __all__ if available

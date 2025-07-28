@@ -21,6 +21,7 @@
 ```bash
 poetry install
 ```
+This package requires **Python 3.10** or later.
 ## ✨ Features
 
 - Consistent interface across models
@@ -31,6 +32,7 @@ poetry install
 - Mixture cure and piecewise exponential models
 - Competing risks generators (constant and Weibull hazards)
 - Command-line interface powered by `Typer`
+- Export utilities for CSV, JSON, and Feather formats
 
 ## 🧪 Example
 
@@ -98,6 +100,7 @@ python -m gen_surv dataset aft_ln --n 100 > data.csv
 | `sample_bivariate_distribution()` | Sample correlated Weibull or exponential times |
 | `runifcens()` | Generate uniform censoring times |
 | `rexpocens()` | Generate exponential censoring times |
+| `export_dataset()` | Save a dataset to CSV, JSON or Feather |
 
 
 ```text
