@@ -1,5 +1,6 @@
 import pandas as pd
-from gen_surv.mixture import gen_mixture_cure, cure_fraction_estimate
+
+from gen_surv.mixture import cure_fraction_estimate, gen_mixture_cure
 
 
 def test_gen_mixture_cure_runs():

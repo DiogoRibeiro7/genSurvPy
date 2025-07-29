@@ -1,5 +1,6 @@
 import numpy as np
-from gen_surv.censoring import runifcens, rexpocens
+
+from gen_surv.censoring import rexpocens, runifcens
 
 
 def test_runifcens_range():

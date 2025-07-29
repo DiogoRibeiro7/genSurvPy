@@ -5,13 +5,14 @@ This module provides functions to generate survival data with
 competing risks under different hazard specifications.
 """
 
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union, Literal, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - used only for type hints
-    from matplotlib.figure import Figure
     from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
 
 
 def gen_competing_risks(

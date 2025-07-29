@@ -1,8 +1,10 @@
-import sys
 import os
+import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from gen_surv.thmm import gen_thmm
+
 
 def test_gen_thmm_shape():
     df = gen_thmm(

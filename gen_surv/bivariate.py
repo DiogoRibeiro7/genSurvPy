@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def sample_bivariate_distribution(n, dist, corr, dist_par):
     """
     Generate samples from a bivariate distribution with specified correlation.
@@ -14,7 +15,9 @@ def sample_bivariate_distribution(n, dist, corr, dist_par):
     - np.ndarray of shape (n, 2)
     """
     if dist not in {"weibull", "exponential"}:
-        raise ValueError("Only 'weibull' and 'exponential' distributions are supported.")
+        raise ValueError(
+            "Only 'weibull' and 'exponential' distributions are supported."
+        )
 
     # Step 1: Generate correlated standard normals using Cholesky
     mean = [0, 0]
@@ -26,13 +29,17 @@ def sample_bivariate_distribution(n, dist, corr, dist_par):
     # Step 2: Transform to marginals
     if dist == "exponential":
         if len(dist_par) != 2:
-            raise ValueError("Exponential distribution requires 2 positive rate parameters.")
+            raise ValueError(
+                "Exponential distribution requires 2 positive rate parameters."
+            )
         x1 = -np.log(1 - u[:, 0]) / dist_par[0]
         x2 = -np.log(1 - u[:, 1]) / dist_par[1]
 
     elif dist == "weibull":
         if len(dist_par) != 4:
-            raise ValueError("Weibull distribution requires 4 positive parameters [a1, b1, a2, b2].")
+            raise ValueError(
+                "Weibull distribution requires 4 positive parameters [a1, b1, a2, b2]."
+            )
         a1, b1, a2, b2 = dist_par
         x1 = (-np.log(1 - u[:, 0]) / a1) ** (1 / b1)
         x2 = (-np.log(1 - u[:, 1]) / a2) ** (1 / b2)

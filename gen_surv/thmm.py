@@ -1,9 +1,13 @@
 import numpy as np
 import pandas as pd
-from gen_surv.validate import validate_gen_thmm_inputs
-from gen_surv.censoring import runifcens, rexpocens
 
-def calculate_transitions(z1: float, cens_par: float, beta: list, rate: list, rfunc) -> dict:
+from gen_surv.censoring import rexpocens, runifcens
+from gen_surv.validate import validate_gen_thmm_inputs
+
+
+def calculate_transitions(
+    z1: float, cens_par: float, beta: list, rate: list, rfunc
+) -> dict:
     """
     Calculate transition and censoring times for THMM.
 

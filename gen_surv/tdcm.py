@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-from gen_surv.validate import validate_gen_tdcm_inputs
+
 from gen_surv.bivariate import sample_bivariate_distribution
-from gen_surv.censoring import runifcens, rexpocens
+from gen_surv.censoring import rexpocens, runifcens
+from gen_surv.validate import validate_gen_tdcm_inputs
+
 
 def generate_censored_observations(n, dist_par, model_cens, cens_par, beta, lam, b):
     """
@@ -71,6 +73,10 @@ def gen_tdcm(n, dist, corr, dist_par, model_cens, cens_par, beta, lam):
     # Generate covariate matrix from bivariate distribution
     b = sample_bivariate_distribution(n, dist, corr, dist_par)
 
-    data = generate_censored_observations(n, dist_par, model_cens, cens_par, beta, lam, b)
+    data = generate_censored_observations(
+        n, dist_par, model_cens, cens_par, beta, lam, b
+    )
 
-    return pd.DataFrame(data, columns=["id", "start", "stop", "status", "covariate", "tdcov"])
+    return pd.DataFrame(
+        data, columns=["id", "start", "stop", "status", "covariate", "tdcov"]
+    )
