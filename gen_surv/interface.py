@@ -7,16 +7,17 @@ Example:
 """
 
 from typing import Any, Literal
+
 import pandas as pd
 
-from gen_surv.cphm import gen_cphm
+from gen_surv.aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
 from gen_surv.cmm import gen_cmm
-from gen_surv.tdcm import gen_tdcm
-from gen_surv.thmm import gen_thmm
-from gen_surv.aft import gen_aft_log_normal, gen_aft_weibull, gen_aft_log_logistic
 from gen_surv.competing_risks import gen_competing_risks, gen_competing_risks_weibull
+from gen_surv.cphm import gen_cphm
 from gen_surv.mixture import gen_mixture_cure
 from gen_surv.piecewise import gen_piecewise_exponential
+from gen_surv.tdcm import gen_tdcm
+from gen_surv.thmm import gen_thmm
 
 # Type definitions for model names
 ModelType = Literal[
@@ -82,6 +83,6 @@ def generate(model: str, **kwargs: Any) -> pd.DataFrame:
     if model_lower not in _model_map:
         valid_models = list(_model_map.keys())
         raise ValueError(f"Unknown model '{model}'. Choose from {valid_models}.")
-    
+
     # Call the appropriate generator function with the provided kwargs
     return _model_map[model_lower](**kwargs)

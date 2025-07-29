@@ -5,20 +5,22 @@ This module provides functions to generate survival data following the
 Cox Proportional Hazards Model with various censoring mechanisms.
 """
 
-import numpy as np
-import pandas as pd
 from typing import Callable, Literal, Optional
 
+import numpy as np
+import pandas as pd
+
+from gen_surv.censoring import rexpocens, runifcens
 from gen_surv.validate import validate_gen_cphm_inputs
-from gen_surv.censoring import runifcens, rexpocens
+
 
 def generate_cphm_data(
-    n: int, 
-    rfunc: Callable[[int, float], np.ndarray], 
-    cens_par: float, 
-    beta: float, 
+    n: int,
+    rfunc: Callable[[int, float], np.ndarray],
+    cens_par: float,
+    beta: float,
     covariate_range: float,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
 ) -> np.ndarray:
     """
     Generate data from a Cox Proportional Hazards Model (CPHM).
@@ -45,7 +47,7 @@ def generate_cphm_data(
     """
     if seed is not None:
         np.random.seed(seed)
-        
+
     data = np.zeros((n, 3))
 
     for k in range(n):
@@ -62,12 +64,12 @@ def generate_cphm_data(
 
 
 def gen_cphm(
-    n: int, 
-    model_cens: Literal["uniform", "exponential"], 
-    cens_par: float, 
-    beta: float, 
+    n: int,
+    model_cens: Literal["uniform", "exponential"],
+    cens_par: float,
+    beta: float,
     covariate_range: float,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
 ) -> pd.DataFrame:
     """
     Generate survival data following a Cox Proportional Hazards Model.
@@ -107,10 +109,7 @@ def gen_cphm(
     """
     validate_gen_cphm_inputs(n, model_cens, cens_par, covariate_range)
 
-    rfunc = {
-        "uniform": runifcens,
-        "exponential": rexpocens
-    }[model_cens]
+    rfunc = {"uniform": runifcens, "exponential": rexpocens}[model_cens]
 
     data = generate_cphm_data(n, rfunc, cens_par, beta, covariate_range, seed)
     return pd.DataFrame(data, columns=["time", "status", "X0"])

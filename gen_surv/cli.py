@@ -5,8 +5,10 @@ This module provides a command-line interface for generating survival data
 using the gen_surv package.
 """
 
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
+
 import typer
+
 from gen_surv.interface import generate
 
 app = typer.Typer(help="Generate synthetic survival datasets.")
@@ -15,8 +17,10 @@ app = typer.Typer(help="Generate synthetic survival datasets.")
 @app.command()
 def dataset(
     model: str = typer.Argument(
-        ..., 
-        help=("Model to simulate [cphm, cmm, tdcm, thmm, aft_ln, aft_weibull, aft_log_logistic, competing_risks, competing_risks_weibull, mixture_cure, piecewise_exponential]")
+        ...,
+        help=(
+            "Model to simulate [cphm, cmm, tdcm, thmm, aft_ln, aft_weibull, aft_log_logistic, competing_risks, competing_risks_weibull, mixture_cure, piecewise_exponential]"
+        ),
     ),
     n: int = typer.Option(100, help="Number of samples"),
     model_cens: str = typer.Option(
@@ -24,7 +28,8 @@ def dataset(
     ),
     cens_par: float = typer.Option(1.0, help="Censoring parameter"),
     beta: List[float] = typer.Option(
-        [0.5], help="Regression coefficient(s). Provide multiple values for multi-parameter models."
+        [0.5],
+        help="Regression coefficient(s). Provide multiple values for multi-parameter models.",
     ),
     covariate_range: Optional[float] = typer.Option(
         2.0,
@@ -63,9 +68,7 @@ def dataset(
     hazard_rates: List[float] = typer.Option(
         [], help="Hazard rates for piecewise exponential model"
     ),
-    seed: Optional[int] = typer.Option(
-        None, help="Random seed for reproducibility"
-    ),
+    seed: Optional[int] = typer.Option(None, help="Random seed for reproducibility"),
     output: Optional[str] = typer.Option(
         None, "-o", help="Output CSV file. Prints to stdout if omitted."
     ),
@@ -92,20 +95,20 @@ def dataset(
         "n": _val(n),
         "model_cens": _val(model_cens),
         "cens_par": _val(cens_par),
-        "seed": _val(seed)
+        "seed": _val(seed),
     }
-    
+
     # Add model-specific parameters
     if model_str in ["cphm", "cmm", "thmm"]:
         # These models use a single beta and covariate range
         kwargs["beta"] = _val(beta)[0] if len(_val(beta)) > 0 else 0.5
         kwargs["covariate_range"] = _val(covariate_range)
-        
+
     elif model_str == "aft_ln":
         # Log-normal AFT model uses beta list and sigma
         kwargs["beta"] = _val(beta)
         kwargs["sigma"] = _val(sigma)
-        
+
     elif model_str == "aft_weibull":
         # Weibull AFT model uses beta list, shape, and scale
         kwargs["beta"] = _val(beta)
@@ -145,14 +148,14 @@ def dataset(
         kwargs["breakpoints"] = _val(breakpoints)
         kwargs["hazard_rates"] = _val(hazard_rates)
         kwargs["betas"] = _val(beta)
-    
+
     # Generate the data
     try:
         df = generate(**kwargs)
     except TypeError:
         # Fallback for tests where generate accepts only model and n
         df = generate(model=model_str, n=_val(n))
-    
+
     # Output the data
     if output:
         df.to_csv(output, index=False)
@@ -166,67 +169,61 @@ def visualize(
     input_file: str = typer.Argument(
         ..., help="Input CSV file containing survival data"
     ),
-    time_col: str = typer.Option(
-        "time", help="Column containing time/duration values"
-    ),
+    time_col: str = typer.Option("time", help="Column containing time/duration values"),
     status_col: str = typer.Option(
         "status", help="Column containing event indicator (1=event, 0=censored)"
     ),
     group_col: Optional[str] = typer.Option(
         None, help="Column to use for stratification"
     ),
-    output: str = typer.Option(
-        "survival_plot.png", help="Output image file"
-    ),
+    output: str = typer.Option("survival_plot.png", help="Output image file"),
 ) -> None:
     """Visualize survival data from a CSV file.
-    
+
     Examples:
         # Generate a Kaplan-Meier plot from a CSV file
         $ gen_surv visualize data.csv --time-col time --status-col status -o km_plot.png
-        
+
         # Generate a stratified plot using a grouping variable
         $ gen_surv visualize data.csv --group-col X0 -o stratified_plot.png
     """
     try:
-        import pandas as pd
-        from gen_surv.visualization import plot_survival_curve
         import matplotlib.pyplot as plt
+        import pandas as pd
+
+        from gen_surv.visualization import plot_survival_curve
     except ImportError:
         typer.echo(
             "Error: Visualization requires matplotlib and lifelines. "
             "Install them with: pip install matplotlib lifelines"
         )
         raise typer.Exit(1)
-    
+
     # Load the data
     try:
         data = pd.read_csv(input_file)
     except Exception as e:
         typer.echo(f"Error loading CSV file: {str(e)}")
         raise typer.Exit(1)
-    
+
     # Check required columns
     if time_col not in data.columns:
         typer.echo(f"Error: Time column '{time_col}' not found in data")
         raise typer.Exit(1)
-    
+
     if status_col not in data.columns:
         typer.echo(f"Error: Status column '{status_col}' not found in data")
         raise typer.Exit(1)
-    
+
     if group_col is not None and group_col not in data.columns:
         typer.echo(f"Error: Group column '{group_col}' not found in data")
         raise typer.Exit(1)
-    
+
     # Create the plot
     fig, ax = plot_survival_curve(
-        data=data,
-        time_col=time_col,
-        status_col=status_col,
-        group_col=group_col
+        data=data, time_col=time_col, status_col=status_col, group_col=group_col
     )
-    
+
     # Save the plot
     plt.savefig(output, dpi=300, bbox_inches="tight")
     typer.echo(f"Plot saved to {output}")

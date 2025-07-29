@@ -1,6 +1,6 @@
-import sys
 import os
 import runpy
+import sys
 
 import pandas as pd
 
@@ -39,6 +39,7 @@ def test_main_entry_point(monkeypatch):
     monkeypatch.setattr("sys.argv", ["gen_surv", "dataset", "cphm"])
     runpy.run_module("gen_surv.__main__", run_name="__main__")
     assert called
+
 
 def test_cli_dataset_file_output(monkeypatch, tmp_path):
     """Dataset command writes CSV to file when output path is provided."""

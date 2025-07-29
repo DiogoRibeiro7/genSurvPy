@@ -5,9 +5,10 @@ This module provides functions to generate survival data with a cure fraction,
 i.e., a proportion of subjects who are immune to the event of interest.
 """
 
+from typing import Dict, List, Literal, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union, Literal
 
 
 def gen_mixture_cure(
@@ -22,11 +23,11 @@ def gen_mixture_cure(
     model_cens: Literal["uniform", "exponential"] = "uniform",
     cens_par: float = 5.0,
     max_time: Optional[float] = 10.0,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
 ) -> pd.DataFrame:
     """
     Generate survival data with a cure fraction using a mixture cure model.
-    
+
     Parameters
     ----------
     n : int
@@ -60,7 +61,7 @@ def gen_mixture_cure(
         Maximum simulation time. Set to None for no limit.
     seed : int, optional
         Random seed for reproducibility.
-        
+
     Returns
     -------
     pd.DataFrame
@@ -70,11 +71,11 @@ def gen_mixture_cure(
         - "status": Event indicator (1=event, 0=censored)
         - "cured": Indicator of cure status (1=cured, 0=not cured)
         - "X0", "X1", ...: Covariates
-        
+
     Examples
     --------
     >>> from gen_surv.mixture import gen_mixture_cure
-    >>> 
+    >>>
     >>> # Generate data with 30% baseline cure fraction
     >>> df = gen_mixture_cure(
     ...     n=100,
@@ -83,20 +84,20 @@ def gen_mixture_cure(
     ...     betas_cure=[-0.5, 0.8],
     ...     seed=42
     ... )
-    >>> 
+    >>>
     >>> # Check cure proportion
     >>> print(f"Cured subjects: {df['cured'].mean():.2%}")
     """
     if seed is not None:
         np.random.seed(seed)
-        
+
     # Validate inputs
     if not 0 <= cure_fraction <= 1:
         raise ValueError("cure_fraction must be between 0 and 1")
-    
+
     if baseline_hazard <= 0:
         raise ValueError("baseline_hazard must be positive")
-    
+
     # Set default covariate parameters if not provided
     if covariate_params is None:
         if covariate_dist == "normal":
@@ -107,14 +108,14 @@ def gen_mixture_cure(
             covariate_params = {"p": 0.5}
         else:
             raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
-    
+
     # Set default betas if not provided
     if betas_survival is None:
         betas_survival = np.random.normal(0, 0.5, size=n_covariates)
     else:
         betas_survival = np.array(betas_survival)
         n_covariates = len(betas_survival)
-        
+
     if betas_cure is None:
         betas_cure = np.random.normal(0, 0.5, size=n_covariates)
     else:
@@ -124,57 +125,57 @@ def gen_mixture_cure(
                 f"betas_cure must have the same length as betas_survival, "
                 f"got {len(betas_cure)} vs {n_covariates}"
             )
-    
+
     # Generate covariates
     if covariate_dist == "normal":
         X = np.random.normal(
             covariate_params.get("mean", 0.0),
             covariate_params.get("std", 1.0),
-            size=(n, n_covariates)
+            size=(n, n_covariates),
         )
     elif covariate_dist == "uniform":
         X = np.random.uniform(
             covariate_params.get("low", 0.0),
             covariate_params.get("high", 1.0),
-            size=(n, n_covariates)
+            size=(n, n_covariates),
         )
     elif covariate_dist == "binary":
         X = np.random.binomial(
-            1,
-            covariate_params.get("p", 0.5),
-            size=(n, n_covariates)
+            1, covariate_params.get("p", 0.5), size=(n, n_covariates)
         )
     else:
         raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
-    
+
     # Calculate linear predictors
     lp_survival = X @ betas_survival
     lp_cure = X @ betas_cure
-    
+
     # Determine cure status (logistic model)
-    cure_probs = 1 / (1 + np.exp(-(np.log(cure_fraction / (1 - cure_fraction)) + lp_cure)))
+    cure_probs = 1 / (
+        1 + np.exp(-(np.log(cure_fraction / (1 - cure_fraction)) + lp_cure))
+    )
     cured = np.random.binomial(1, cure_probs)
-    
+
     # Generate survival times
     survival_times = np.zeros(n)
-    
+
     # For non-cured subjects, generate event times
     non_cured_indices = np.where(cured == 0)[0]
-    
+
     for i in non_cured_indices:
         # Adjust hazard rate by covariate effect
         adjusted_hazard = baseline_hazard * np.exp(lp_survival[i])
-        
+
         # Generate exponential survival time
-        survival_times[i] = np.random.exponential(scale=1/adjusted_hazard)
-    
+        survival_times[i] = np.random.exponential(scale=1 / adjusted_hazard)
+
     # For cured subjects, set "infinite" survival time
     cured_indices = np.where(cured == 1)[0]
     if max_time is not None:
         survival_times[cured_indices] = max_time * 100  # Effectively infinite
     else:
         survival_times[cured_indices] = np.inf  # Actually infinite
-    
+
     # Generate censoring times
     if model_cens == "uniform":
         cens_times = np.random.uniform(0, cens_par, size=n)
@@ -182,29 +183,26 @@ def gen_mixture_cure(
         cens_times = np.random.exponential(scale=cens_par, size=n)
     else:
         raise ValueError("model_cens must be 'uniform' or 'exponential'")
-    
+
     # Determine observed time and status
     observed_times = np.minimum(survival_times, cens_times)
     status = (survival_times <= cens_times).astype(int)
-    
+
     # Cap times at max_time if specified
     if max_time is not None:
         over_max = observed_times > max_time
         observed_times[over_max] = max_time
         status[over_max] = 0  # Censored if beyond max_time
-    
+
     # Create DataFrame
-    data = pd.DataFrame({
-        "id": np.arange(n),
-        "time": observed_times,
-        "status": status,
-        "cured": cured
-    })
-    
+    data = pd.DataFrame(
+        {"id": np.arange(n), "time": observed_times, "status": status, "cured": cured}
+    )
+
     # Add covariates
     for j in range(n_covariates):
         data[f"X{j}"] = X[:, j]
-    
+
     return data
 
 
@@ -212,11 +210,11 @@ def cure_fraction_estimate(
     data: pd.DataFrame,
     time_col: str = "time",
     status_col: str = "status",
-    bandwidth: float = 0.1
+    bandwidth: float = 0.1,
 ) -> float:
     """
     Estimate the cure fraction from observed data using non-parametric methods.
-    
+
     Parameters
     ----------
     data : pd.DataFrame
@@ -227,12 +225,12 @@ def cure_fraction_estimate(
         Name of the status column (1=event, 0=censored).
     bandwidth : float, default=0.1
         Bandwidth parameter for smoothing the tail of the survival curve.
-        
+
     Returns
     -------
     float
         Estimated cure fraction.
-    
+
     Notes
     -----
     This function uses a non-parametric approach to estimate the cure fraction
@@ -241,41 +239,44 @@ def cure_fraction_estimate(
     """
     # Sort data by time
     sorted_data = data.sort_values(by=time_col).copy()
-    
+
     # Calculate Kaplan-Meier estimate
     times = sorted_data[time_col].values
     status = sorted_data[status_col].values
     n = len(times)
-    
+
     if n == 0:
         return 0.0
-    
+
     # Calculate survival function
     survival = np.ones(n)
-    
+
     for i in range(n):
         if i > 0:
-            survival[i] = survival[i-1]
-        
+            survival[i] = survival[i - 1]
+
         # Count subjects at risk at this time
         at_risk = n - i
-        
+
         if status[i] == 1:  # Event
-            survival[i] *= (1 - 1/at_risk)
-    
+            survival[i] *= 1 - 1 / at_risk
+
     # Estimate cure fraction as the plateau of the survival curve
     # Use the last 10% of the survival curve if enough data points
     tail_size = max(int(n * 0.1), 1)
     tail_survival = survival[-tail_size:]
-    
+
     # Apply smoothing if there are enough data points
     if tail_size > 3:
         # Use kernel smoothing
-        weights = np.exp(-(np.arange(tail_size) - tail_size + 1)**2 / (2 * bandwidth * tail_size)**2)
+        weights = np.exp(
+            -((np.arange(tail_size) - tail_size + 1) ** 2)
+            / (2 * bandwidth * tail_size) ** 2
+        )
         weights = weights / weights.sum()
         cure_fraction = np.sum(tail_survival * weights)
     else:
         # Just use the last survival probability
         cure_fraction = survival[-1]
-    
+
     return cure_fraction

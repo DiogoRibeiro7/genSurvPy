@@ -5,31 +5,32 @@ This module exposes the main functions and provides access to the package versio
 
 from importlib.metadata import PackageNotFoundError, version
 
-# Main interface
-from .interface import generate
-
-# Individual generators
-from .cphm import gen_cphm
-from .cmm import gen_cmm
-from .tdcm import gen_tdcm
-from .thmm import gen_thmm
-from .aft import gen_aft_log_normal, gen_aft_weibull, gen_aft_log_logistic
-from .competing_risks import gen_competing_risks, gen_competing_risks_weibull
-from .mixture import gen_mixture_cure, cure_fraction_estimate
-from .piecewise import gen_piecewise_exponential
-from .export import export_dataset
+from .aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
 
 # Helper functions
 from .bivariate import sample_bivariate_distribution
-from .censoring import runifcens, rexpocens
+from .censoring import rexpocens, runifcens
+from .cmm import gen_cmm
+from .competing_risks import gen_competing_risks, gen_competing_risks_weibull
+
+# Individual generators
+from .cphm import gen_cphm
+from .export import export_dataset
+
+# Main interface
+from .interface import generate
+from .mixture import cure_fraction_estimate, gen_mixture_cure
+from .piecewise import gen_piecewise_exponential
+from .tdcm import gen_tdcm
+from .thmm import gen_thmm
 
 # Visualization tools (requires matplotlib and lifelines)
 try:
     from .visualization import (
-        plot_survival_curve,
-        plot_hazard_comparison,
-        plot_covariate_effect,
         describe_survival,
+        plot_covariate_effect,
+        plot_hazard_comparison,
+        plot_survival_curve,
     )
 
     _has_visualization = True

@@ -1,10 +1,12 @@
 import os
 import sys
+
 import numpy as np
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from gen_surv.bivariate import sample_bivariate_distribution
 import pytest
+
+from gen_surv.bivariate import sample_bivariate_distribution
 
 
 def test_sample_bivariate_exponential_shape():
@@ -19,10 +21,12 @@ def test_sample_bivariate_invalid_dist():
     with pytest.raises(ValueError):
         sample_bivariate_distribution(10, "invalid", 0.0, [1, 1])
 
+
 def test_sample_bivariate_exponential_param_length_error():
     """Exponential distribution with wrong param length should raise ValueError."""
     with pytest.raises(ValueError):
         sample_bivariate_distribution(5, "exponential", 0.0, [1.0])
+
 
 def test_sample_bivariate_weibull_param_length_error():
     """Weibull distribution with wrong param length should raise ValueError."""
