@@ -70,3 +70,37 @@ def test_piecewise_custom_betas_reproducible():
         seed=2,
     )
     pd.testing.assert_frame_equal(df1, df2)
+
+
+def test_piecewise_invalid_covariate_dist():
+    with pytest.raises(ValueError):
+        gen_piecewise_exponential(
+            n=5,
+            breakpoints=[1.0],
+            hazard_rates=[0.5, 1.0],
+            covariate_dist="unknown",
+            seed=1,
+        )
+
+
+def test_piecewise_invalid_censoring_model():
+    with pytest.raises(ValueError):
+        gen_piecewise_exponential(
+            n=5,
+            breakpoints=[1.0],
+            hazard_rates=[0.5, 1.0],
+            model_cens="bad",
+            seed=1,
+        )
+
+
+
+def test_piecewise_negative_breakpoint():
+    with pytest.raises(ValueError):
+        gen_piecewise_exponential(
+            n=5,
+            breakpoints=[-1.0],
+            hazard_rates=[0.5, 1.0],
+            seed=1,
+        )
+

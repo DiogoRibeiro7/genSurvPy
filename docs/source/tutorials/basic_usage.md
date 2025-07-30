@@ -15,7 +15,7 @@ import pandas as pd
      model="cphm",
      n=200,
      beta=0.7,
-     covar=1.5,
+    covariate_range=1.5,
      model_cens="exponential",
      cens_par=2.0,
      seed=42  # For reproducibility
@@ -43,7 +43,7 @@ All models share these parameters:
 Each model has unique parameters. For CPHM:
 
 - `beta`: Covariate effect (hazard ratio = exp(beta))
-- `covar`: Range for uniform covariate generation [0, covar]
+- `covariate_range`: Range for uniform covariate generation [0, covariate_range]
 
 ## Censoring Mechanisms
 
@@ -56,7 +56,7 @@ df_uniform = generate(
     model="cphm",
     n=100,
     beta=0.5,
-    covar=2.0,
+    covariate_range=2.0,
     model_cens="uniform",
     cens_par=3.0
 )
@@ -69,7 +69,7 @@ df_exponential = generate(
     model="cphm",
     n=100,
     beta=0.5,
-    covar=2.0,
+    covariate_range=2.0,
     model_cens="exponential",
     cens_par=2.0
 )
@@ -93,8 +93,8 @@ ax1.set_ylabel('Frequency')
 ax1.set_title('Distribution of Observed Times')
 
 # Event rate vs covariate
-df['covar_bin'] = pd.cut(df['covariate'], bins=5)
-event_rate = df.groupby('covar_bin')['status'].mean()
+df['covariate_bin'] = pd.cut(df['covariate'], bins=5)
+event_rate = df.groupby('covariate_bin')['status'].mean()
 event_rate.plot(kind='bar', ax=ax2, rot=45)
 ax2.set_ylabel('Event Rate')
 ax2.set_title('Event Rate by Covariate Level')
@@ -105,6 +105,6 @@ plt.show()
 
 ## Next Steps
 
-- Try different models: {doc}`model_comparison`
-- Learn advanced features: {doc}`advanced_features`  
-- See integration examples: {doc}`integration_examples`
+- Try different models (model_comparison)
+- Learn advanced features (advanced_features)
+- See integration examples (integration_examples)

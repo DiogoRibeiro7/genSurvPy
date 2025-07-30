@@ -20,6 +20,8 @@
 - Mixture cure and piecewise exponential models
 - Competing risks generators (constant and Weibull hazards)
 - Command-line interface and export utilities
+- Scikit-learn compatible data generator
+- Conversion helper for scikit-survival and lifelines
 
 ## Installation
 
@@ -40,11 +42,30 @@ poetry install
 ## Quick Example
 
 ```python
-from gen_surv import generate
+from gen_surv import export_dataset, generate
 
 # basic Cox proportional hazards data
-sim = generate(model="cphm", n=100, beta=0.5, covar=2.0,
-               model_cens="uniform", cens_par=1.0)
+sim = generate(
+    model="cphm",
+    n=100,
+    beta=0.5,
+    covariate_range=2.0,
+    model_cens="uniform",
+    cens_par=1.0,
+)
+
+# save to an RDS file
+export_dataset(sim, "survival_data.rds")
+```
+
+You can also convert the resulting DataFrame for use with
+[scikit-survival](https://scikit-survival.readthedocs.io) or
+[lifelines](https://lifelines.readthedocs.io):
+
+```python
+from gen_surv import to_sksurv
+
+sks_dataset = to_sksurv(sim)
 ```
 
 See the [usage guide](docs/source/getting_started.md) for more examples.

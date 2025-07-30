@@ -10,6 +10,7 @@ import os
 from typing import Optional
 
 import pandas as pd
+import pyreadr
 
 
 def export_dataset(df: pd.DataFrame, path: str, fmt: Optional[str] = None) -> None:
@@ -22,7 +23,7 @@ def export_dataset(df: pd.DataFrame, path: str, fmt: Optional[str] = None) -> No
     path : str
         File path to write to. The extension is used to infer the format
         when ``fmt`` is ``None``.
-    fmt : {"csv", "json", "feather"}, optional
+    fmt : {"csv", "json", "feather", "rds"}, optional
         Format to use. If omitted, inferred from ``path``.
 
     Raises
@@ -39,5 +40,7 @@ def export_dataset(df: pd.DataFrame, path: str, fmt: Optional[str] = None) -> No
         df.to_json(path, orient="table")
     elif fmt in {"feather", "ft"}:
         df.reset_index(drop=True).to_feather(path)
+    elif fmt == "rds":
+        pyreadr.write_rds(path, df.reset_index(drop=True))
     else:
         raise ValueError(f"Unsupported export format: {fmt}")
