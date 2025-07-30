@@ -6,7 +6,9 @@ This page presents the mathematical formulation behind the survival models imple
 
 ## 1. Cox Proportional Hazards Model (CPHM)
 
-The hazard function conditioned on covariates is:
+This semi-parametric approach models the hazard as a baseline component
+multiplied by an exponential term involving the covariates. The hazard
+function conditioned on covariates is:
 
 $$
 h(t \mid X) = h_0(t) \exp(X \\beta)
@@ -39,7 +41,8 @@ $$
 
 ## 2. Time-Dependent Covariate Model (TDCM)
 
-A generalization of CPHM where covariates change over time:
+This extension of the Cox model allows covariate values to vary during
+follow-up, accommodating exposures or treatments that change over time:
 
 $$
 h(t \mid Z(t)) = h_0(t) \\exp(Z(t) \\beta)
@@ -51,7 +54,8 @@ In this package, piecewise covariate values are simulated with dependence across
 
 ## 3. Continuous-Time Multi-State Markov Model (CMM)
 
-Markov model with generator matrix \( Q \). The transition probability matrix is given by:
+This framework captures transitions between a finite set of states where
+waiting times are exponentially distributed. With generator matrix \( Q \), the transition probability matrix is given by:
 
 $$
 P(t) = \\exp(Qt)
@@ -66,7 +70,9 @@ Where:
 
 ## 4. Time-Homogeneous Hidden Markov Model (THMM)
 
-This model simulates observed states with unobserved latent state transitions.
+This model handles situations where the process evolves through unobserved
+states that generate the observed responses. It simulates observed states with
+latent transitions.
 
 Let:
 
@@ -84,7 +90,9 @@ $$
 
 ## 5. Accelerated Failure Time (AFT) Models
 
-AFT models assume that the effect of covariates accelerates or decelerates time to event directly, rather than the hazard.
+These fully parametric models relate covariates to the logarithm of the
+survival time. They assume the effect of a covariate speeds up or slows down the
+event time directly, rather than acting on the hazard.
 
 ### Log-Normal AFT
 
@@ -121,19 +129,20 @@ All models support censoring:
 
 ## 6. Competing Risks Models
 
-These models simulate multiple mutually exclusive event types. Each cause has its
-own hazard function, and the observed status indicates which event occurred
-(1, 2, ...). The package includes constant-hazard and Weibull-hazard versions.
+These models handle scenarios where several distinct failure types can occur.
+Each cause has its own hazard function, and the observed status indicates which
+event occurred (1, 2, ...). The package includes constant-hazard and
+Weibull-hazard versions.
 
 ## 7. Mixture Cure Models
 
-Mixture cure models assume a proportion of subjects are immune to the event. The
-generator mixes a logistic cure component with an exponential hazard for the
-uncured, returning a ``cured`` indicator column alongside the usual time and
-status.
+These models posit that a subset of the population is cured and will never
+experience the event of interest. The generator mixes a logistic cure component
+with an exponential hazard for the uncured, returning a ``cured`` indicator
+column alongside the usual time and status.
 
 ## 8. Piecewise Exponential Model
 
-This model divides the time axis into intervals defined by user-supplied
-breakpoints. Each interval has its own hazard rate, allowing flexible hazard
-shapes over time.
+Here the baseline hazard is assumed constant within each of several
+user-specified intervals. This allows flexible hazard shapes over time while
+remaining easy to simulate.

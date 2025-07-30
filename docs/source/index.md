@@ -1,100 +1,135 @@
-# gen_surv
+# gen_surv: Survival Data Simulation in Python
 
-**gen_surv** is a Python package for simulating survival data under various models, inspired by the R package `genSurv`.
+[![Documentation Status](https://readthedocs.org/projects/gensurvpy/badge/?version=latest)](https://gensurvpy.readthedocs.io/en/latest/?badge=latest)
+[![PyPI version](https://badge.fury.io/py/gen-surv.svg)](https://badge.fury.io/py/gen-surv)
+[![Python versions](https://img.shields.io/pypi/pyversions/gen-surv.svg)](https://pypi.org/project/gen-surv/)
 
-It includes generators for:
+**gen_surv** is a comprehensive Python package for simulating survival data under various statistical models, inspired by the R package `genSurv`. It provides a unified interface for generating synthetic survival datasets that are essential for:
 
-- **Cox Proportional Hazards Models (CPHM)**
-- **Continuous-Time Markov Models (CMM)**
-- **Time-Dependent Covariate Models (TDCM)**
-- **Time-Homogeneous Hidden Markov Models (THMM)**
-- **Accelerated Failure Time (AFT) Log-Normal Models**
+- **Research**: Testing new survival analysis methods
+- **Education**: Teaching survival analysis concepts
+- **Benchmarking**: Comparing different survival models
+- **Validation**: Testing statistical software implementations
 
-Key functions include `generate()`, `gen_cphm()`, `gen_cmm()`, `gen_tdcm()`,
-`gen_thmm()`, `gen_aft_log_normal()`, `sample_bivariate_distribution()`,
-`runifcens()`, and `rexpocens()`.
+```{admonition} Quick Start
+:class: tip
 
----
+Install with pip:
+```bash
+pip install gen-surv
+```
 
-See the [Getting Started](usage) guide for installation instructions.
+Generate your first dataset:
+```python
+from gen_surv import generate
+df = generate(model="cphm", n=100, beta=0.5, covar=2.0)
+```
+```
 
-## 📚 Modules
+## Supported Models
+
+| Model | Description | Use Case |
+|-------|-------------|----------|
+| **CPHM** | Cox Proportional Hazards | Standard survival regression |
+| **AFT** | Accelerated Failure Time | Non-proportional hazards |
+| **CMM** | Continuous-Time Markov | Multi-state processes |
+| **TDCM** | Time-Dependent Covariates | Dynamic risk factors |
+| **THMM** | Time-Homogeneous Markov | Hidden state processes |
+| **Competing Risks** | Multiple event types | Cause-specific hazards |
+| **Mixture Cure** | Long-term survivors | Logistic cure fraction |
+| **Piecewise Exponential** | Piecewise constant hazard | Flexible baseline |
+
+## Algorithm Descriptions
+
+For a brief summary of each statistical model see {doc}`algorithms`. Mathematical
+details and notation are provided on the {doc}`theory` page.
+
+## Documentation Contents
 
 ```{toctree}
 :maxdepth: 2
-:caption: Contents
 
-usage
-modules
+getting_started
+tutorials/index
+api/index
 theory
+algorithms
+examples/index
+rtd
+contributing
+changelog
+bibliography
 ```
 
+## Quick Examples
 
-# 🚀 Usage Example
-
+### Cox Proportional Hazards Model
 ```python
-from gen_surv import generate
+import gen_surv as gs
 
-# CPHM
-generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
-
-# AFT Log-Normal
-generate(model="aft_ln", n=100, beta=[0.5, -0.3], sigma=1.0, model_cens="exponential", cens_par=3.0)
-
-# CMM
-generate(model="cmm", n=100, model_cens="exponential", cens_par=2.0,
-         qmat=[[0, 0.1], [0.05, 0]], p0=[1.0, 0.0])
-
-# TDCM
-generate(model="tdcm", n=100, dist="weibull", corr=0.5,
-         dist_par=[1, 2, 1, 2], model_cens="uniform", cens_par=1.0,
-         beta=[0.1, 0.2, 0.3], lam=1.0)
-
-# THMM
-generate(model="thmm", n=100, qmat=[[0, 0.2, 0], [0.1, 0, 0.1], [0, 0.3, 0]],
-         emission_pars={"mu": [0.0, 1.0, 2.0], "sigma": [0.5, 0.5, 0.5]},
-         p0=[1.0, 0.0, 0.0], model_cens="exponential", cens_par=3.0)
+# Basic CPHM with uniform censoring
+df = gs.generate(
+    model="cphm", 
+    n=500, 
+    beta=0.5, 
+    covar=2.0,
+    model_cens="uniform", 
+    cens_par=3.0
+)
 ```
 
-## ⌨️ Command-Line Usage
-
-Generate datasets directly from the terminal:
-
-```bash
-python -m gen_surv dataset aft_ln --n 100 > data.csv
+### Accelerated Failure Time Model
+```python
+# AFT with log-normal distribution
+df = gs.generate(
+    model="aft_ln",
+    n=200,
+    beta=[0.5, -0.3, 0.2],
+    sigma=1.0,
+    model_cens="exponential",
+    cens_par=2.0
+)
 ```
 
-## Repository Layout
-
-```text
-genSurvPy/
-├── gen_surv/
-│   └── ...
-├── tests/
-├── examples/
-├── docs/
-├── scripts/
-├── tasks.py
-└── TODO.md
+### Multi-State Markov Model
+```python
+# Three-state illness-death model
+df = gs.generate(
+    model="cmm",
+    n=300,
+    qmat=[[0, 0.1], [0.05, 0]],
+    p0=[1.0, 0.0],
+    model_cens="uniform",
+    cens_par=5.0
+)
 ```
 
-## 🔗 Project Links
+## Key Features
 
-- [Source Code](https://github.com/DiogoRibeiro7/genSurvPy)
-- [License](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/LICENCE)
-- [Code of Conduct](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/CODE_OF_CONDUCT.md)
-
+- **Unified Interface**: Single `generate()` function for all models
+- **Flexible Censoring**: Support for uniform and exponential censoring
+- **Rich Parameterization**: Extensive customization options
+- **Command-Line Interface**: Generate datasets from terminal
+- **Comprehensive Validation**: Input parameter checking
+- **Educational Focus**: Clear mathematical documentation
 
 ## Citation
 
-If you use **gen_surv** in your work, please cite it using the metadata in
-[CITATION.cff](../../CITATION.cff).
+If you use gen_surv in your research, please cite:
 
-## Author
+```bibtex
+@software{ribeiro2025gensurvpy,
+  title = {gen_surv: Survival Data Simulation in Python},
+  author = {Diogo Ribeiro},
+  year = {2025},
+  url = {https://github.com/DiogoRibeiro7/genSurvPy},
+  version = {1.0.8}
+}
+```
 
-**Diogo Ribeiro** — [ESMAD - Instituto Politécnico do Porto](https://esmad.ipp.pt)
+## License
 
-- ORCID: <https://orcid.org/0009-0001-2022-7072>
-- Professional email: <dfr@esmad.ipp.pt>
-- Personal email: <diogo.debastos.ribeiro@gmail.com>
+MIT License - see [LICENSE](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/LICENCE) for details.
 
+For foundational papers related to these models see the {doc}`bibliography`.
+Information on building the docs is provided in the {doc}`rtd` page.
