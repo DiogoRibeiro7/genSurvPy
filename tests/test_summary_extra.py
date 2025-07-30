@@ -1,11 +1,12 @@
 import pandas as pd
 import pytest
+
+from gen_surv import generate
 from gen_surv.summary import (
+    _print_summary,
     check_survival_data_quality,
     compare_survival_datasets,
-    _print_summary,
 )
-from gen_surv import generate
 
 
 def test_check_survival_data_quality_fix_issues():

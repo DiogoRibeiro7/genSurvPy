@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # References
 
 Below is a selection of references covering the statistical models implemented in **gen_surv**.

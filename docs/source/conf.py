@@ -64,6 +64,10 @@ intersphinx_mapping = {
     'pandas': ('https://pandas.pydata.org/docs/', None),
 }
 
+# Disable fetching remote inventories when network access is unavailable
+if os.environ.get("SKIP_INTERSPHINX", "1") == "1":
+    intersphinx_mapping = {}
+
 # HTML theme options
 html_theme = 'sphinx_rtd_theme'
 html_theme_options = {

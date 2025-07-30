@@ -11,17 +11,18 @@ def generate_censored_observations(n, dist_par, model_cens, cens_par, beta, lam,
     Generate censored TDCM observations.
 
     Parameters:
-    - n (int): Number of individuals
-    - dist_par (list): Not directly used here (kept for API compatibility)
-    - model_cens (str): "uniform" or "exponential"
-    - cens_par (float): Parameter for the censoring model
-    - beta (list): Length-2 list of regression coefficients
-    - lam (float): Rate parameter
-    - b (np.ndarray): Covariate matrix with 2 columns [., z1]
+
+        - n (int): Number of individuals
+        - dist_par (list): Not directly used here (kept for API compatibility)
+        - model_cens (str): "uniform" or "exponential"
+        - cens_par (float): Parameter for the censoring model
+        - beta (list): Length-2 list of regression coefficients
+        - lam (float): Rate parameter
+        - b (np.ndarray): Covariate matrix with 2 columns [., z1]
 
     Returns:
-    - np.ndarray: Shape (n, 6) with columns:
-      [id, start, stop, status, covariate1 (z1), covariate2 (z2)]
+        - np.ndarray: Shape (n, 6) with columns:
+          [id, start, stop, status, covariate1 (z1), covariate2 (z2)]
     """
     rfunc = runifcens if model_cens == "uniform" else rexpocens
     observations = np.zeros((n, 6))

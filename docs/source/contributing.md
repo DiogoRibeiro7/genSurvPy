@@ -1,5 +1,9 @@
+---
+orphan: true
+---
+
 # Contributing
 
 ```{include} ../../CONTRIBUTING.md
-:relative: true
+:relative-docs: true
 ```

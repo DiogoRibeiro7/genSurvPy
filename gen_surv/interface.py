@@ -58,7 +58,8 @@ def generate(model: str, **kwargs: Any) -> pd.DataFrame:
             ``tdcm``, ``thmm``, ``aft_ln``, ``aft_weibull``, ``aft_log_logistic``,
             ``competing_risks``, ``competing_risks_weibull``, ``mixture_cure``,
             or ``piecewise_exponential``.
-        **kwargs: Arguments forwarded to the chosen generator. These vary by model:
+        **kwargs: Arguments forwarded to the chosen generator. These vary by model.
+
             - cphm: n, model_cens, cens_par, beta, covariate_range
             - cmm: n, model_cens, cens_par, beta, covariate_range, rate
             - tdcm: n, dist, corr, dist_par, model_cens, cens_par, beta, lam
