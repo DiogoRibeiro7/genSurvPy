@@ -18,3 +18,19 @@ def test_piecewise_invalid_lengths():
         gen_piecewise_exponential(
             n=5, breakpoints=[1.0, 2.0], hazard_rates=[0.5], seed=42
         )
+
+def test_piecewise_invalid_hazard_and_breakpoints():
+    with pytest.raises(ValueError):
+        gen_piecewise_exponential(
+            n=5,
+            breakpoints=[2.0, 1.0],
+            hazard_rates=[0.5, 1.0, 1.5],
+            seed=42,
+        )
+    with pytest.raises(ValueError):
+        gen_piecewise_exponential(
+            n=5,
+            breakpoints=[1.0],
+            hazard_rates=[0.5, -1.0],
+            seed=42,
+        )
