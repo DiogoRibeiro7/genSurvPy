@@ -22,7 +22,7 @@ pip install gen-surv
 Generate your first dataset:
 ```python
 from gen_surv import generate
-df = generate(model="cphm", n=100, beta=0.5, covar=2.0)
+df = generate(model="cphm", n=100, beta=0.5, covariate_range=2.0)
 ```
 ```
 
@@ -72,7 +72,7 @@ df = gs.generate(
     model="cphm", 
     n=500, 
     beta=0.5, 
-    covar=2.0,
+    covariate_range=2.0,
     model_cens="uniform", 
     cens_par=3.0
 )

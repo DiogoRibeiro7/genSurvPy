@@ -33,8 +33,8 @@ from gen_surv import generate
  df = generate(
      model="cphm",      # Model type
      n=100,             # Sample size
-     beta=0.5,          # Covariate effect
-     covar=2.0,         # Covariate range
+    beta=0.5,          # Covariate effect
+    covariate_range=2.0,  # Covariate range
      model_cens="uniform",  # Censoring type
      cens_par=3.0       # Censoring parameter
  )

@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 
-# Add the package to the Python path
-project_root = Path(__file__).parent.parent.parent
+# Add the package to the Python path using an absolute path
+project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root / "gen_surv"))
 
 # Project information
@@ -74,7 +74,6 @@ html_theme_options = {
     'canonical_url': 'https://gensurvpy.readthedocs.io/',
     'analytics_id': '',
     'logo_only': False,
-    'display_version': True,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
     'style_nav_header_background': '#2980B9',

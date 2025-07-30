@@ -16,6 +16,8 @@ from .competing_risks import gen_competing_risks, gen_competing_risks_weibull
 # Individual generators
 from .cphm import gen_cphm
 from .export import export_dataset
+from .integration import to_sksurv
+from .sklearn_adapter import GenSurvDataGenerator
 
 # Main interface
 from .interface import generate
@@ -64,6 +66,8 @@ __all__ = [
     "runifcens",
     "rexpocens",
     "export_dataset",
+    "to_sksurv",
+    "GenSurvDataGenerator",
 ]
 
 # Add visualization tools to __all__ if available
