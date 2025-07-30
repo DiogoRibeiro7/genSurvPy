@@ -30,6 +30,7 @@ pandas = "^2.2.3"
 typer = "^0.12.3"
 matplotlib = "^3.10"
 lifelines = "^0.30"
+pyarrow = "^14"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
