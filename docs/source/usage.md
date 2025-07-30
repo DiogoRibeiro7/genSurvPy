@@ -31,3 +31,15 @@ python -m gen_surv dataset aft_ln --n 100 > data.csv
 
 For a full description of available models and parameters, see the API reference.
 
+
+## Building the Documentation
+
+Documentation is written using [Sphinx](https://www.sphinx-doc.org). To build the HTML pages locally run:
+
+```bash
+cd docs
+make html
+```
+
+The generated files will be available under `docs/build/html`.
+
