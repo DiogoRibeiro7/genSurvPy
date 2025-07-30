@@ -162,11 +162,12 @@ def test_cli_visualize_import_error(monkeypatch, tmp_path, capsys):
 
 def test_cli_visualize_read_error(monkeypatch, tmp_path, capsys):
     """visualize handles CSV read failures gracefully."""
-    monkeypatch.setattr("pandas.read_csv", lambda *a, **k: (_ for _ in ()).throw(Exception("boom")))
+    monkeypatch.setattr(
+        "pandas.read_csv", lambda *a, **k: (_ for _ in ()).throw(Exception("boom"))
+    )
     csv_path = tmp_path / "x.csv"
     csv_path.write_text("time,status\n1,1\n")
     with pytest.raises(typer.Exit):
         visualize(str(csv_path))
     captured = capsys.readouterr()
     assert "Error loading CSV file" in captured.out
-

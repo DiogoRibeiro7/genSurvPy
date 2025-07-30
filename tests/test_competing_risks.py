@@ -8,6 +8,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+import gen_surv.competing_risks as cr
 from gen_surv.competing_risks import (
     cause_specific_cumulative_incidence,
     gen_competing_risks,
@@ -183,3 +184,33 @@ def test_reproducibility():
 
     with pytest.raises(AssertionError):
         pd.testing.assert_frame_equal(df1, df3)
+
+
+def test_competing_risks_summary_basic():
+    df = gen_competing_risks(n=10, n_risks=2, seed=1)
+    summary = cr.competing_risks_summary(df)
+    assert summary["n_subjects"] == 10
+    assert summary["n_causes"] == 2
+    assert set(summary["events_by_cause"]) <= {1, 2}
+    assert "time_stats" in summary
+
+
+def test_competing_risks_summary_with_categorical():
+    df = gen_competing_risks(n=8, n_risks=2, seed=2)
+    df["group"] = ["A", "B"] * 4
+    summary = cr.competing_risks_summary(df, covariate_cols=["X0", "group"])
+    assert summary["covariate_stats"]["group"]["categories"] == 2
+    assert "distribution" in summary["covariate_stats"]["group"]
+
+
+import matplotlib
+
+matplotlib.use("Agg")
+
+
+def test_plot_cause_specific_hazards_runs():
+    df = gen_competing_risks(n=30, n_risks=2, seed=3)
+    fig, ax = cr.plot_cause_specific_hazards(df, time_points=np.linspace(0, 5, 5))
+    assert hasattr(fig, "savefig")
+    assert len(ax.get_lines()) >= 1
+    matplotlib.pyplot.close(fig)

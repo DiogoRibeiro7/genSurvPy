@@ -1,11 +1,12 @@
 import os
 import runpy
 import sys
+import pytest
 
 import pandas as pd
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from gen_surv.cli import dataset
+from gen_surv.cli import dataset, visualize
 
 
 def test_cli_dataset_stdout(monkeypatch, capsys):
@@ -81,7 +82,9 @@ def test_dataset_weibull_parameters(monkeypatch):
         return pd.DataFrame({"time": [1], "status": [0]})
 
     monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
-    dataset(model="aft_weibull", n=3, beta=[0.1, 0.2], shape=1.1, scale=2.2, output=None)
+    dataset(
+        model="aft_weibull", n=3, beta=[0.1, 0.2], shape=1.1, scale=2.2, output=None
+    )
     assert captured["model"] == "aft_weibull"
     assert captured["beta"] == [0.1, 0.2]
     assert captured["shape"] == 1.1
@@ -146,3 +149,109 @@ def test_dataset_mixture_cure(monkeypatch):
     assert captured["betas_survival"] == [0.4]
     assert captured["betas_cure"] == [0.4]
 
+
+def test_dataset_invalid_model(monkeypatch):
+    def fake_generate(**kwargs):
+        raise ValueError("bad model")
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    with pytest.raises(ValueError):
+        dataset(model="nope", n=1, output=None)
+
+
+def test_cli_visualize_basic(monkeypatch, tmp_path):
+    csv = tmp_path / "data.csv"
+    pd.DataFrame({"time": [1, 2], "status": [1, 0]}).to_csv(csv, index=False)
+
+    def fake_plot_survival_curve(**kwargs):
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        ax.plot([0, 1], [1, 0])
+        return fig, ax
+
+    monkeypatch.setattr(
+        "gen_surv.visualization.plot_survival_curve", fake_plot_survival_curve
+    )
+
+    saved = []
+
+    def fake_savefig(path, *args, **kwargs):
+        saved.append(path)
+
+    monkeypatch.setattr("matplotlib.pyplot.savefig", fake_savefig)
+
+    visualize(
+        str(csv),
+        time_col="time",
+        status_col="status",
+        group_col=None,
+        output=str(tmp_path / "plot.png"),
+    )
+    assert saved and saved[0].endswith("plot.png")
+
+
+def test_dataset_aft_log_logistic(monkeypatch):
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"time": [1], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(
+        model="aft_log_logistic",
+        n=1,
+        beta=[0.1],
+        shape=1.2,
+        scale=2.3,
+        output=None,
+    )
+    assert captured["model"] == "aft_log_logistic"
+    assert captured["beta"] == [0.1]
+    assert captured["shape"] == 1.2
+    assert captured["scale"] == 2.3
+
+
+def test_dataset_competing_risks_weibull(monkeypatch):
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"time": [1], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(
+        model="competing_risks_weibull",
+        n=1,
+        n_risks=2,
+        shape_params=[0.7, 1.2],
+        scale_params=[2.0, 2.0],
+        beta=0.3,
+        output=None,
+    )
+    assert captured["n_risks"] == 2
+    assert captured["shape_params"] == [0.7, 1.2]
+    assert captured["scale_params"] == [2.0, 2.0]
+    assert captured["betas"] == [0.3, 0.3]
+
+
+def test_dataset_piecewise(monkeypatch):
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"time": [1], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(
+        model="piecewise_exponential",
+        n=1,
+        breakpoints=[1.0],
+        hazard_rates=[0.2, 0.3],
+        beta=[0.4],
+        output=None,
+    )
+    assert captured["breakpoints"] == [1.0]
+    assert captured["hazard_rates"] == [0.2, 0.3]
+    assert captured["betas"] == [0.4]
