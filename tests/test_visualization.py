@@ -118,3 +118,55 @@ def test_cli_visualize_missing_column(tmp_path, capsys):
         )
     captured = capsys.readouterr()
     assert "Status column 'status' not found in data" in captured.out
+
+
+def test_cli_visualize_missing_time(tmp_path, capsys):
+    df = pd.DataFrame({"t": [1, 2], "status": [1, 0]})
+    path = tmp_path / "d.csv"
+    df.to_csv(path, index=False)
+    with pytest.raises(typer.Exit):
+        visualize(str(path), time_col="time", status_col="status")
+    captured = capsys.readouterr()
+    assert "Time column 'time' not found in data" in captured.out
+
+
+def test_cli_visualize_missing_group(tmp_path, capsys):
+    df = pd.DataFrame({"time": [1], "status": [1], "x": [0]})
+    path = tmp_path / "d2.csv"
+    df.to_csv(path, index=False)
+    with pytest.raises(typer.Exit):
+        visualize(str(path), time_col="time", status_col="status", group_col="group")
+    captured = capsys.readouterr()
+    assert "Group column 'group' not found in data" in captured.out
+
+
+def test_cli_visualize_import_error(monkeypatch, tmp_path, capsys):
+    """visualize exits when matplotlib is missing."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name.startswith("matplotlib"):  # simulate missing dependency
+            raise ImportError("no matplot")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    csv_path = tmp_path / "d.csv"
+    pd.DataFrame({"time": [1], "status": [1]}).to_csv(csv_path, index=False)
+    with pytest.raises(typer.Exit):
+        visualize(str(csv_path))
+    captured = capsys.readouterr()
+    assert "Visualization requires matplotlib" in captured.out
+
+
+def test_cli_visualize_read_error(monkeypatch, tmp_path, capsys):
+    """visualize handles CSV read failures gracefully."""
+    monkeypatch.setattr("pandas.read_csv", lambda *a, **k: (_ for _ in ()).throw(Exception("boom")))
+    csv_path = tmp_path / "x.csv"
+    csv_path.write_text("time,status\n1,1\n")
+    with pytest.raises(typer.Exit):
+        visualize(str(csv_path))
+    captured = capsys.readouterr()
+    assert "Error loading CSV file" in captured.out
+

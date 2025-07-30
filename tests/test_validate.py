@@ -42,6 +42,31 @@ def test_validate_gen_cmm_inputs_invalid_beta_length():
         )
 
 
+@pytest.mark.parametrize(
+    "n, model_cens, cens_par, cov_range, rate",
+    [
+        (0, "uniform", 0.5, 1.0, [0.1] * 6),
+        (1, "bad", 0.5, 1.0, [0.1] * 6),
+        (1, "uniform", 0.0, 1.0, [0.1] * 6),
+        (1, "uniform", 0.5, 0.0, [0.1] * 6),
+        (1, "uniform", 0.5, 1.0, [0.1] * 3),
+    ],
+)
+def test_validate_gen_cmm_inputs_other_invalid(
+    n, model_cens, cens_par, cov_range, rate
+):
+    with pytest.raises(ValueError):
+        v.validate_gen_cmm_inputs(
+            n, model_cens, cens_par, [0.1, 0.2, 0.3], cov_range, rate
+        )
+
+
+def test_validate_gen_cmm_inputs_valid():
+    v.validate_gen_cmm_inputs(
+        1, "uniform", 1.0, [0.1, 0.2, 0.3], covariate_range=1.0, rate=[0.1] * 6
+    )
+
+
 def test_validate_gen_tdcm_inputs_invalid_lambda():
     """Lambda <= 0 should raise a ValueError."""
     with pytest.raises(ValueError):
@@ -57,6 +82,44 @@ def test_validate_gen_tdcm_inputs_invalid_lambda():
         )
 
 
+@pytest.mark.parametrize(
+    "dist,corr,dist_par",
+    [
+        ("bad", 0.5, [1, 2]),
+        ("weibull", 0.0, [1, 2, 3, 4]),
+        ("weibull", 0.5, [1, 2, -1, 2]),
+        ("weibull", 0.5, [1, 2, 3]),
+        ("exponential", 2.0, [1, 1]),
+        ("exponential", 0.5, [1]),
+    ],
+)
+def test_validate_gen_tdcm_inputs_invalid_dist(dist, corr, dist_par):
+    with pytest.raises(ValueError):
+        v.validate_gen_tdcm_inputs(
+            1,
+            dist,
+            corr,
+            dist_par,
+            "uniform",
+            1.0,
+            beta=[0.1, 0.2, 0.3],
+            lam=1.0,
+        )
+
+
+def test_validate_gen_tdcm_inputs_valid():
+    v.validate_gen_tdcm_inputs(
+        1,
+        "weibull",
+        0.5,
+        [1, 1, 1, 1],
+        "uniform",
+        1.0,
+        beta=[0.1, 0.2, 0.3],
+        lam=1.0,
+    )
+
+
 def test_validate_gen_aft_log_normal_inputs_valid():
     """Valid parameters should not raise an error for AFT log-normal."""
     v.validate_gen_aft_log_normal_inputs(
@@ -68,9 +131,35 @@ def test_validate_gen_aft_log_normal_inputs_valid():
     )
 
 
+@pytest.mark.parametrize(
+    "n,beta,sigma,model_cens,cens_par",
+    [
+        (0, [0.1], 1.0, "uniform", 1.0),
+        (1, "bad", 1.0, "uniform", 1.0),
+        (1, [0.1], 0.0, "uniform", 1.0),
+        (1, [0.1], 1.0, "bad", 1.0),
+        (1, [0.1], 1.0, "uniform", 0.0),
+    ],
+)
+def test_validate_gen_aft_log_normal_inputs_invalid(
+    n, beta, sigma, model_cens, cens_par
+):
+    with pytest.raises(ValueError):
+        v.validate_gen_aft_log_normal_inputs(n, beta, sigma, model_cens, cens_par)
+
+
 def test_validate_dg_biv_inputs_valid_weibull():
     """Valid parameters for a Weibull distribution should pass."""
     v.validate_dg_biv_inputs(5, "weibull", 0.1, [1.0, 1.0, 1.0, 1.0])
+
+
+def test_validate_dg_biv_inputs_invalid_corr_and_params():
+    with pytest.raises(ValueError):
+        v.validate_dg_biv_inputs(1, "exponential", -2.0, [1.0, 1.0])
+    with pytest.raises(ValueError):
+        v.validate_dg_biv_inputs(1, "exponential", 0.5, [1.0])
+    with pytest.raises(ValueError):
+        v.validate_dg_biv_inputs(1, "weibull", 0.5, [1.0, 1.0])
 
 
 def test_validate_gen_aft_weibull_inputs_and_log_logistic():
@@ -80,7 +169,46 @@ def test_validate_gen_aft_weibull_inputs_and_log_logistic():
         v.validate_gen_aft_log_logistic_inputs(1, [0.1], -1.0, 1.0, "uniform", 1.0)
 
 
+@pytest.mark.parametrize(
+    "shape,scale",
+    [(-1.0, 1.0), (1.0, -1.0)],
+)
+def test_validate_gen_aft_weibull_invalid_params(shape, scale):
+    with pytest.raises(ValueError):
+        v.validate_gen_aft_weibull_inputs(1, [0.1], shape, scale, "uniform", 1.0)
+
+
+def test_validate_gen_aft_weibull_valid():
+    v.validate_gen_aft_weibull_inputs(1, [0.1], 1.0, 1.0, "uniform", 1.0)
+
+
+def test_validate_gen_aft_log_logistic_valid():
+    v.validate_gen_aft_log_logistic_inputs(1, [0.1], 1.0, 1.0, "uniform", 1.0)
+
+
 def test_validate_competing_risks_inputs():
     with pytest.raises(ValueError):
         v.validate_competing_risks_inputs(1, 2, [0.1], None, "uniform", 1.0)
     v.validate_competing_risks_inputs(1, 1, [0.5], [[0.1]], "uniform", 0.5)
+
+
+@pytest.mark.parametrize(
+    "n,model_cens,cens_par,beta,cov_range,rate",
+    [
+        (0, "uniform", 1.0, [0.1, 0.2, 0.3], 1.0, [0.1, 0.2, 0.3]),
+        (1, "bad", 1.0, [0.1, 0.2, 0.3], 1.0, [0.1, 0.2, 0.3]),
+        (1, "uniform", 0.0, [0.1, 0.2, 0.3], 1.0, [0.1, 0.2, 0.3]),
+        (1, "uniform", 1.0, [0.1, 0.2], 1.0, [0.1, 0.2, 0.3]),
+        (1, "uniform", 1.0, [0.1, 0.2, 0.3], 0.0, [0.1, 0.2, 0.3]),
+        (1, "uniform", 1.0, [0.1, 0.2, 0.3], 1.0, [0.1]),
+    ],
+)
+def test_validate_gen_thmm_inputs_invalid(
+    n, model_cens, cens_par, beta, cov_range, rate
+):
+    with pytest.raises(ValueError):
+        v.validate_gen_thmm_inputs(n, model_cens, cens_par, beta, cov_range, rate)
+
+
+def test_validate_gen_thmm_inputs_valid():
+    v.validate_gen_thmm_inputs(1, "uniform", 1.0, [0.1, 0.2, 0.3], 1.0, [0.1, 0.2, 0.3])

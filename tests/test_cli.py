@@ -53,3 +53,96 @@ def test_cli_dataset_file_output(monkeypatch, tmp_path):
     assert out_file.exists()
     content = out_file.read_text()
     assert "time,status,X0,X1" in content
+
+
+def test_dataset_fallback(monkeypatch):
+    """If generate fails with additional kwargs, dataset retries with minimal args."""
+    calls = []
+
+    def fake_generate(**kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            raise TypeError("bad args")
+        return pd.DataFrame({"time": [0], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(model="cphm", n=2, output=None)
+    # first call has many parameters, second only model and n
+    assert calls[-1] == {"model": "cphm", "n": 2}
+    assert len(calls) == 2
+
+
+def test_dataset_weibull_parameters(monkeypatch):
+    """Parameters for aft_weibull model are forwarded correctly."""
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"time": [1], "status": [0]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(model="aft_weibull", n=3, beta=[0.1, 0.2], shape=1.1, scale=2.2, output=None)
+    assert captured["model"] == "aft_weibull"
+    assert captured["beta"] == [0.1, 0.2]
+    assert captured["shape"] == 1.1
+    assert captured["scale"] == 2.2
+
+
+def test_dataset_aft_ln(monkeypatch):
+    """aft_ln model should forward beta list and sigma."""
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"time": [1], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(model="aft_ln", n=1, beta=[0.3, 0.4], sigma=1.2, output=None)
+    assert captured["beta"] == [0.3, 0.4]
+    assert captured["sigma"] == 1.2
+
+
+def test_dataset_competing_risks(monkeypatch):
+    """competing_risks expands betas and passes hazards."""
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"time": [1], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(
+        model="competing_risks",
+        n=1,
+        n_risks=2,
+        baseline_hazards=[0.1, 0.2],
+        beta=0.5,
+        output=None,
+    )
+    assert captured["n_risks"] == 2
+    assert captured["baseline_hazards"] == [0.1, 0.2]
+    assert captured["betas"] == [0.5, 0.5]
+
+
+def test_dataset_mixture_cure(monkeypatch):
+    """mixture_cure passes cure and baseline parameters."""
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"time": [1], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(
+        model="mixture_cure",
+        n=1,
+        cure_fraction=0.2,
+        baseline_hazard=0.1,
+        beta=[0.4],
+        output=None,
+    )
+    assert captured["cure_fraction"] == 0.2
+    assert captured["baseline_hazard"] == 0.1
+    assert captured["betas_survival"] == [0.4]
+    assert captured["betas_cure"] == [0.4]
+
