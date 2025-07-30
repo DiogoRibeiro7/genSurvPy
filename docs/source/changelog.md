@@ -1,5 +1,9 @@
+---
+orphan: true
+---
+
 # Changelog
 
 ```{include} ../../CHANGELOG.md
-:relative: true
+:relative-docs: true
 ```

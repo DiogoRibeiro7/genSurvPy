@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Getting Started
 
 This page offers a quick introduction to installing and using **gen_surv**.

@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Getting Started
 
 This guide will help you install gen_surv and generate your first survival dataset.

@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Algorithm Overview
 
 This page provides a short description of each model implemented in **gen_surv**.  For mathematical details see {doc}`theory`.

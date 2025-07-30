@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # 📘 Mathematical Foundations of `gen_surv`
 
 This page presents the mathematical formulation behind the survival models implemented in the `gen_surv` package.

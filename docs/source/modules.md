@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # API Reference
 
 ::: gen_surv.cphm

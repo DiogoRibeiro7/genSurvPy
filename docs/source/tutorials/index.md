@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Tutorials
 
 Step-by-step guides for using gen_surv effectively.

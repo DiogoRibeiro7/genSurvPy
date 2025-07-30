@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # API Reference
 
 Complete documentation for all gen_surv functions and classes.

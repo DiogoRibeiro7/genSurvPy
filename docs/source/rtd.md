@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Read the Docs
 
 This project uses [Read the Docs](https://readthedocs.org/) to host its documentation. The site is automatically rebuilt whenever changes are pushed to the repository.

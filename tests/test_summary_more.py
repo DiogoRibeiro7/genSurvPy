@@ -1,9 +1,10 @@
 import pandas as pd
 import pytest
+
 from gen_surv.summary import (
-    summarize_survival_dataset,
-    check_survival_data_quality,
     _print_summary,
+    check_survival_data_quality,
+    summarize_survival_dataset,
 )
 
 
