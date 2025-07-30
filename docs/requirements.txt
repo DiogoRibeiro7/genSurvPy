@@ -1,2 +1,6 @@
-sphinx
-myst-parser
+sphinx>=6.0
+myst-parser>=1.0.0,<4.0.0
+sphinx-rtd-theme
+sphinx-autodoc-typehints
+sphinx-copybutton
+sphinx-design
