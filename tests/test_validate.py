@@ -71,3 +71,16 @@ def test_validate_gen_aft_log_normal_inputs_valid():
 def test_validate_dg_biv_inputs_valid_weibull():
     """Valid parameters for a Weibull distribution should pass."""
     v.validate_dg_biv_inputs(5, "weibull", 0.1, [1.0, 1.0, 1.0, 1.0])
+
+
+def test_validate_gen_aft_weibull_inputs_and_log_logistic():
+    with pytest.raises(ValueError):
+        v.validate_gen_aft_weibull_inputs(0, [0.1], 1.0, 1.0, "uniform", 1.0)
+    with pytest.raises(ValueError):
+        v.validate_gen_aft_log_logistic_inputs(1, [0.1], -1.0, 1.0, "uniform", 1.0)
+
+
+def test_validate_competing_risks_inputs():
+    with pytest.raises(ValueError):
+        v.validate_competing_risks_inputs(1, 2, [0.1], None, "uniform", 1.0)
+    v.validate_competing_risks_inputs(1, 1, [0.5], [[0.1]], "uniform", 0.5)
