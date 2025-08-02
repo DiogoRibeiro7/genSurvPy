@@ -5,7 +5,7 @@ message: "If you use this software, please cite it using the metadata below."
 preferred-citation:
   type: software
   title: "gen_surv"
-  version: "1.0.8"
+  version: "1.0.9"
   url: "https://github.com/DiogoRibeiro7/genSurvPy"
   authors:
     - family-names: Ribeiro
@@ -15,5 +15,5 @@ preferred-citation:
       affiliation: "ESMAD - Instituto Politécnico do Porto"
       email: "dfr@esmad.ipp.pt"
   license: "MIT"
-  date-released: "2024-01-01"
+  date-released: "2025-08-02"
 

@@ -75,6 +75,12 @@ Datasets generated with **gen_surv** can be directly used with
 [scikit-survival](https://scikit-survival.readthedocs.io) you can convert the
 DataFrame using ``to_sksurv``:
 
+```{note}
+The ``to_sksurv`` helper requires the optional dependency
+``scikit-survival``. Install it with `poetry install --with dev` or
+``pip install scikit-survival``.
+```
+
 ```python
 from gen_surv import to_sksurv
 

@@ -26,6 +26,12 @@ df = generate(model="cphm", n=100, beta=0.5, covariate_range=2.0)
 ```
 ```
 
+```{note}
+The `to_sksurv` helper and related tests require the optional
+dependency `scikit-survival`. Install it with `poetry install --with dev`
+or `pip install scikit-survival` if you need this functionality.
+```
+
 ## Supported Models
 
 | Model | Description | Use Case |
@@ -123,13 +129,13 @@ If you use gen_surv in your research, please cite:
   author = {Diogo Ribeiro},
   year = {2025},
   url = {https://github.com/DiogoRibeiro7/genSurvPy},
-  version = {1.0.8}
+  version = {1.0.9}
 }
 ```
 
 ## License
 
-MIT License - see [LICENSE](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/LICENCE) for details.
+MIT License - see [LICENSE](https://github.com/DiogoRibeiro7/genSurvPy/blob/main/LICENSE) for details.
 
 For foundational papers related to these models see the {doc}`bibliography`.
 Information on building the docs is provided in the {doc}`rtd` page.
