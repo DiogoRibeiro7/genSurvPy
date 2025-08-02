@@ -22,6 +22,13 @@ cd genSurvPy
 poetry install
 ```
 
+```{note}
+Some features and tests rely on optional packages such as
+`scikit-survival`. Install them with `poetry install --with dev` or
+`pip install scikit-survival` (additional system libraries may be
+required).
+```
+
 ## Basic Usage
 
 The main entry point is the `generate()` function:

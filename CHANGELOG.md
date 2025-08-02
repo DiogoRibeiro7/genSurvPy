@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v1.0.9 (Unreleased)
+## v1.0.9 (2025-08-02)
 
 ### Features
 - export datasets to RDS files
@@ -10,6 +10,10 @@
 
 ### Documentation
 - updated usage examples and tutorials
+- document optional scikit-survival dependency throughout the docs
+
+### Continuous Integration
+- auto-tag releases using the version check script
 
 ### Misc
 - README quick example uses `covariate_range`

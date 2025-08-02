@@ -36,7 +36,23 @@ To develop locally with all extras:
 ```bash
 git clone https://github.com/DiogoRibeiro7/genSurvPy.git
 cd genSurvPy
-poetry install
+# Install runtime and development dependencies
+# (scikit-survival is optional but required for integration tests).
+# On Debian/Ubuntu you may need ``build-essential gfortran libopenblas-dev`` to
+# build scikit-survival.
+poetry install --with dev
+```
+
+Integration tests that rely on scikit-survival are automatically skipped if the
+package is not installed.
+
+## Development Setup
+
+Before committing changes, install the pre-commit hooks:
+
+```bash
+pre-commit install
+pre-commit run --all-files
 ```
 
 ## Quick Example
@@ -108,7 +124,7 @@ Open `build/html/index.html` in your browser to view the result.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENCE](LICENCE) for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Citation
 

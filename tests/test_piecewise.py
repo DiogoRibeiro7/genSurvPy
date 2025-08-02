@@ -94,7 +94,6 @@ def test_piecewise_invalid_censoring_model():
         )
 
 
-
 def test_piecewise_negative_breakpoint():
     with pytest.raises(ValueError):
         gen_piecewise_exponential(
@@ -103,4 +102,3 @@ def test_piecewise_negative_breakpoint():
             hazard_rates=[0.5, 1.0],
             seed=1,
         )
-

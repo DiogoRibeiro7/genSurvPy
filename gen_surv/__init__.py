@@ -17,12 +17,12 @@ from .competing_risks import gen_competing_risks, gen_competing_risks_weibull
 from .cphm import gen_cphm
 from .export import export_dataset
 from .integration import to_sksurv
-from .sklearn_adapter import GenSurvDataGenerator
 
 # Main interface
 from .interface import generate
 from .mixture import cure_fraction_estimate, gen_mixture_cure
 from .piecewise import gen_piecewise_exponential
+from .sklearn_adapter import GenSurvDataGenerator
 from .tdcm import gen_tdcm
 from .thmm import gen_thmm
 

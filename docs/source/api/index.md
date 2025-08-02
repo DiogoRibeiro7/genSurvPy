@@ -6,6 +6,12 @@ orphan: true
 
 Complete documentation for all gen_surv functions and classes.
 
+```{note}
+The `to_sksurv` helper and related tests rely on the optional
+dependency `scikit-survival`. Install it with `poetry install --with dev`
+or `pip install scikit-survival` to enable this functionality.
+```
+
 ## Core Interface
 
 ```{eval-rst}
