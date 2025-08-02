@@ -7,6 +7,9 @@ from typing import List, Literal, Optional
 import numpy as np
 import pandas as pd
 
+from ._validation import ensure_censoring_model, ensure_positive
+from .censoring import rexpocens, runifcens
+
 
 def gen_aft_log_normal(
     n: int,
@@ -48,12 +51,9 @@ def gen_aft_log_normal(
     log_T = X @ np.array(beta) + epsilon
     T = np.exp(log_T)
 
-    if model_cens == "uniform":
-        C = np.random.uniform(0, cens_par, size=n)
-    elif model_cens == "exponential":
-        C = np.random.exponential(scale=cens_par, size=n)
-    else:
-        raise ValueError("model_cens must be 'uniform' or 'exponential'")
+    ensure_censoring_model(model_cens)
+    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    C = rfunc(n, cens_par)
 
     observed_time = np.minimum(T, C)
     status = (T <= C).astype(int)
@@ -106,11 +106,8 @@ def gen_aft_weibull(
     if seed is not None:
         np.random.seed(seed)
 
-    if shape <= 0:
-        raise ValueError("shape parameter must be positive")
-
-    if scale <= 0:
-        raise ValueError("scale parameter must be positive")
+    ensure_positive(shape, "shape")
+    ensure_positive(scale, "scale")
 
     p = len(beta)
     X = np.random.normal(size=(n, p))
@@ -123,12 +120,9 @@ def gen_aft_weibull(
     T = scale * (-np.log(U) * np.exp(-eta)) ** (1 / shape)
 
     # Generate censoring times
-    if model_cens == "uniform":
-        C = np.random.uniform(0, cens_par, size=n)
-    elif model_cens == "exponential":
-        C = np.random.exponential(scale=cens_par, size=n)
-    else:
-        raise ValueError("model_cens must be 'uniform' or 'exponential'")
+    ensure_censoring_model(model_cens)
+    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    C = rfunc(n, cens_par)
 
     # Observed time is the minimum of event time and censoring time
     observed_time = np.minimum(T, C)
@@ -184,11 +178,8 @@ def gen_aft_log_logistic(
     if seed is not None:
         np.random.seed(seed)
 
-    if shape <= 0:
-        raise ValueError("shape parameter must be positive")
-
-    if scale <= 0:
-        raise ValueError("scale parameter must be positive")
+    ensure_positive(shape, "shape")
+    ensure_positive(scale, "scale")
 
     p = len(beta)
     X = np.random.normal(size=(n, p))
@@ -210,12 +201,9 @@ def gen_aft_log_logistic(
     T = scale * (U / (1 - U)) ** (1 / shape) * np.exp(-eta / shape)
 
     # Generate censoring times
-    if model_cens == "uniform":
-        C = np.random.uniform(0, cens_par, size=n)
-    elif model_cens == "exponential":
-        C = np.random.exponential(scale=cens_par, size=n)
-    else:
-        raise ValueError("model_cens must be 'uniform' or 'exponential'")
+    ensure_censoring_model(model_cens)
+    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    C = rfunc(n, cens_par)
 
     # Observed time is the minimum of event time and censoring time
     observed_time = np.minimum(T, C)

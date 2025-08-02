@@ -10,6 +10,15 @@ from typing import Dict, List, Literal, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from ._validation import (
+    ensure_censoring_model,
+    ensure_in_choices,
+    ensure_positive_sequence,
+    ensure_sequence_length,
+    ParameterError,
+)
+from .censoring import rexpocens, runifcens
+
 
 def gen_piecewise_exponential(
     n: int,
@@ -80,21 +89,16 @@ def gen_piecewise_exponential(
         np.random.seed(seed)
 
     # Validate inputs
-    if len(hazard_rates) != len(breakpoints) + 1:
-        raise ValueError(
-            f"Expected {len(breakpoints) + 1} hazard rates, got {len(hazard_rates)}"
-        )
+    ensure_sequence_length(hazard_rates, len(breakpoints) + 1, "hazard_rates")
+    ensure_positive_sequence(breakpoints, "breakpoints")
+    ensure_positive_sequence(hazard_rates, "hazard_rates")
+    if np.any(np.diff(breakpoints) <= 0):
+        raise ParameterError("breakpoints", breakpoints, "must be in ascending order")
 
-    if not all(b > 0 for b in breakpoints):
-        raise ValueError("All breakpoints must be positive")
-
-    if not all(h > 0 for h in hazard_rates):
-        raise ValueError("All hazard rates must be positive")
-
-    if not all(
-        breakpoints[i] < breakpoints[i + 1] for i in range(len(breakpoints) - 1)
-    ):
-        raise ValueError("Breakpoints must be in ascending order")
+    ensure_censoring_model(model_cens)
+    ensure_in_choices(
+        covariate_dist, "covariate_dist", {"normal", "uniform", "binary"}
+    )
 
     # Set default covariate parameters if not provided
     if covariate_params is None:
@@ -104,8 +108,6 @@ def gen_piecewise_exponential(
             covariate_params = {"low": 0.0, "high": 1.0}
         elif covariate_dist == "binary":
             covariate_params = {"p": 0.5}
-        else:
-            raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
 
     # Set default betas if not provided
     if betas is None:
@@ -131,8 +133,12 @@ def gen_piecewise_exponential(
         X = np.random.binomial(
             1, covariate_params.get("p", 0.5), size=(n, n_covariates)
         )
-    else:
-        raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
+    else:  # pragma: no cover - validated above
+        raise ParameterError(
+            "covariate_dist",
+            covariate_dist,
+            "must be one of {'normal', 'uniform', 'binary'}",
+        )
 
     # Calculate linear predictor
     linear_predictor = X @ betas
@@ -187,12 +193,8 @@ def gen_piecewise_exponential(
             survival_times[i] = total_time + remaining_time / hazard
 
     # Generate censoring times
-    if model_cens == "uniform":
-        cens_times = np.random.uniform(0, cens_par, size=n)
-    elif model_cens == "exponential":
-        cens_times = np.random.exponential(scale=cens_par, size=n)
-    else:
-        raise ValueError("model_cens must be 'uniform' or 'exponential'")
+    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    cens_times = rfunc(n, cens_par)
 
     # Determine observed time and status
     observed_times = np.minimum(survival_times, cens_times)

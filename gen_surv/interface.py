@@ -6,7 +6,7 @@ Example:
     >>> df = generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
 """
 
-from typing import Any, Literal
+from typing import Any, Literal, Protocol, Dict
 
 import pandas as pd
 
@@ -18,6 +18,7 @@ from gen_surv.mixture import gen_mixture_cure
 from gen_surv.piecewise import gen_piecewise_exponential
 from gen_surv.tdcm import gen_tdcm
 from gen_surv.thmm import gen_thmm
+from ._validation import ensure_in_choices
 
 # Type definitions for model names
 ModelType = Literal[
@@ -34,8 +35,13 @@ ModelType = Literal[
     "piecewise_exponential",
 ]
 
+# Interface for generator callables
+class DataGenerator(Protocol):
+    def __call__(self, **kwargs: Any) -> pd.DataFrame: ...
+
+
 # Map model names to their generator functions
-_model_map = {
+_model_map: Dict[ModelType, DataGenerator] = {
     "cphm": gen_cphm,
     "cmm": gen_cmm,
     "tdcm": gen_tdcm,
@@ -50,7 +56,7 @@ _model_map = {
 }
 
 
-def generate(model: str, **kwargs: Any) -> pd.DataFrame:
+def generate(model: ModelType, **kwargs: Any) -> pd.DataFrame:
     """Generate survival data from a specific model.
 
     Args:
@@ -78,12 +84,8 @@ def generate(model: str, **kwargs: Any) -> pd.DataFrame:
             All models include time/duration and status columns.
 
     Raises:
-        ValueError: If an unknown model name is provided.
+        ChoiceError: If an unknown model name is provided.
     """
     model_lower = model.lower()
-    if model_lower not in _model_map:
-        valid_models = list(_model_map.keys())
-        raise ValueError(f"Unknown model '{model}'. Choose from {valid_models}.")
-
-    # Call the appropriate generator function with the provided kwargs
+    ensure_in_choices(model_lower, "model", _model_map.keys())
     return _model_map[model_lower](**kwargs)

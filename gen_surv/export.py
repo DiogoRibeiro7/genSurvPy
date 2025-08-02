@@ -12,6 +12,8 @@ from typing import Optional
 import pandas as pd
 import pyreadr
 
+from ._validation import ensure_in_choices
+
 
 def export_dataset(df: pd.DataFrame, path: str, fmt: Optional[str] = None) -> None:
     """Save a DataFrame to disk.
@@ -28,11 +30,13 @@ def export_dataset(df: pd.DataFrame, path: str, fmt: Optional[str] = None) -> No
 
     Raises
     ------
-    ValueError
+    ChoiceError
         If the format is not one of the supported types.
     """
     if fmt is None:
         fmt = os.path.splitext(path)[1].lstrip(".").lower()
+
+    ensure_in_choices(fmt, "fmt", {"csv", "json", "feather", "ft", "rds"})
 
     if fmt == "csv":
         df.to_csv(path, index=False)
@@ -42,5 +46,3 @@ def export_dataset(df: pd.DataFrame, path: str, fmt: Optional[str] = None) -> No
         df.reset_index(drop=True).to_feather(path)
     elif fmt == "rds":
         pyreadr.write_rds(path, df.reset_index(drop=True))
-    else:
-        raise ValueError(f"Unsupported export format: {fmt}")

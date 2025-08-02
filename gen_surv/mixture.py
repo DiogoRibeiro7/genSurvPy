@@ -5,25 +5,148 @@ This module provides functions to generate survival data with a cure fraction,
 i.e., a proportion of subjects who are immune to the event of interest.
 """
 
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
+
+
+_TAIL_FRACTION = 0.1
+_SMOOTH_MIN_TAIL = 3
+
+from ._validation import (
+    ensure_censoring_model,
+    ensure_in_choices,
+    ensure_positive,
+    LengthError,
+    ParameterError,
+)
+from .censoring import rexpocens, runifcens
+
+
+def _set_covariate_params(
+    covariate_dist: str,
+    covariate_params: dict[str, float | tuple[float, float]] | None,
+) -> dict[str, float | tuple[float, float]]:
+    if covariate_params is not None:
+        return covariate_params
+    if covariate_dist == "normal":
+        return {"mean": 0.0, "std": 1.0}
+    if covariate_dist == "uniform":
+        return {"low": 0.0, "high": 1.0}
+    if covariate_dist == "binary":
+        return {"p": 0.5}
+    raise ParameterError(
+        "covariate_dist", covariate_dist, "must be one of {'normal','uniform','binary'}"
+    )
+
+
+def _prepare_betas(
+    betas_survival: list[float] | None,
+    betas_cure: list[float] | None,
+    n_covariates: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], int]:
+    if betas_survival is None:
+        betas_survival_arr = np.random.normal(0, 0.5, size=n_covariates)
+    else:
+        betas_survival_arr = np.asarray(betas_survival, dtype=float)
+        n_covariates = len(betas_survival_arr)
+
+    if betas_cure is None:
+        betas_cure_arr = np.random.normal(0, 0.5, size=n_covariates)
+    else:
+        betas_cure_arr = np.asarray(betas_cure, dtype=float)
+        if len(betas_cure_arr) != n_covariates:
+            raise LengthError("betas_cure", len(betas_cure_arr), n_covariates)
+
+    return betas_survival_arr, betas_cure_arr, n_covariates
+
+
+def _generate_covariates(
+    n: int,
+    n_covariates: int,
+    covariate_dist: str,
+    covariate_params: dict[str, float | tuple[float, float]],
+) -> NDArray[np.float64]:
+    if covariate_dist == "normal":
+        return np.random.normal(
+            covariate_params.get("mean", 0.0),
+            covariate_params.get("std", 1.0),
+            size=(n, n_covariates),
+        )
+    if covariate_dist == "uniform":
+        return np.random.uniform(
+            covariate_params.get("low", 0.0),
+            covariate_params.get("high", 1.0),
+            size=(n, n_covariates),
+        )
+    if covariate_dist == "binary":
+        return np.random.binomial(
+            1, covariate_params.get("p", 0.5), size=(n, n_covariates)
+        ).astype(float)
+    raise ParameterError(
+        "covariate_dist", covariate_dist, "must be one of {'normal','uniform','binary'}"
+    )
+
+
+def _cure_status(
+    lp_cure: NDArray[np.float64], cure_fraction: float
+) -> NDArray[np.int64]:
+    cure_probs = 1 / (
+        1 + np.exp(-(np.log(cure_fraction / (1 - cure_fraction)) + lp_cure))
+    )
+    return np.random.binomial(1, cure_probs).astype(np.int64)
+
+
+def _survival_times(
+    cured: NDArray[np.int64],
+    lp_survival: NDArray[np.float64],
+    baseline_hazard: float,
+    max_time: float | None,
+) -> NDArray[np.float64]:
+    n = cured.size
+    times = np.zeros(n, dtype=float)
+    non_cured = cured == 0
+    adjusted_hazard = baseline_hazard * np.exp(lp_survival[non_cured])
+    times[non_cured] = np.random.exponential(scale=1 / adjusted_hazard)
+    if max_time is not None:
+        times[~non_cured] = max_time * 100
+    else:
+        times[~non_cured] = np.inf
+    return times
+
+
+def _apply_censoring(
+    survival_times: NDArray[np.float64],
+    model_cens: str,
+    cens_par: float,
+    max_time: float | None,
+) -> tuple[NDArray[np.float64], NDArray[np.int64]]:
+    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    cens_times = rfunc(len(survival_times), cens_par)
+    observed = np.minimum(survival_times, cens_times)
+    status = (survival_times <= cens_times).astype(int)
+    if max_time is not None:
+        over_max = observed > max_time
+        observed[over_max] = max_time
+        status[over_max] = 0
+    return observed, status
 
 
 def gen_mixture_cure(
     n: int,
     cure_fraction: float,
     baseline_hazard: float = 0.5,
-    betas_survival: Optional[List[float]] = None,
-    betas_cure: Optional[List[float]] = None,
+    betas_survival: list[float] | None = None,
+    betas_cure: list[float] | None = None,
     n_covariates: int = 2,
     covariate_dist: Literal["normal", "uniform", "binary"] = "normal",
-    covariate_params: Optional[Dict[str, Union[float, Tuple[float, float]]]] = None,
+    covariate_params: dict[str, float | tuple[float, float]] | None = None,
     model_cens: Literal["uniform", "exponential"] = "uniform",
     cens_par: float = 5.0,
-    max_time: Optional[float] = 10.0,
-    seed: Optional[int] = None,
+    max_time: float | None = 10.0,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """
     Generate survival data with a cure fraction using a mixture cure model.
@@ -91,115 +214,34 @@ def gen_mixture_cure(
     if seed is not None:
         np.random.seed(seed)
 
-    # Validate inputs
     if not 0 <= cure_fraction <= 1:
-        raise ValueError("cure_fraction must be between 0 and 1")
-
-    if baseline_hazard <= 0:
-        raise ValueError("baseline_hazard must be positive")
-
-    # Set default covariate parameters if not provided
-    if covariate_params is None:
-        if covariate_dist == "normal":
-            covariate_params = {"mean": 0.0, "std": 1.0}
-        elif covariate_dist == "uniform":
-            covariate_params = {"low": 0.0, "high": 1.0}
-        elif covariate_dist == "binary":
-            covariate_params = {"p": 0.5}
-        else:
-            raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
-
-    # Set default betas if not provided
-    if betas_survival is None:
-        betas_survival = np.random.normal(0, 0.5, size=n_covariates)
-    else:
-        betas_survival = np.array(betas_survival)
-        n_covariates = len(betas_survival)
-
-    if betas_cure is None:
-        betas_cure = np.random.normal(0, 0.5, size=n_covariates)
-    else:
-        betas_cure = np.array(betas_cure)
-        if len(betas_cure) != n_covariates:
-            raise ValueError(
-                f"betas_cure must have the same length as betas_survival, "
-                f"got {len(betas_cure)} vs {n_covariates}"
-            )
-
-    # Generate covariates
-    if covariate_dist == "normal":
-        X = np.random.normal(
-            covariate_params.get("mean", 0.0),
-            covariate_params.get("std", 1.0),
-            size=(n, n_covariates),
+        raise ParameterError(
+            "cure_fraction", cure_fraction, "must be between 0 and 1"
         )
-    elif covariate_dist == "uniform":
-        X = np.random.uniform(
-            covariate_params.get("low", 0.0),
-            covariate_params.get("high", 1.0),
-            size=(n, n_covariates),
-        )
-    elif covariate_dist == "binary":
-        X = np.random.binomial(
-            1, covariate_params.get("p", 0.5), size=(n, n_covariates)
-        )
-    else:
-        raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
+    ensure_positive(baseline_hazard, "baseline_hazard")
 
-    # Calculate linear predictors
-    lp_survival = X @ betas_survival
-    lp_cure = X @ betas_cure
-
-    # Determine cure status (logistic model)
-    cure_probs = 1 / (
-        1 + np.exp(-(np.log(cure_fraction / (1 - cure_fraction)) + lp_cure))
+    ensure_in_choices(
+        covariate_dist, "covariate_dist", {"normal", "uniform", "binary"}
     )
-    cured = np.random.binomial(1, cure_probs)
+    covariate_params = _set_covariate_params(covariate_dist, covariate_params)
+    betas_survival_arr, betas_cure_arr, n_covariates = _prepare_betas(
+        betas_survival, betas_cure, n_covariates
+    )
+    X = _generate_covariates(n, n_covariates, covariate_dist, covariate_params)
+    lp_survival = X @ betas_survival_arr
+    lp_cure = X @ betas_cure_arr
+    cured = _cure_status(lp_cure, cure_fraction)
+    survival_times = _survival_times(cured, lp_survival, baseline_hazard, max_time)
 
-    # Generate survival times
-    survival_times = np.zeros(n)
+    ensure_censoring_model(model_cens)
+    observed_times, status = _apply_censoring(
+        survival_times, model_cens, cens_par, max_time
+    )
 
-    # For non-cured subjects, generate event times
-    non_cured_indices = np.where(cured == 0)[0]
-
-    for i in non_cured_indices:
-        # Adjust hazard rate by covariate effect
-        adjusted_hazard = baseline_hazard * np.exp(lp_survival[i])
-
-        # Generate exponential survival time
-        survival_times[i] = np.random.exponential(scale=1 / adjusted_hazard)
-
-    # For cured subjects, set "infinite" survival time
-    cured_indices = np.where(cured == 1)[0]
-    if max_time is not None:
-        survival_times[cured_indices] = max_time * 100  # Effectively infinite
-    else:
-        survival_times[cured_indices] = np.inf  # Actually infinite
-
-    # Generate censoring times
-    if model_cens == "uniform":
-        cens_times = np.random.uniform(0, cens_par, size=n)
-    elif model_cens == "exponential":
-        cens_times = np.random.exponential(scale=cens_par, size=n)
-    else:
-        raise ValueError("model_cens must be 'uniform' or 'exponential'")
-
-    # Determine observed time and status
-    observed_times = np.minimum(survival_times, cens_times)
-    status = (survival_times <= cens_times).astype(int)
-
-    # Cap times at max_time if specified
-    if max_time is not None:
-        over_max = observed_times > max_time
-        observed_times[over_max] = max_time
-        status[over_max] = 0  # Censored if beyond max_time
-
-    # Create DataFrame
     data = pd.DataFrame(
         {"id": np.arange(n), "time": observed_times, "status": status, "cured": cured}
     )
 
-    # Add covariates
     for j in range(n_covariates):
         data[f"X{j}"] = X[:, j]
 
@@ -262,12 +304,12 @@ def cure_fraction_estimate(
             survival[i] *= 1 - 1 / at_risk
 
     # Estimate cure fraction as the plateau of the survival curve
-    # Use the last 10% of the survival curve if enough data points
-    tail_size = max(int(n * 0.1), 1)
+    # Use the last portion of the survival curve if enough data points
+    tail_size = max(int(n * _TAIL_FRACTION), 1)
     tail_survival = survival[-tail_size:]
 
     # Apply smoothing if there are enough data points
-    if tail_size > 3:
+    if tail_size > _SMOOTH_MIN_TAIL:
         # Use kernel smoothing
         weights = np.exp(
             -((np.arange(tail_size) - tail_size + 1) ** 2)

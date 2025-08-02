@@ -5,7 +5,7 @@ This module provides a command-line interface for generating survival data
 using the gen_surv package.
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, TypeVar, cast
 
 import typer
 
@@ -85,8 +85,10 @@ def dataset(
     # Helper to unwrap Typer Option defaults when function is called directly
     from typer.models import OptionInfo
 
-    def _val(v):
-        return v if not isinstance(v, OptionInfo) else v.default
+    T = TypeVar("T")
+
+    def _val(v: T | OptionInfo) -> T:
+        return v if not isinstance(v, OptionInfo) else cast(T, v.default)
 
     # Prepare arguments based on the selected model
     model_str = _val(model)

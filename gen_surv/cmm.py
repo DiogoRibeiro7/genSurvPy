@@ -1,11 +1,20 @@
 import numpy as np
 import pandas as pd
+from typing import Sequence, TypedDict
 
-from gen_surv.censoring import rexpocens, runifcens
+from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validate import validate_gen_cmm_inputs
 
 
-def generate_event_times(z1: float, beta: list, rate: list) -> dict:
+class EventTimes(TypedDict):
+    t12: float
+    t13: float
+    t23: float
+
+
+def generate_event_times(
+    z1: float, beta: Sequence[float], rate: Sequence[float]
+) -> EventTimes:
     """
     Generate event times for a continuous-time multi-state Markov model.
 
@@ -29,7 +38,14 @@ def generate_event_times(z1: float, beta: list, rate: list) -> dict:
     return {"t12": t12, "t13": t13, "t23": t23}
 
 
-def gen_cmm(n, model_cens, cens_par, beta, covariate_range, rate):
+def gen_cmm(
+    n: int,
+    model_cens: str,
+    cens_par: float,
+    beta: Sequence[float],
+    covariate_range: float,
+    rate: Sequence[float],
+) -> pd.DataFrame:
     """
     Generate survival data using a continuous-time Markov model (CMM).
 
@@ -46,28 +62,29 @@ def gen_cmm(n, model_cens, cens_par, beta, covariate_range, rate):
     """
     validate_gen_cmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
 
-    rfunc = runifcens if model_cens == "uniform" else rexpocens
-    rows = []
+    rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
 
-    for k in range(n):
-        z1 = np.random.uniform(0, covariate_range)
-        c = rfunc(1, cens_par)[0]
-        events = generate_event_times(z1, beta, rate)
+    z1 = np.random.uniform(0, covariate_range, size=n)
+    c = rfunc(n, cens_par)
 
-        t12, t13, t23 = events["t12"], events["t13"], events["t23"]
-        min_event_time = min(t12, t13, c)
+    u = np.random.uniform(size=(3, n))
+    t12 = (-np.log(1 - u[0]) / (rate[0] * np.exp(beta[0] * z1))) ** (1 / rate[1])
+    t13 = (-np.log(1 - u[1]) / (rate[2] * np.exp(beta[1] * z1))) ** (1 / rate[3])
 
-        if min_event_time < c:
-            if t12 <= t13:
-                transition = 1  # 1 -> 2
-                rows.append([k + 1, 0, t12, 1, z1, transition])
-            else:
-                transition = 2  # 1 -> 3
-                rows.append([k + 1, 0, t13, 1, z1, transition])
-        else:
-            # Censored before any event
-            rows.append([k + 1, 0, c, 0, z1, np.nan])
+    first_event = np.minimum(t12, t13)
+    censored = first_event >= c
+
+    status = (~censored).astype(int)
+    transition = np.where(censored, np.nan, np.where(t12 <= t13, 1, 2))
+    stop = np.where(censored, c, first_event)
 
     return pd.DataFrame(
-        rows, columns=["id", "start", "stop", "status", "X0", "transition"]
+        {
+            "id": np.arange(1, n + 1),
+            "start": np.zeros(n),
+            "stop": stop,
+            "status": status,
+            "X0": z1,
+            "transition": transition,
+        }
     )

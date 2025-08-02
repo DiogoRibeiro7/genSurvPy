@@ -7,8 +7,6 @@ including Kaplan-Meier survival curves and other commonly used plots in
 survival analysis.
 """
 
-from typing import Dict, Optional, Tuple
-
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.axes import Axes
@@ -19,12 +17,12 @@ def plot_survival_curve(
     data: pd.DataFrame,
     time_col: str = "time",
     status_col: str = "status",
-    group_col: Optional[str] = None,
+    group_col: str | None = None,
     confidence_intervals: bool = True,
     title: str = "Kaplan-Meier Survival Curve",
-    figsize: Tuple[float, float] = (10, 6),
+    figsize: tuple[float, float] = (10, 6),
     ci_alpha: float = 0.2,
-) -> Tuple[Figure, Axes]:
+) -> tuple[Figure, Axes]:
     """
     Plot Kaplan-Meier survival curves from simulated data.
 
@@ -128,13 +126,13 @@ def plot_survival_curve(
 
 
 def plot_hazard_comparison(
-    models: Dict[str, pd.DataFrame],
+    models: dict[str, pd.DataFrame],
     time_col: str = "time",
     status_col: str = "status",
     title: str = "Hazard Function Comparison",
-    figsize: Tuple[float, float] = (10, 6),
+    figsize: tuple[float, float] = (10, 6),
     bandwidth: float = 0.5,
-) -> Tuple[Figure, Axes]:
+) -> tuple[Figure, Axes]:
     """
     Compare hazard functions from multiple generated datasets.
 
@@ -215,9 +213,9 @@ def plot_covariate_effect(
     status_col: str = "status",
     n_groups: int = 3,
     title: str = "Effect of Covariate on Survival",
-    figsize: Tuple[float, float] = (10, 6),
+    figsize: tuple[float, float] = (10, 6),
     ci_alpha: float = 0.2,
-) -> Tuple[Figure, Axes]:
+) -> tuple[Figure, Axes]:
     """
     Visualize the effect of a continuous covariate on survival by discretizing
     it.

@@ -6,18 +6,19 @@ from gen_surv.summary import (
     check_survival_data_quality,
     summarize_survival_dataset,
 )
+from gen_surv._validation import ParameterError
 
 
 def test_summarize_survival_dataset_errors():
     df = pd.DataFrame({"time": [1, 2], "status": [1, 0]})
     # Missing time column
-    with pytest.raises(ValueError):
+    with pytest.raises(ParameterError):
         summarize_survival_dataset(df.drop(columns=["time"]))
     # Missing ID column when specified
-    with pytest.raises(ValueError):
+    with pytest.raises(ParameterError):
         summarize_survival_dataset(df, id_col="id")
     # Missing covariate columns
-    with pytest.raises(ValueError):
+    with pytest.raises(ParameterError):
         summarize_survival_dataset(df, covariate_cols=["bad"])
 
 

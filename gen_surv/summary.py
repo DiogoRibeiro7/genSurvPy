@@ -5,19 +5,21 @@ This module provides functions to summarize survival data,
 check data quality, and identify potential issues.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import pandas as pd
+
+from ._validation import ParameterError
 
 
 def summarize_survival_dataset(
     data: pd.DataFrame,
     time_col: str = "time",
     status_col: str = "status",
-    id_col: Optional[str] = None,
-    covariate_cols: Optional[List[str]] = None,
+    id_col: str | None = None,
+    covariate_cols: list[str] | None = None,
     verbose: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generate a comprehensive summary of a survival dataset.
 
@@ -39,7 +41,7 @@ def summarize_survival_dataset(
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Dictionary containing all summary statistics.
 
     Examples
@@ -57,10 +59,10 @@ def summarize_survival_dataset(
     # Validate input columns
     for col in [time_col, status_col]:
         if col not in data.columns:
-            raise ValueError(f"Column '{col}' not found in data")
+            raise ParameterError("column", col, "not found in data")
 
     if id_col is not None and id_col not in data.columns:
-        raise ValueError(f"ID column '{id_col}' not found in data")
+        raise ParameterError("id_col", id_col, "not found in data")
 
     # Determine covariate columns
     if covariate_cols is None:
@@ -71,7 +73,9 @@ def summarize_survival_dataset(
     else:
         missing_cols = [col for col in covariate_cols if col not in data.columns]
         if missing_cols:
-            raise ValueError(f"Covariate columns not found in data: {missing_cols}")
+            raise ParameterError(
+                "covariate_cols", missing_cols, "not found in data"
+            )
 
     # Basic dataset information
     n_subjects = len(data)
@@ -172,12 +176,12 @@ def check_survival_data_quality(
     data: pd.DataFrame,
     time_col: str = "time",
     status_col: str = "status",
-    id_col: Optional[str] = None,
+    id_col: str | None = None,
     min_time: float = 0.0,
-    max_time: Optional[float] = None,
-    status_values: Optional[List[int]] = None,
+    max_time: float | None = None,
+    status_values: list[int] | None = None,
     fix_issues: bool = False,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """
     Check for common issues in survival data and optionally fix them.
 
@@ -202,7 +206,7 @@ def check_survival_data_quality(
 
     Returns
     -------
-    Tuple[pd.DataFrame, Dict[str, Any]]
+    tuple[pd.DataFrame, dict[str, Any]]
         Tuple containing (possibly fixed) DataFrame and issues report.
 
     Examples
@@ -300,18 +304,18 @@ def check_survival_data_quality(
 
 
 def _print_summary(
-    summary: Dict[str, Any],
+    summary: dict[str, Any],
     time_col: str,
     status_col: str,
-    id_col: Optional[str],
-    covariate_cols: List[str],
+    id_col: str | None,
+    covariate_cols: list[str],
 ) -> None:
     """
     Print a formatted summary of survival data.
 
     Parameters
     ----------
-    summary : Dict[str, Any]
+    summary : dict[str, Any]
         Summary dictionary from summarize_survival_dataset.
     time_col : str
         Name of the time column.
@@ -319,7 +323,7 @@ def _print_summary(
         Name of the status column.
     id_col : str, optional
         Name of the ID column.
-    covariate_cols : List[str]
+    covariate_cols : list[str]
         List of covariate column names.
     """
     print("=" * 60)
@@ -403,17 +407,17 @@ def _print_summary(
 
 
 def compare_survival_datasets(
-    datasets: Dict[str, pd.DataFrame],
+    datasets: dict[str, pd.DataFrame],
     time_col: str = "time",
     status_col: str = "status",
-    covariate_cols: Optional[List[str]] = None,
+    covariate_cols: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Compare multiple survival datasets and summarize their differences.
 
     Parameters
     ----------
-    datasets : Dict[str, pd.DataFrame]
+    datasets : dict[str, pd.DataFrame]
         Dictionary mapping dataset names to DataFrames.
     time_col : str, default="time"
         Name of the time column in each dataset.
@@ -445,7 +449,7 @@ def compare_survival_datasets(
     >>> print(comparison)
     """
     if not datasets:
-        raise ValueError("No datasets provided for comparison")
+        raise ParameterError("datasets", datasets, "at least one dataset is required")
 
     # Find common columns if covariate_cols not specified
     if covariate_cols is None:

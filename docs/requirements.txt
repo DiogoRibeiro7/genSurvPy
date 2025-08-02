@@ -5,3 +5,4 @@ sphinx-autodoc-typehints
 sphinx-copybutton
 sphinx-design
 linkify-it-py>=2.0
+matplotlib

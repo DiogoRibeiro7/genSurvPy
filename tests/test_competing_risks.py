@@ -14,6 +14,7 @@ from gen_surv.competing_risks import (
     gen_competing_risks,
     gen_competing_risks_weibull,
 )
+from gen_surv._validation import ChoiceError, LengthError, ParameterError
 
 
 def test_gen_competing_risks_basic():
@@ -60,7 +61,7 @@ def test_gen_competing_risks_weibull_basic():
 def test_competing_risks_parameters():
     """Test parameter validation in competing risks model."""
     # Test with invalid number of baseline hazards
-    with pytest.raises(ValueError, match="Expected 3 baseline hazards"):
+    with pytest.raises(LengthError):
         gen_competing_risks(
             n=10,
             n_risks=3,
@@ -69,7 +70,7 @@ def test_competing_risks_parameters():
         )
 
     # Test with invalid number of beta coefficient sets
-    with pytest.raises(ValueError, match="Expected 2 sets of coefficients"):
+    with pytest.raises(LengthError):
         gen_competing_risks(
             n=10,
             n_risks=2,
@@ -78,16 +79,14 @@ def test_competing_risks_parameters():
         )
 
     # Test with invalid censoring model
-    with pytest.raises(
-        ValueError, match="model_cens must be 'uniform' or 'exponential'"
-    ):
+    with pytest.raises(ChoiceError):
         gen_competing_risks(n=10, n_risks=2, model_cens="invalid", seed=42)
 
 
 def test_competing_risks_weibull_parameters():
     """Test parameter validation in Weibull competing risks model."""
     # Test with invalid number of shape parameters
-    with pytest.raises(ValueError, match="Expected 3 shape parameters"):
+    with pytest.raises(LengthError):
         gen_competing_risks_weibull(
             n=10,
             n_risks=3,
@@ -96,7 +95,7 @@ def test_competing_risks_weibull_parameters():
         )
 
     # Test with invalid number of scale parameters
-    with pytest.raises(ValueError, match="Expected 3 scale parameters"):
+    with pytest.raises(LengthError):
         gen_competing_risks_weibull(
             n=10,
             n_risks=3,
@@ -123,7 +122,7 @@ def test_cause_specific_cumulative_incidence():
     assert cif["incidence"].is_monotonic_increasing
 
     # Test with invalid cause
-    with pytest.raises(ValueError, match="Cause 3 not found in the data"):
+    with pytest.raises(ParameterError):
         cause_specific_cumulative_incidence(df, time_points, cause=3)
 
 
