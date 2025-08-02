@@ -12,7 +12,14 @@ Some examples may require optional packages such as
 `pip install scikit-survival` before running these examples.
 ```
 
+Each example page includes a [Binder](https://mybinder.org/) badge so you can
+launch the corresponding notebook and experiment interactively in your
+browser.
+
 ```{toctree}
 :maxdepth: 2
 
+tdcm
+cmm
+thmm
 ```

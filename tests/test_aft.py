@@ -12,6 +12,7 @@ from hypothesis import strategies as st
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from gen_surv.aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
+from gen_surv._validation import ChoiceError, PositiveValueError
 
 
 def test_gen_aft_log_logistic_runs():
@@ -37,7 +38,7 @@ def test_gen_aft_log_logistic_runs():
 def test_gen_aft_log_logistic_invalid_shape():
     """Test that the Log-Logistic AFT generator raises error
     for invalid shape."""
-    with pytest.raises(ValueError, match="shape parameter must be positive"):
+    with pytest.raises(PositiveValueError):
         gen_aft_log_logistic(
             n=10,
             beta=[0.5, -0.2],
@@ -51,7 +52,7 @@ def test_gen_aft_log_logistic_invalid_shape():
 def test_gen_aft_log_logistic_invalid_scale():
     """Test that the Log-Logistic AFT generator raises error
     for invalid scale."""
-    with pytest.raises(ValueError, match="scale parameter must be positive"):
+    with pytest.raises(PositiveValueError):
         gen_aft_log_logistic(
             n=10,
             beta=[0.5, -0.2],
@@ -167,7 +168,7 @@ def test_gen_aft_weibull_runs():
 
 def test_gen_aft_weibull_invalid_shape():
     """Test that the Weibull AFT generator raises error for invalid shape."""
-    with pytest.raises(ValueError, match="shape parameter must be positive"):
+    with pytest.raises(PositiveValueError):
         gen_aft_weibull(
             n=10,
             beta=[0.5, -0.2],
@@ -180,7 +181,7 @@ def test_gen_aft_weibull_invalid_shape():
 
 def test_gen_aft_weibull_invalid_scale():
     """Test that the Weibull AFT generator raises error for invalid scale."""
-    with pytest.raises(ValueError, match="scale parameter must be positive"):
+    with pytest.raises(PositiveValueError):
         gen_aft_weibull(
             n=10,
             beta=[0.5, -0.2],
@@ -193,9 +194,7 @@ def test_gen_aft_weibull_invalid_scale():
 
 def test_gen_aft_weibull_invalid_cens_model():
     """Test that the Weibull AFT generator raises error for invalid censoring model."""
-    with pytest.raises(
-        ValueError, match="model_cens must be 'uniform' or 'exponential'"
-    ):
+    with pytest.raises(ChoiceError):
         gen_aft_weibull(
             n=10,
             beta=[0.5, -0.2],

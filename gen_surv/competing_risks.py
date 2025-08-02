@@ -10,6 +10,15 @@ from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple, Uni
 import numpy as np
 import pandas as pd
 
+from ._validation import (
+    ensure_censoring_model,
+    ensure_in_choices,
+    ensure_positive_sequence,
+    ensure_sequence_length,
+    ParameterError,
+)
+from .censoring import rexpocens, runifcens
+
 if TYPE_CHECKING:  # pragma: no cover - used only for type hints
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
@@ -92,16 +101,17 @@ def gen_competing_risks(
     if baseline_hazards is None:
         baseline_hazards = np.array([0.5 / (i + 1) for i in range(n_risks)])
     else:
-        baseline_hazards = np.array(baseline_hazards)
-        if len(baseline_hazards) != n_risks:
-            raise ValueError(
-                f"Expected {n_risks} baseline hazards, got {len(baseline_hazards)}"
-            )
+        baseline_hazards = np.asarray(baseline_hazards, dtype=float)
+        ensure_sequence_length(baseline_hazards, n_risks, "baseline_hazards")
+        ensure_positive_sequence(baseline_hazards, "baseline_hazards")
 
     # Set default number of covariates and their parameters
     n_covariates = 2  # Default number of covariates
 
     # Set default covariate parameters if not provided
+    ensure_in_choices(
+        covariate_dist, "covariate_dist", {"normal", "uniform", "binary"}
+    )
     if covariate_params is None:
         if covariate_dist == "normal":
             covariate_params = {"mean": 0.0, "std": 1.0}
@@ -109,18 +119,13 @@ def gen_competing_risks(
             covariate_params = {"low": 0.0, "high": 1.0}
         elif covariate_dist == "binary":
             covariate_params = {"p": 0.5}
-        else:
-            raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
 
     # Set default betas if not provided
     if betas is None:
         betas = np.random.normal(0, 0.5, size=(n_risks, n_covariates))
     else:
-        betas = np.array(betas)
-        if betas.shape[0] != n_risks:
-            raise ValueError(
-                f"Expected {n_risks} sets of coefficients, got {betas.shape[0]}"
-            )
+        betas = np.asarray(betas, dtype=float)
+        ensure_sequence_length(betas, n_risks, "betas")
         n_covariates = betas.shape[1]
 
     # Generate covariates
@@ -140,8 +145,12 @@ def gen_competing_risks(
         X = np.random.binomial(
             1, covariate_params.get("p", 0.5), size=(n, n_covariates)
         )
-    else:
-        raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
+    else:  # pragma: no cover - validated above
+        raise ParameterError(
+            "covariate_dist",
+            covariate_dist,
+            "must be one of {'normal', 'uniform', 'binary'}",
+        )
 
     # Calculate linear predictors for each risk
     linear_predictors = np.zeros((n, n_risks))
@@ -160,12 +169,9 @@ def gen_competing_risks(
         event_times[:, j] = np.random.exponential(1 / hazard_rates[:, j])
 
     # Generate censoring times
-    if model_cens == "uniform":
-        cens_times = np.random.uniform(0, cens_par, size=n)
-    elif model_cens == "exponential":
-        cens_times = np.random.exponential(scale=cens_par, size=n)
-    else:
-        raise ValueError("model_cens must be 'uniform' or 'exponential'")
+    ensure_censoring_model(model_cens)
+    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    cens_times = rfunc(n, cens_par)
 
     # Find the minimum time for each subject (first event or censoring)
     min_event_times = np.min(event_times, axis=1)
@@ -290,25 +296,22 @@ def gen_competing_risks_weibull(
     if shape_params is None:
         shape_params = np.array([1.2 if i % 2 == 0 else 0.8 for i in range(n_risks)])
     else:
-        shape_params = np.array(shape_params)
-        if len(shape_params) != n_risks:
-            raise ValueError(
-                f"Expected {n_risks} shape parameters, got {len(shape_params)}"
-            )
+        shape_params = np.asarray(shape_params, dtype=float)
+        ensure_sequence_length(shape_params, n_risks, "shape_params")
 
     if scale_params is None:
         scale_params = np.array([2.0 + i for i in range(n_risks)])
     else:
-        scale_params = np.array(scale_params)
-        if len(scale_params) != n_risks:
-            raise ValueError(
-                f"Expected {n_risks} scale parameters, got {len(scale_params)}"
-            )
+        scale_params = np.asarray(scale_params, dtype=float)
+        ensure_sequence_length(scale_params, n_risks, "scale_params")
 
     # Set default number of covariates and their parameters
     n_covariates = 2  # Default number of covariates
 
     # Set default covariate parameters if not provided
+    ensure_in_choices(
+        covariate_dist, "covariate_dist", {"normal", "uniform", "binary"}
+    )
     if covariate_params is None:
         if covariate_dist == "normal":
             covariate_params = {"mean": 0.0, "std": 1.0}
@@ -316,18 +319,13 @@ def gen_competing_risks_weibull(
             covariate_params = {"low": 0.0, "high": 1.0}
         elif covariate_dist == "binary":
             covariate_params = {"p": 0.5}
-        else:
-            raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
 
     # Set default betas if not provided
     if betas is None:
         betas = np.random.normal(0, 0.5, size=(n_risks, n_covariates))
     else:
-        betas = np.array(betas)
-        if betas.shape[0] != n_risks:
-            raise ValueError(
-                f"Expected {n_risks} sets of coefficients, got {betas.shape[0]}"
-            )
+        betas = np.asarray(betas, dtype=float)
+        ensure_sequence_length(betas, n_risks, "betas")
         n_covariates = betas.shape[1]
 
     # Generate covariates
@@ -347,8 +345,12 @@ def gen_competing_risks_weibull(
         X = np.random.binomial(
             1, covariate_params.get("p", 0.5), size=(n, n_covariates)
         )
-    else:
-        raise ValueError(f"Unknown covariate distribution: {covariate_dist}")
+    else:  # pragma: no cover - validated above
+        raise ParameterError(
+            "covariate_dist",
+            covariate_dist,
+            "must be one of {'normal', 'uniform', 'binary'}",
+        )
 
     # Calculate linear predictors for each risk
     linear_predictors = np.zeros((n, n_risks))
@@ -370,12 +372,9 @@ def gen_competing_risks_weibull(
         event_times[:, j] = adjusted_scale * (-np.log(1 - u)) ** (1 / shape_params[j])
 
     # Generate censoring times
-    if model_cens == "uniform":
-        cens_times = np.random.uniform(0, cens_par, size=n)
-    elif model_cens == "exponential":
-        cens_times = np.random.exponential(scale=cens_par, size=n)
-    else:
-        raise ValueError("model_cens must be 'uniform' or 'exponential'")
+    ensure_censoring_model(model_cens)
+    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    cens_times = rfunc(n, cens_par)
 
     # Find the minimum time for each subject (first event or censoring)
     min_event_times = np.min(event_times, axis=1)
@@ -447,8 +446,8 @@ def cause_specific_cumulative_incidence(
     # Validate the cause value
     unique_causes = set(data[status_col].unique()) - {0}  # Exclude censoring
     if cause not in unique_causes:
-        raise ValueError(
-            f"Cause {cause} not found in the data. Available causes: {unique_causes}"
+        raise ParameterError(
+            "cause", cause, f"not found in the data. Available causes: {unique_causes}"
         )
 
     # Sort data by time
@@ -499,8 +498,8 @@ def competing_risks_summary(
     data: pd.DataFrame,
     time_col: str = "time",
     status_col: str = "status",
-    covariate_cols: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    covariate_cols: list[str] | None = None,
+) -> dict[str, Any]:
     """
     Provide a summary of a competing risks dataset.
 
@@ -612,12 +611,12 @@ def competing_risks_summary(
 
 def plot_cause_specific_hazards(
     data: pd.DataFrame,
-    time_points: Optional[np.ndarray] = None,
+    time_points: np.ndarray | None = None,
     time_col: str = "time",
     status_col: str = "status",
     bandwidth: float = 0.5,
-    figsize: Tuple[float, float] = (10, 6),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 6),
+) -> tuple["Figure", "Axes"]:
     """
     Plot cause-specific hazard functions.
 

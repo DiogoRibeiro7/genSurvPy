@@ -9,7 +9,17 @@ from .aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
 
 # Helper functions
 from .bivariate import sample_bivariate_distribution
-from .censoring import rexpocens, runifcens
+from .censoring import (
+    CensoringModel,
+    rexpocens,
+    runifcens,
+    rweibcens,
+    rlognormcens,
+    rgammacens,
+    WeibullCensoring,
+    LogNormalCensoring,
+    GammaCensoring,
+)
 from .cmm import gen_cmm
 from .competing_risks import gen_competing_risks, gen_competing_risks_weibull
 
@@ -65,6 +75,13 @@ __all__ = [
     "sample_bivariate_distribution",
     "runifcens",
     "rexpocens",
+    "rweibcens",
+    "rlognormcens",
+    "rgammacens",
+    "WeibullCensoring",
+    "LogNormalCensoring",
+    "GammaCensoring",
+    "CensoringModel",
     "export_dataset",
     "to_sksurv",
     "GenSurvDataGenerator",

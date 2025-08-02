@@ -21,6 +21,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
     "sphinx.ext.githubpages",
+    "sphinx.ext.plot_directive",
     "myst_parser",
     "sphinx_copybutton",
     "sphinx_design",

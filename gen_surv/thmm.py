@@ -1,13 +1,25 @@
 import numpy as np
 import pandas as pd
+from typing import Sequence, TypedDict
 
-from gen_surv.censoring import rexpocens, runifcens
+from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validate import validate_gen_thmm_inputs
 
 
+class TransitionTimes(TypedDict):
+    c: float
+    t12: float
+    t13: float
+    t23: float
+
+
 def calculate_transitions(
-    z1: float, cens_par: float, beta: list, rate: list, rfunc
-) -> dict:
+    z1: float,
+    cens_par: float,
+    beta: Sequence[float],
+    rate: Sequence[float],
+    rfunc: CensoringFunc,
+) -> TransitionTimes:
     """
     Calculate transition and censoring times for THMM.
 
@@ -33,7 +45,14 @@ def calculate_transitions(
     return {"c": c, "t12": t12, "t13": t13, "t23": t23}
 
 
-def gen_thmm(n, model_cens, cens_par, beta, covariate_range, rate):
+def gen_thmm(
+    n: int,
+    model_cens: str,
+    cens_par: float,
+    beta: Sequence[float],
+    covariate_range: float,
+    rate: Sequence[float],
+) -> pd.DataFrame:
     """
     Generate THMM (Time-Homogeneous Markov Model) survival data.
 
@@ -49,7 +68,7 @@ def gen_thmm(n, model_cens, cens_par, beta, covariate_range, rate):
     - pd.DataFrame: Columns = ["id", "time", "state", "X0"]
     """
     validate_gen_thmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
-    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
     records = []
 
     for k in range(n):

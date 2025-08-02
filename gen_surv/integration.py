@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 
-def to_sksurv(df: pd.DataFrame, time_col: str = "time", event_col: str = "status"):
+def to_sksurv(
+    df: pd.DataFrame, time_col: str = "time", event_col: str = "status"
+) -> NDArray[np.void]:
     """Convert a DataFrame to a scikit-survival structured array.
 
     Parameters

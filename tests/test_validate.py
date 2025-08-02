@@ -1,6 +1,13 @@
 import pytest
 
 import gen_surv.validate as v
+from gen_surv._validation import (
+    ChoiceError,
+    ParameterError,
+    PositiveIntegerError,
+    ensure_censoring_model,
+    ensure_positive_int,
+)
 
 
 def test_validate_gen_cphm_inputs_valid():
@@ -212,3 +219,27 @@ def test_validate_gen_thmm_inputs_invalid(
 
 def test_validate_gen_thmm_inputs_valid():
     v.validate_gen_thmm_inputs(1, "uniform", 1.0, [0.1, 0.2, 0.3], 1.0, [0.1, 0.2, 0.3])
+
+
+def test_positive_integer_error():
+    with pytest.raises(PositiveIntegerError):
+        ensure_positive_int(-1, "n")
+
+
+def test_censoring_model_choice_error():
+    with pytest.raises(ChoiceError):
+        ensure_censoring_model("bad")
+
+
+def test_parameter_error_from_validator():
+    with pytest.raises(ParameterError):
+        v.validate_gen_tdcm_inputs(
+            1,
+            "weibull",
+            0.0,
+            [1, 2, 3, 4],
+            "uniform",
+            1.0,
+            beta=[0.1, 0.2, 0.3],
+            lam=1.0,
+        )
