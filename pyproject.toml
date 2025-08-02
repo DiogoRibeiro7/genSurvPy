@@ -28,7 +28,7 @@ python = ">=3.10,<3.13"
 numpy = "^1.26"
 pandas = "^2.2.3"
 typer = "^0.12.3"
-matplotlib = "^3.10"
+matplotlib = "~3.8"
 lifelines = "^0.30"
 pyarrow = "^14"
 pyreadr = "^0.5"
@@ -45,6 +45,7 @@ black = "^24.1.0"
 isort = "^5.13.2"
 flake8 = "^6.1.0"
 scikit-survival = "^0.24.1"
+pre-commit = "^3.8"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = ">=6.0"
@@ -78,7 +79,7 @@ line_length = 88
 
 [tool.flake8]
 max-line-length = 88
-extend-ignore = ["E203", "W503", "E501", "W291", "W293", "W391", "F401", "F841", "E402", "E302", "E305"]
+extend-ignore = ["E203", "W503", "E501", "W291", "W293", "W391", "E402", "E302", "E305"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -86,6 +87,15 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "gen_surv.interface",
+    "gen_surv.competing_risks",
+    "gen_surv.mixture",
+    "gen_surv.sklearn_adapter",
+]
 ignore_errors = true
 
 [build-system]

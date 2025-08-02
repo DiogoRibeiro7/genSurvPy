@@ -4,7 +4,7 @@
 
 Visualize transition times from the CMM generator:
 
-```{plot}
+```python
 import numpy as np
 import matplotlib.pyplot as plt
 from gen_surv import generate
