@@ -1,17 +1,13 @@
 import os
-import sys
-from pathlib import Path
-
-# Add the package to the Python path using an absolute path
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(project_root / "gen_surv"))
+from datetime import datetime
+from importlib import metadata
 
 # Project information
 project = "gen_surv"
-copyright = "2025, Diogo Ribeiro"
+copyright = f"{datetime.now().year}, Diogo Ribeiro"
 author = "Diogo Ribeiro"
-release = "1.0.9"
-version = "1.0.9"
+release = metadata.version("gen_surv")
+version = release
 
 # General configuration
 extensions = [
@@ -21,10 +17,10 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
     "sphinx.ext.githubpages",
-    "sphinx.ext.plot_directive",
     "myst_parser",
     "sphinx_copybutton",
     "sphinx_design",
+    "sphinx_autodoc_typehints",
 ]
 
 # MyST Parser configuration

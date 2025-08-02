@@ -3,7 +3,7 @@
 [![Coverage](https://codecov.io/gh/DiogoRibeiro7/genSurvPy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/DiogoRibeiro7/genSurvPy)
 [![Docs](https://readthedocs.org/projects/gensurvpy/badge/?version=latest)](https://gensurvpy.readthedocs.io/en/latest/)
 [![PyPI](https://img.shields.io/pypi/v/gen_surv)](https://pypi.org/project/gen-surv/)
-[![Tests](https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/test.yml/badge.svg)](https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/test.yml)
+[![Tests](https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml/badge.svg)](https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/pypi/pyversions/gen_surv)](https://pypi.org/project/gen-surv/)
 
 **gen_surv** is a Python package for simulating survival data under a variety of statistical models. It is inspired by the R package [genSurv](https://cran.r-project.org/package=genSurv) and provides a unified interface for generating realistic survival datasets.
@@ -24,6 +24,8 @@
 - Conversion helper for scikit-survival and lifelines
 
 ## Installation
+
+Requires Python 3.10 or later.
 
 Install the latest release from PyPI:
 

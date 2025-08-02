@@ -5,7 +5,7 @@ This module provides a command-line interface for generating survival data
 using the gen_surv package.
 """
 
-from typing import List, Optional, TypeVar, cast
+from typing import Any, Dict, List, Optional, TypeVar, cast
 
 import typer
 
@@ -91,8 +91,8 @@ def dataset(
         return v if not isinstance(v, OptionInfo) else cast(T, v.default)
 
     # Prepare arguments based on the selected model
-    model_str = _val(model)
-    kwargs = {
+    model_str: str = _val(model)
+    kwargs: Dict[str, Any] = {
         "model": model_str,
         "n": _val(n),
         "model_cens": _val(model_cens),
@@ -103,7 +103,8 @@ def dataset(
     # Add model-specific parameters
     if model_str in ["cphm", "cmm", "thmm"]:
         # These models use a single beta and covariate range
-        kwargs["beta"] = _val(beta)[0] if len(_val(beta)) > 0 else 0.5
+        beta_values = cast(List[float], _val(beta))
+        kwargs["beta"] = beta_values[0] if len(beta_values) > 0 else 0.5
         kwargs["covariate_range"] = _val(covariate_range)
 
     elif model_str == "aft_ln":
@@ -153,10 +154,10 @@ def dataset(
 
     # Generate the data
     try:
-        df = generate(**kwargs)
+        df = generate(**kwargs)  # type: ignore[arg-type]
     except TypeError:
         # Fallback for tests where generate accepts only model and n
-        df = generate(model=model_str, n=_val(n))
+        df = generate(model=model_str, n=_val(n))  # type: ignore[arg-type]
 
     # Output the data
     if output:
@@ -228,6 +229,7 @@ def visualize(
 
     # Save the plot
     plt.savefig(output, dpi=300, bbox_inches="tight")
+    plt.close(fig)
     typer.echo(f"Plot saved to {output}")
 
 
