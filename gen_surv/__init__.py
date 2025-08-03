@@ -11,14 +11,14 @@ from .aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
 from .bivariate import sample_bivariate_distribution
 from .censoring import (
     CensoringModel,
+    GammaCensoring,
+    LogNormalCensoring,
+    WeibullCensoring,
     rexpocens,
+    rgammacens,
+    rlognormcens,
     runifcens,
     rweibcens,
-    rlognormcens,
-    rgammacens,
-    WeibullCensoring,
-    LogNormalCensoring,
-    GammaCensoring,
 )
 from .cmm import gen_cmm
 from .competing_risks import gen_competing_risks, gen_competing_risks_weibull
@@ -38,12 +38,10 @@ from .thmm import gen_thmm
 
 # Visualization tools (requires matplotlib and lifelines)
 try:
-    from .visualization import (
-        describe_survival,
-        plot_covariate_effect,
-        plot_hazard_comparison,
-        plot_survival_curve,
-    )
+    from .visualization import describe_survival  # noqa: F401
+    from .visualization import plot_covariate_effect  # noqa: F401
+    from .visualization import plot_hazard_comparison  # noqa: F401
+    from .visualization import plot_survival_curve  # noqa: F401
 
     _has_visualization = True
 except ImportError:

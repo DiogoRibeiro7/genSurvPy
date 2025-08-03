@@ -15,3 +15,5 @@ repos:
     rev: v1.15.0
     hooks:
       - id: mypy
+        pass_filenames: false
+        args: [--config-file=pyproject.toml, gen_surv]

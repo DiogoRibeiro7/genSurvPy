@@ -1,12 +1,12 @@
 import pandas as pd
 import pytest
 
+from gen_surv._validation import ParameterError
 from gen_surv.summary import (
     _print_summary,
     check_survival_data_quality,
     summarize_survival_dataset,
 )
-from gen_surv._validation import ParameterError
 
 
 def test_summarize_survival_dataset_errors():

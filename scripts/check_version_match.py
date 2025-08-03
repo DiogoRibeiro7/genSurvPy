@@ -3,6 +3,7 @@
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 if sys.version_info >= (3, 11):
     import tomllib as tomli
@@ -15,8 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def pyproject_version() -> str:
     pyproject_path = ROOT / "pyproject.toml"
     with pyproject_path.open("rb") as f:
-        data = tomli.load(f)
-    return data["tool"]["poetry"]["version"]
+        data: Any = tomli.load(f)
+    return cast(str, data["tool"]["poetry"]["version"])
 
 
 def latest_tag() -> str:

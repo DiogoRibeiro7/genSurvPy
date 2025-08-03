@@ -1,9 +1,9 @@
-import numpy as np
-from numpy.typing import NDArray
 from typing import Sequence
 
-from .validate import validate_dg_biv_inputs
+import numpy as np
+from numpy.typing import NDArray
 
+from .validate import validate_dg_biv_inputs
 
 _CHI2_SCALE = 0.5
 _CLIP_EPS = 1e-10
@@ -43,7 +43,9 @@ def sample_bivariate_distribution(
     mean = [0, 0]
     cov = [[1, corr], [corr, 1]]
     z = np.random.multivariate_normal(mean, cov, size=n)
-    u = 1 - np.exp(-_CHI2_SCALE * z**2)  # transform normals to uniform via chi-squared approx
+    u = 1 - np.exp(
+        -_CHI2_SCALE * z**2
+    )  # transform normals to uniform via chi-squared approx
     u = np.clip(u, _CLIP_EPS, 1 - _CLIP_EPS)  # avoid infs in tails
 
     # Step 2: Transform to marginals

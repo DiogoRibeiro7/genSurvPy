@@ -11,11 +11,11 @@ import numpy as np
 import pandas as pd
 
 from ._validation import (
+    ParameterError,
     ensure_censoring_model,
     ensure_in_choices,
     ensure_positive_sequence,
     ensure_sequence_length,
-    ParameterError,
 )
 from .censoring import rexpocens, runifcens
 
@@ -96,9 +96,7 @@ def gen_piecewise_exponential(
         raise ParameterError("breakpoints", breakpoints, "must be in ascending order")
 
     ensure_censoring_model(model_cens)
-    ensure_in_choices(
-        covariate_dist, "covariate_dist", {"normal", "uniform", "binary"}
-    )
+    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
 
     # Set default covariate parameters if not provided
     if covariate_params is None:

@@ -1,6 +1,7 @@
+from typing import Protocol
+
 import numpy as np
 from numpy.typing import NDArray
-from typing import Protocol
 
 
 class CensoringFunc(Protocol):

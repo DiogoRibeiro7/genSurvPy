@@ -55,7 +55,9 @@ class PositiveSequenceError(ValidationError):
     """Raised when a sequence contains non-positive elements."""
 
     def __init__(self, name: str, seq: Sequence[Any]) -> None:
-        super().__init__(f"All elements in '{name}' must be greater than 0; got {seq!r}")
+        super().__init__(
+            f"All elements in '{name}' must be greater than 0; got {seq!r}"
+        )
 
 
 class ListOfListsError(ValidationError):
@@ -69,9 +71,7 @@ class ParameterError(ValidationError):
     """Raised when a parameter falls outside its allowed range."""
 
     def __init__(self, name: str, value: Any, constraint: str) -> None:
-        super().__init__(
-            f"Invalid value for '{name}': {value!r}. {constraint}"
-        )
+        super().__init__(f"Invalid value for '{name}': {value!r}. {constraint}")
 
 
 _ALLOWED_CENSORING = {"uniform", "exponential"}
@@ -108,15 +108,18 @@ def _to_float_array(seq: Sequence[Any], name: str) -> NDArray[np.float64]:
     except (TypeError, ValueError) as exc:
         raise NumericSequenceError(name, seq) from exc
 
+
 def ensure_numeric_sequence(seq: Sequence[Any], name: str) -> None:
     """Ensure all elements of ``seq`` are numeric."""
     _to_float_array(seq, name)
+
 
 def ensure_positive_sequence(seq: Sequence[float], name: str) -> None:
     """Ensure all elements of ``seq`` are positive."""
     arr = _to_float_array(seq, name)
     if np.any(arr <= 0):
         raise PositiveSequenceError(name, seq)
+
 
 def ensure_censoring_model(model_cens: str) -> None:
     """Validate that the censoring model is supported."""
