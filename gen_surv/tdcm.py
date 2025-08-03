@@ -1,7 +1,8 @@
+from typing import Sequence
+
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
-from typing import Sequence
 
 from gen_surv.bivariate import sample_bivariate_distribution
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
@@ -45,9 +46,7 @@ def generate_censored_observations(
     exp_b0_z1 = np.exp(beta[0] * z1)
     log_term = -np.log(1 - u)
     t1 = log_term / (lam * exp_b0_z1)
-    t2 = (log_term + x * (1 - np.exp(beta[1]))) / (
-        lam * np.exp(beta[0] * z1 + beta[1])
-    )
+    t2 = (log_term + x * (1 - np.exp(beta[1]))) / (lam * np.exp(beta[0] * z1 + beta[1]))
     mask = u < threshold
     t = np.where(mask, t1, t2)
     z2 = (~mask).astype(float)

@@ -6,7 +6,7 @@ Example:
     >>> df = generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
 """
 
-from typing import Any, Literal, Protocol, Dict
+from typing import Any, Dict, Literal, Protocol
 
 import pandas as pd
 
@@ -18,6 +18,7 @@ from gen_surv.mixture import gen_mixture_cure
 from gen_surv.piecewise import gen_piecewise_exponential
 from gen_surv.tdcm import gen_tdcm
 from gen_surv.thmm import gen_thmm
+
 from ._validation import ensure_in_choices
 
 # Type definitions for model names
@@ -34,6 +35,7 @@ ModelType = Literal[
     "mixture_cure",
     "piecewise_exponential",
 ]
+
 
 # Interface for generator callables
 class DataGenerator(Protocol):

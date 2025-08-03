@@ -1,6 +1,7 @@
+from typing import Sequence, TypedDict
+
 import numpy as np
 import pandas as pd
-from typing import Sequence, TypedDict
 
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validate import validate_gen_cmm_inputs

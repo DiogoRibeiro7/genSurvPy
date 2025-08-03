@@ -4,8 +4,8 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from .interface import generate
 from ._validation import ensure_in_choices
+from .interface import generate
 
 try:  # pragma: no cover - only imported if sklearn is installed
     from sklearn.base import BaseEstimator
@@ -28,9 +28,7 @@ class GenSurvDataGenerator(BaseEstimator):
     ) -> "GenSurvDataGenerator":
         return self
 
-    def transform(
-        self, X: Optional[Any] = None
-    ) -> pd.DataFrame | dict[str, list[Any]]:
+    def transform(self, X: Optional[Any] = None) -> pd.DataFrame | dict[str, list[Any]]:
         df = generate(self.model, **self.kwargs)
         ensure_in_choices(self.return_type, "return_type", {"df", "dict"})
         if self.return_type == "df":

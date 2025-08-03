@@ -11,8 +11,8 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from gen_surv.aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
 from gen_surv._validation import ChoiceError, PositiveValueError
+from gen_surv.aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
 
 
 def test_gen_aft_log_logistic_runs():

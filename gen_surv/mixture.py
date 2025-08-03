@@ -11,16 +11,15 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-
 _TAIL_FRACTION = 0.1
 _SMOOTH_MIN_TAIL = 3
 
 from ._validation import (
+    LengthError,
+    ParameterError,
     ensure_censoring_model,
     ensure_in_choices,
     ensure_positive,
-    LengthError,
-    ParameterError,
 )
 from .censoring import rexpocens, runifcens
 
@@ -215,14 +214,10 @@ def gen_mixture_cure(
         np.random.seed(seed)
 
     if not 0 <= cure_fraction <= 1:
-        raise ParameterError(
-            "cure_fraction", cure_fraction, "must be between 0 and 1"
-        )
+        raise ParameterError("cure_fraction", cure_fraction, "must be between 0 and 1")
     ensure_positive(baseline_hazard, "baseline_hazard")
 
-    ensure_in_choices(
-        covariate_dist, "covariate_dist", {"normal", "uniform", "binary"}
-    )
+    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
     covariate_params = _set_covariate_params(covariate_dist, covariate_params)
     betas_survival_arr, betas_cure_arr, n_covariates = _prepare_betas(
         betas_survival, betas_cure, n_covariates

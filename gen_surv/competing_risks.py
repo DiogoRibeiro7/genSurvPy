@@ -11,11 +11,11 @@ import numpy as np
 import pandas as pd
 
 from ._validation import (
+    ParameterError,
     ensure_censoring_model,
     ensure_in_choices,
     ensure_positive_sequence,
     ensure_sequence_length,
-    ParameterError,
 )
 from .censoring import rexpocens, runifcens
 
@@ -109,9 +109,7 @@ def gen_competing_risks(
     n_covariates = 2  # Default number of covariates
 
     # Set default covariate parameters if not provided
-    ensure_in_choices(
-        covariate_dist, "covariate_dist", {"normal", "uniform", "binary"}
-    )
+    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
     if covariate_params is None:
         if covariate_dist == "normal":
             covariate_params = {"mean": 0.0, "std": 1.0}
@@ -309,9 +307,7 @@ def gen_competing_risks_weibull(
     n_covariates = 2  # Default number of covariates
 
     # Set default covariate parameters if not provided
-    ensure_in_choices(
-        covariate_dist, "covariate_dist", {"normal", "uniform", "binary"}
-    )
+    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
     if covariate_params is None:
         if covariate_dist == "normal":
             covariate_params = {"mean": 0.0, "std": 1.0}

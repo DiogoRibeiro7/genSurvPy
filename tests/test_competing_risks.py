@@ -9,12 +9,12 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 import gen_surv.competing_risks as cr
+from gen_surv._validation import ChoiceError, LengthError, ParameterError
 from gen_surv.competing_risks import (
     cause_specific_cumulative_incidence,
     gen_competing_risks,
     gen_competing_risks_weibull,
 )
-from gen_surv._validation import ChoiceError, LengthError, ParameterError
 
 
 def test_gen_competing_risks_basic():

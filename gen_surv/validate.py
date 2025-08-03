@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from ._validation import (
+    ListOfListsError,
+    ParameterError,
     ensure_censoring_model,
     ensure_in_choices,
     ensure_numeric_sequence,
@@ -12,10 +14,7 @@ from ._validation import (
     ensure_positive_int,
     ensure_positive_sequence,
     ensure_sequence_length,
-    ListOfListsError,
-    ParameterError,
 )
-
 
 _BETA_LEN = 3
 _CMM_RATE_LEN = 6
@@ -128,7 +127,9 @@ def validate_gen_tdcm_inputs(
 
     if dist == "exponential":
         if not (-1 <= corr <= 1):
-            raise ParameterError("corr", corr, "with dist='exponential' must be in [-1,1]")
+            raise ParameterError(
+                "corr", corr, "with dist='exponential' must be in [-1,1]"
+            )
         ensure_sequence_length(dist_par, _EXP_DIST_PAR_LEN, "dist_par")
         ensure_positive_sequence(dist_par, "dist_par")
 
@@ -325,4 +326,3 @@ def validate_competing_risks_inputs(
             raise ListOfListsError("betas", betas)
         for b in betas:
             ensure_numeric_sequence(b, "betas")
-

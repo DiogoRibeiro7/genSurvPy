@@ -73,9 +73,7 @@ def summarize_survival_dataset(
     else:
         missing_cols = [col for col in covariate_cols if col not in data.columns]
         if missing_cols:
-            raise ParameterError(
-                "covariate_cols", missing_cols, "not found in data"
-            )
+            raise ParameterError("covariate_cols", missing_cols, "not found in data")
 
     # Basic dataset information
     n_subjects = len(data)
