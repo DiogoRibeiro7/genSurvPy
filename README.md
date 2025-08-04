@@ -1,27 +1,38 @@
 # gen_surv
 
-[![Coverage](https://codecov.io/gh/DiogoRibeiro7/genSurvPy/branch/main/graph/badge.svg)](https://app.codecov.io/gh/DiogoRibeiro7/genSurvPy)
-[![Docs](https://readthedocs.org/projects/gensurvpy/badge/?version=latest)](https://gensurvpy.readthedocs.io/en/latest/)
-[![PyPI](https://img.shields.io/pypi/v/gen_surv)](https://pypi.org/project/gen-surv/)
-[![Tests](https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml/badge.svg)](https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/pypi/pyversions/gen_surv)](https://pypi.org/project/gen-surv/)
+[![Coverage][cov-badge]][cov-link]
+[![Docs][docs-badge]][docs-link]
+[![PyPI][pypi-badge]][pypi-link]
+[![Tests][ci-badge]][ci-link]
+[![Python][py-badge]][pypi-link]
 
-**gen_surv** is a Python package for simulating survival data under a variety of statistical models. It is inspired by the R package [genSurv](https://cran.r-project.org/package=genSurv) and provides a unified interface for generating realistic survival datasets.
+[cov-badge]: https://codecov.io/gh/DiogoRibeiro7/genSurvPy/branch/main/graph/badge.svg
+[cov-link]: https://app.codecov.io/gh/DiogoRibeiro7/genSurvPy
+[docs-badge]: https://readthedocs.org/projects/gensurvpy/badge/?version=latest
+[docs-link]: https://gensurvpy.readthedocs.io/en/latest/
+[pypi-badge]: https://img.shields.io/pypi/v/gen_surv
+[pypi-link]: https://pypi.org/project/gen-surv/
+[ci-badge]: https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml/badge.svg
+[ci-link]: https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml
+[py-badge]: https://img.shields.io/pypi/pyversions/gen_surv
+
+**gen_surv** is a Python library for simulating survival data under a wide range of statistical models. Inspired by the R package [genSurv](https://cran.r-project.org/package=genSurv), it offers a unified interface for generating realistic datasets for research, teaching and benchmarking.
 
 ---
 
 ## Features
 
 - Cox proportional hazards model (CPHM)
-- Accelerated failure time models (log-normal, log-logistic)
+- Accelerated failure time models (log-normal, log-logistic, Weibull)
 - Continuous-time multi-state Markov model (CMM)
 - Time-dependent covariate model (TDCM)
 - Time-homogeneous hidden Markov model (THMM)
 - Mixture cure and piecewise exponential models
 - Competing risks generators (constant and Weibull hazards)
-- Command-line interface and export utilities
+- Visualization utilities for simulated datasets
 - Scikit-learn compatible data generator
-- Conversion helper for scikit-survival and lifelines
+- Conversion helpers for scikit-survival and lifelines
+- Command-line interface and export utilities
 
 ## Installation
 
@@ -45,8 +56,7 @@ cd genSurvPy
 poetry install --with dev
 ```
 
-Integration tests that rely on scikit-survival are automatically skipped if the
-package is not installed.
+Integration tests that rely on scikit-survival are automatically skipped if the package is not installed.
 
 ## Development Setup
 
@@ -57,10 +67,13 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-## Quick Example
+## Usage
+
+### Python API
 
 ```python
-from gen_surv import export_dataset, generate
+from gen_surv import generate, export_dataset, to_sksurv
+from gen_surv.visualization import plot_survival_curve
 
 # basic Cox proportional hazards data
 sim = generate(
@@ -72,44 +85,37 @@ sim = generate(
     cens_par=1.0,
 )
 
-# save to an RDS file
+plot_survival_curve(sim)
 export_dataset(sim, "survival_data.rds")
-```
 
-You can also convert the resulting DataFrame for use with
-[scikit-survival](https://scikit-survival.readthedocs.io) or
-[lifelines](https://lifelines.readthedocs.io):
-
-```python
-from gen_surv import to_sksurv
-
+# convert for scikit-survival
 sks_dataset = to_sksurv(sim)
 ```
 
-See the [usage guide](docs/source/getting_started.md) for more examples.
+See the [usage guide](https://gensurvpy.readthedocs.io/en/latest/getting_started.html) for more examples.
 
-## Supported Models
-
-| Model                | Description                             |
-|----------------------|-----------------------------------------|
-| **CPHM**             | Cox proportional hazards                |
-| **AFT**              | Accelerated failure time (log-normal, log-logistic) |
-| **CMM**              | Continuous-time multi-state Markov      |
-| **TDCM**             | Time-dependent covariates                |
-| **THMM**             | Time-homogeneous hidden Markov          |
-| **Competing Risks**  | Multiple event types with cause-specific hazards |
-| **Mixture Cure**     | Models long-term survivors              |
-| **Piecewise Exponential** | Flexible baseline hazard via intervals |
-
-More details on each algorithm are available in the [Algorithms](docs/source/algorithms.md) page and the [theory guide](docs/source/theory.md).
-
-## Command-Line Usage
+### Command Line
 
 Datasets can be generated without writing Python code:
 
 ```bash
 python -m gen_surv dataset cphm --n 1000 -o survival.csv
 ```
+
+## Supported Models
+
+| Model | Description |
+|-------|-------------|
+| **CPHM** | Cox proportional hazards |
+| **AFT** | Accelerated failure time (log-normal, log-logistic, Weibull) |
+| **CMM** | Continuous-time multi-state Markov |
+| **TDCM** | Time-dependent covariates |
+| **THMM** | Time-homogeneous hidden Markov |
+| **Competing Risks** | Multiple event types with cause-specific hazards |
+| **Mixture Cure** | Models long-term survivors |
+| **Piecewise Exponential** | Flexible baseline hazard via intervals |
+
+More details on each algorithm are available in the [Algorithms](https://gensurvpy.readthedocs.io/en/latest/algorithms.html) page. For additional background, see the [theory guide](https://gensurvpy.readthedocs.io/en/latest/theory.html).
 
 ## Documentation
 
@@ -139,4 +145,3 @@ If you use **gen_surv** in your research, please cite the project using the meta
 - ORCID: <https://orcid.org/0009-0001-2022-7072>
 - Professional email: <dfr@esmad.ipp.pt>
 - Personal email: <diogo.debastos.ribeiro@gmail.com>
-

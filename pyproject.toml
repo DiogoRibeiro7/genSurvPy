@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gen_surv"
-version = "1.0.9"
+version = "1.0.8"
 description = "A Python package for simulating survival data, inspired by the R package genSurv"
 authors = ["Diogo Ribeiro <diogo.debastos.ribeiro@gmail.com>"]
 license = "MIT"
@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{ include = "gen_surv" }]
 homepage = "https://github.com/DiogoRibeiro7/genSurvPy"
 repository = "https://github.com/DiogoRibeiro7/genSurvPy"
-documentation = "https://gensurvpy.readthedocs.io/en/stable/"
+documentation = "https://gensurvpy.readthedocs.io/en/latest/"
 keywords = ["survival-analysis", "simulation", "cox-model", "markov-model", "time-dependent", "statistics"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
