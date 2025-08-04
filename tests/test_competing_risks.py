@@ -1,6 +1,6 @@
-"""
-Tests for Competing Risks models.
-"""
+"""Tests for Competing Risks models."""
+
+import os
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,8 @@ from gen_surv.competing_risks import (
     gen_competing_risks,
     gen_competing_risks_weibull,
 )
+
+os.environ.setdefault("MPLBACKEND", "Agg")
 
 
 def test_gen_competing_risks_basic():
@@ -83,6 +85,13 @@ def test_competing_risks_parameters():
         gen_competing_risks(n=10, n_risks=2, model_cens="invalid", seed=42)
 
 
+def test_invalid_covariate_dist():
+    with pytest.raises(ChoiceError):
+        gen_competing_risks(n=5, n_risks=2, covariate_dist="unknown", seed=1)
+    with pytest.raises(ChoiceError):
+        gen_competing_risks_weibull(n=5, n_risks=2, covariate_dist="unknown", seed=1)
+
+
 def test_competing_risks_weibull_parameters():
     """Test parameter validation in Weibull competing risks model."""
     # Test with invalid number of shape parameters
@@ -124,6 +133,18 @@ def test_cause_specific_cumulative_incidence():
     # Test with invalid cause
     with pytest.raises(ParameterError):
         cause_specific_cumulative_incidence(df, time_points, cause=3)
+
+
+def test_cause_specific_cumulative_incidence_bounds():
+    df = gen_competing_risks(n=30, n_risks=2, seed=5)
+    max_time = df["time"].max()
+    time_points = [-1.0, 0.0, max_time + 1]
+    cif = cause_specific_cumulative_incidence(df, time_points, cause=1)
+    assert cif.iloc[0]["incidence"] == 0.0
+    expected = cause_specific_cumulative_incidence(df, [max_time], cause=1).iloc[0][
+        "incidence"
+    ]
+    assert cif.iloc[-1]["incidence"] == expected
 
 
 @given(
@@ -170,6 +191,31 @@ def test_competing_risks_weibull_properties(n, n_risks, seed):
     assert len(status_counts) >= 2
 
 
+def test_gen_competing_risks_forces_event_types():
+    df = gen_competing_risks(
+        n=2,
+        n_risks=2,
+        baseline_hazards=[1e-9, 1e-9],
+        model_cens="uniform",
+        cens_par=0.1,
+        seed=0,
+    )
+    assert set(df["status"]) == {1, 2}
+
+
+def test_gen_competing_risks_weibull_forces_event_types():
+    df = gen_competing_risks_weibull(
+        n=2,
+        n_risks=2,
+        shape_params=[1, 1],
+        scale_params=[1e9, 1e9],
+        model_cens="uniform",
+        cens_par=0.1,
+        seed=0,
+    )
+    assert set(df["status"]) == {1, 2}
+
+
 def test_reproducibility():
     """Test that results are reproducible with the same seed."""
     df1 = gen_competing_risks(n=20, n_risks=2, seed=42)
@@ -202,14 +248,10 @@ def test_competing_risks_summary_with_categorical():
     assert "distribution" in summary["covariate_stats"]["group"]
 
 
-import matplotlib
-
-matplotlib.use("Agg")
-
-
 def test_plot_cause_specific_hazards_runs():
+    plt = pytest.importorskip("matplotlib.pyplot")
     df = gen_competing_risks(n=30, n_risks=2, seed=3)
     fig, ax = cr.plot_cause_specific_hazards(df, time_points=np.linspace(0, 5, 5))
     assert hasattr(fig, "savefig")
     assert len(ax.get_lines()) >= 1
-    matplotlib.pyplot.close(fig)
+    plt.close(fig)
