@@ -5,32 +5,52 @@ This module provides functions for generating survival data from piecewise
 exponential distributions with time-dependent hazards.
 """
 
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
+from ._covariates import generate_covariates, set_covariate_params
 from ._validation import (
     ParameterError,
     ensure_censoring_model,
     ensure_in_choices,
+    ensure_numeric_sequence,
+    ensure_positive,
+    ensure_positive_int,
     ensure_positive_sequence,
     ensure_sequence_length,
 )
 from .censoring import rexpocens, runifcens
 
 
+def _validate_piecewise_params(
+    breakpoints: list[float], hazard_rates: list[float]
+) -> None:
+    """Validate breakpoint and hazard rate sequences."""
+    ensure_sequence_length(hazard_rates, len(breakpoints) + 1, "hazard_rates")
+    ensure_positive_sequence(breakpoints, "breakpoints")
+    ensure_positive_sequence(hazard_rates, "hazard_rates")
+    if np.any(np.diff(breakpoints) <= 0):
+        raise ParameterError(
+            "breakpoints",
+            breakpoints,
+            "must be a strictly increasing sequence",
+        )
+
+
 def gen_piecewise_exponential(
     n: int,
-    breakpoints: List[float],
-    hazard_rates: List[float],
-    betas: Optional[Union[List[float], np.ndarray]] = None,
+    breakpoints: list[float],
+    hazard_rates: list[float],
+    betas: list[float] | NDArray[np.float64] | None = None,
     n_covariates: int = 2,
     covariate_dist: Literal["normal", "uniform", "binary"] = "normal",
-    covariate_params: Optional[Dict[str, Union[float, Tuple[float, float]]]] = None,
+    covariate_params: dict[str, float | tuple[float, float]] | None = None,
     model_cens: Literal["uniform", "exponential"] = "uniform",
     cens_par: float = 5.0,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """
     Generate survival data using a piecewise exponential distribution.
@@ -88,55 +108,27 @@ def gen_piecewise_exponential(
     if seed is not None:
         np.random.seed(seed)
 
+    ensure_positive_int(n, "n")
+    ensure_positive_int(n_covariates, "n_covariates")
+    ensure_positive(cens_par, "cens_par")
+
     # Validate inputs
-    ensure_sequence_length(hazard_rates, len(breakpoints) + 1, "hazard_rates")
-    ensure_positive_sequence(breakpoints, "breakpoints")
-    ensure_positive_sequence(hazard_rates, "hazard_rates")
-    if np.any(np.diff(breakpoints) <= 0):
-        raise ParameterError("breakpoints", breakpoints, "must be in ascending order")
+    _validate_piecewise_params(breakpoints, hazard_rates)
 
     ensure_censoring_model(model_cens)
     ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
-
-    # Set default covariate parameters if not provided
-    if covariate_params is None:
-        if covariate_dist == "normal":
-            covariate_params = {"mean": 0.0, "std": 1.0}
-        elif covariate_dist == "uniform":
-            covariate_params = {"low": 0.0, "high": 1.0}
-        elif covariate_dist == "binary":
-            covariate_params = {"p": 0.5}
+    covariate_params = set_covariate_params(covariate_dist, covariate_params)
 
     # Set default betas if not provided
     if betas is None:
         betas = np.random.normal(0, 0.5, size=n_covariates)
     else:
-        betas = np.array(betas)
+        ensure_numeric_sequence(betas, "betas")
+        betas = np.array(betas, dtype=float)
         n_covariates = len(betas)
 
     # Generate covariates
-    if covariate_dist == "normal":
-        X = np.random.normal(
-            covariate_params.get("mean", 0.0),
-            covariate_params.get("std", 1.0),
-            size=(n, n_covariates),
-        )
-    elif covariate_dist == "uniform":
-        X = np.random.uniform(
-            covariate_params.get("low", 0.0),
-            covariate_params.get("high", 1.0),
-            size=(n, n_covariates),
-        )
-    elif covariate_dist == "binary":
-        X = np.random.binomial(
-            1, covariate_params.get("p", 0.5), size=(n, n_covariates)
-        )
-    else:  # pragma: no cover - validated above
-        raise ParameterError(
-            "covariate_dist",
-            covariate_dist,
-            "must be one of {'normal', 'uniform', 'binary'}",
-        )
+    X = generate_covariates(n, n_covariates, covariate_dist, covariate_params)
 
     # Calculate linear predictor
     linear_predictor = X @ betas
@@ -209,8 +201,10 @@ def gen_piecewise_exponential(
 
 
 def piecewise_hazard_function(
-    t: Union[float, np.ndarray], breakpoints: List[float], hazard_rates: List[float]
-) -> Union[float, np.ndarray]:
+    t: float | NDArray[np.float64],
+    breakpoints: list[float],
+    hazard_rates: list[float],
+) -> float | NDArray[np.float64]:
     """
     Calculate the hazard function value at time t for a piecewise exponential distribution.
 
@@ -228,6 +222,8 @@ def piecewise_hazard_function(
     float or array
         Hazard function value(s) at time t.
     """
+    _validate_piecewise_params(breakpoints, hazard_rates)
+
     # Convert scalar input to array for consistent processing
     scalar_input = np.isscalar(t)
     t_array = np.atleast_1d(t)
@@ -253,8 +249,10 @@ def piecewise_hazard_function(
 
 
 def piecewise_survival_function(
-    t: Union[float, np.ndarray], breakpoints: List[float], hazard_rates: List[float]
-) -> Union[float, np.ndarray]:
+    t: float | NDArray[np.float64],
+    breakpoints: list[float],
+    hazard_rates: list[float],
+) -> float | NDArray[np.float64]:
     """
     Calculate the survival function at time t for a piecewise exponential distribution.
 
@@ -272,6 +270,8 @@ def piecewise_survival_function(
     float or array
         Survival function value(s) at time t.
     """
+    _validate_piecewise_params(breakpoints, hazard_rates)
+
     # Convert scalar input to array for consistent processing
     scalar_input = np.isscalar(t)
     t_array = np.atleast_1d(t)
