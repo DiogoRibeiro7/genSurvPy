@@ -11,34 +11,20 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-_TAIL_FRACTION = 0.1
-_SMOOTH_MIN_TAIL = 3
+_TAIL_FRACTION: float = 0.1
+_SMOOTH_MIN_TAIL: int = 3
 
+from ._covariates import generate_covariates, set_covariate_params
 from ._validation import (
     LengthError,
     ParameterError,
     ensure_censoring_model,
     ensure_in_choices,
+    ensure_numeric_sequence,
     ensure_positive,
+    ensure_positive_int,
 )
 from .censoring import rexpocens, runifcens
-
-
-def _set_covariate_params(
-    covariate_dist: str,
-    covariate_params: dict[str, float | tuple[float, float]] | None,
-) -> dict[str, float | tuple[float, float]]:
-    if covariate_params is not None:
-        return covariate_params
-    if covariate_dist == "normal":
-        return {"mean": 0.0, "std": 1.0}
-    if covariate_dist == "uniform":
-        return {"low": 0.0, "high": 1.0}
-    if covariate_dist == "binary":
-        return {"p": 0.5}
-    raise ParameterError(
-        "covariate_dist", covariate_dist, "must be one of {'normal','uniform','binary'}"
-    )
 
 
 def _prepare_betas(
@@ -49,12 +35,14 @@ def _prepare_betas(
     if betas_survival is None:
         betas_survival_arr = np.random.normal(0, 0.5, size=n_covariates)
     else:
+        ensure_numeric_sequence(betas_survival, "betas_survival")
         betas_survival_arr = np.asarray(betas_survival, dtype=float)
         n_covariates = len(betas_survival_arr)
 
     if betas_cure is None:
         betas_cure_arr = np.random.normal(0, 0.5, size=n_covariates)
     else:
+        ensure_numeric_sequence(betas_cure, "betas_cure")
         betas_cure_arr = np.asarray(betas_cure, dtype=float)
         if len(betas_cure_arr) != n_covariates:
             raise LengthError("betas_cure", len(betas_cure_arr), n_covariates)
@@ -62,36 +50,11 @@ def _prepare_betas(
     return betas_survival_arr, betas_cure_arr, n_covariates
 
 
-def _generate_covariates(
-    n: int,
-    n_covariates: int,
-    covariate_dist: str,
-    covariate_params: dict[str, float | tuple[float, float]],
-) -> NDArray[np.float64]:
-    if covariate_dist == "normal":
-        return np.random.normal(
-            covariate_params.get("mean", 0.0),
-            covariate_params.get("std", 1.0),
-            size=(n, n_covariates),
-        )
-    if covariate_dist == "uniform":
-        return np.random.uniform(
-            covariate_params.get("low", 0.0),
-            covariate_params.get("high", 1.0),
-            size=(n, n_covariates),
-        )
-    if covariate_dist == "binary":
-        return np.random.binomial(
-            1, covariate_params.get("p", 0.5), size=(n, n_covariates)
-        ).astype(float)
-    raise ParameterError(
-        "covariate_dist", covariate_dist, "must be one of {'normal','uniform','binary'}"
-    )
-
-
 def _cure_status(
     lp_cure: NDArray[np.float64], cure_fraction: float
 ) -> NDArray[np.int64]:
+    if not 0 < cure_fraction < 1:
+        raise ParameterError("cure_fraction", cure_fraction, "must be between 0 and 1")
     cure_probs = 1 / (
         1 + np.exp(-(np.log(cure_fraction / (1 - cure_fraction)) + lp_cure))
     )
@@ -104,6 +67,9 @@ def _survival_times(
     baseline_hazard: float,
     max_time: float | None,
 ) -> NDArray[np.float64]:
+    ensure_positive(baseline_hazard, "baseline_hazard")
+    if max_time is not None:
+        ensure_positive(max_time, "max_time")
     n = cured.size
     times = np.zeros(n, dtype=float)
     non_cured = cured == 0
@@ -122,6 +88,10 @@ def _apply_censoring(
     cens_par: float,
     max_time: float | None,
 ) -> tuple[NDArray[np.float64], NDArray[np.int64]]:
+    ensure_censoring_model(model_cens)
+    ensure_positive(cens_par, "cens_par")
+    if max_time is not None:
+        ensure_positive(max_time, "max_time")
     rfunc = runifcens if model_cens == "uniform" else rexpocens
     cens_times = rfunc(len(survival_times), cens_par)
     observed = np.minimum(survival_times, cens_times)
@@ -213,16 +183,21 @@ def gen_mixture_cure(
     if seed is not None:
         np.random.seed(seed)
 
+    ensure_positive_int(n, "n")
+    ensure_positive_int(n_covariates, "n_covariates")
+    ensure_positive(baseline_hazard, "baseline_hazard")
+    ensure_positive(cens_par, "cens_par")
+    if max_time is not None:
+        ensure_positive(max_time, "max_time")
     if not 0 <= cure_fraction <= 1:
         raise ParameterError("cure_fraction", cure_fraction, "must be between 0 and 1")
-    ensure_positive(baseline_hazard, "baseline_hazard")
 
     ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
-    covariate_params = _set_covariate_params(covariate_dist, covariate_params)
+    covariate_params = set_covariate_params(covariate_dist, covariate_params)
     betas_survival_arr, betas_cure_arr, n_covariates = _prepare_betas(
         betas_survival, betas_cure, n_covariates
     )
-    X = _generate_covariates(n, n_covariates, covariate_dist, covariate_params)
+    X = generate_covariates(n, n_covariates, covariate_dist, covariate_params)
     lp_survival = X @ betas_survival_arr
     lp_cure = X @ betas_cure_arr
     cured = _cure_status(lp_cure, cure_fraction)
@@ -274,6 +249,14 @@ def cure_fraction_estimate(
     based on the plateau of the survival curve. It may not be accurate for
     small sample sizes or heavy censoring.
     """
+    if time_col not in data.columns or status_col not in data.columns:
+        missing = [c for c in (time_col, status_col) if c not in data.columns]
+        raise ParameterError(
+            "data",
+            data.columns.tolist(),
+            f"missing required column(s): {', '.join(missing)}",
+        )
+    ensure_positive(bandwidth, "bandwidth")
     # Sort data by time
     sorted_data = data.sort_values(by=time_col).copy()
 
