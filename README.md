@@ -51,7 +51,7 @@ git clone https://github.com/DiogoRibeiro7/genSurvPy.git
 cd genSurvPy
 # Install runtime and development dependencies
 # (scikit-survival is optional but required for integration tests).
-# On Debian/Ubuntu you may need ``build-essential gfortran libopenblas-dev`` to
+# On Debian/Ubuntu you may need `build-essential gfortran libopenblas-dev` to
 # build scikit-survival.
 poetry install --with dev
 ```
