@@ -5,15 +5,14 @@ message: "If you use this software, please cite it using the metadata below."
 preferred-citation:
   type: software
   title: "gen_surv"
-  version: "1.0.9"
+  version: "1.0.3"
   url: "https://github.com/DiogoRibeiro7/genSurvPy"
   authors:
     - family-names: Ribeiro
       given-names: Diogo
-      alias: DiogoRibeiro7
       orcid: "https://orcid.org/0009-0001-2022-7072"
       affiliation: "ESMAD - Instituto Politécnico do Porto"
       email: "dfr@esmad.ipp.pt"
   license: "MIT"
-  date-released: "2025-08-02"
+  date-released: "2024-01-01"
 

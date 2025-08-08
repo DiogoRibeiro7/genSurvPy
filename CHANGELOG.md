@@ -1,40 +1,5 @@
 # CHANGELOG
 
-## v1.0.9 (2025-08-02)
-
-### Features
-- export datasets to RDS files
-- test workflow runs on a Python version matrix
-- scikit-learn compatible data generator
-- compatibility helpers for lifelines and scikit-survival
-
-### Documentation
-- updated usage examples and tutorials
-- document optional scikit-survival dependency throughout the docs
-
-### Continuous Integration
-- auto-tag releases using the version check script
-
-### Misc
-- README quick example uses `covariate_range`
-
-## v1.0.8 (2025-07-30)
-
-### Documentation
-- ensure absolute path resolution in `conf.py`
-- drop unsupported theme option
-- define bibliography anchors and headings
-- fix tutorial links to non-existing docs
-- add additional references to the bibliography
-
-### Testing
-- add CLI integration test
-- expand piecewise generator test coverage
-
-### Misc
-- remove fix_recommendations.md
-
-
 
 ## v1.0.0 (2025-06-06)
 
