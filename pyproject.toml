@@ -8,27 +8,72 @@ readme = "README.md"
 packages = [{ include = "gen_surv" }]
 homepage = "https://github.com/DiogoRibeiro7/genSurvPy"
 repository = "https://github.com/DiogoRibeiro7/genSurvPy"
-documentation = "https://gensurvpy.readthedocs.io/en/stable/"
+documentation = "https://gensurvpy.readthedocs.io/en/latest/"
+keywords = ["survival-analysis", "simulation", "cox-model", "markov-model", "time-dependent", "statistics"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.10,<3.13"
 numpy = "^1.26"
 pandas = "^2.2.3"
-pytest-cov = "^6.1.1"
-invoke = "^2.2.0"
 typer = "^0.12.3"
-tomli = "^2.2.1"
+matplotlib = "~3.8"
+lifelines = "^0.30"
+pyarrow = "^14"
+pyreadr = "^0.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
+pytest-cov = "^6.1.1"
 python-semantic-release = "^9.21.0"
 mypy = "^1.15.0"
 invoke = "^2.2.0"
 hypothesis = "^6.98"
 tomli = "^2.2.1"
+black = "^24.1.0"
+isort = "^5.13.2"
+flake8 = "^6.1.0"
+scikit-survival = "^0.24.1"
+pre-commit = "^3.8"
+
+[tool.poetry.extras]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "python-semantic-release",
+    "mypy",
+    "invoke",
+    "hypothesis",
+    "tomli",
+    "black",
+    "isort",
+    "flake8",
+    "scikit-survival",
+    "pre-commit",
+]
 
 [tool.poetry.group.docs.dependencies]
-myst-parser = "<4.0.0"
+sphinx = ">=6.0"
+sphinx-rtd-theme = "^1.3.0"
+myst-parser = ">=1.0.0,<4.0.0"
+sphinx-autodoc-typehints = "^1.24.0"
+sphinx-copybutton = "^0.5.2"
+sphinx-design = "^0.5.0"
+linkify-it-py = ">=2.0"
+
+[tool.poetry.scripts]
+gen_surv = "gen_surv.cli:app"
 
 [tool.semantic_release]
 version_source = "tag"
@@ -38,6 +83,48 @@ changelog_file = "CHANGELOG.md"
 upload_to_repository = false
 branch = "main"
 build_command = ""
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503", "E501", "W291", "W293", "W391", "E402", "E302", "E305"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "typer",
+    "typer.models",
+    "matplotlib",
+    "matplotlib.*",
+    "lifelines",
+    "lifelines.*",
+    "sklearn",
+    "sklearn.*",
+    "numpy",
+    "numpy.*",
+    "pandas",
+    "pandas.*",
+    "scipy",
+    "scipy.*",
+    "pyreadr",
+    "sksurv",
+    "sksurv.*",
+]
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core"]

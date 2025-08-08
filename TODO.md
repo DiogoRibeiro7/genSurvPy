@@ -1,103 +1,65 @@
-# TODO – Roadmap for gen_surv
+# gen_surv Roadmap
 
-This document outlines future enhancements, features, and ideas for improving the gen_surv package.
+This document outlines the planned development priorities for future versions of gen_surv. This roadmap will be periodically updated based on user feedback, research needs, and community contributions.
 
----
+## Short-term Goals (v1.1.x)
 
-## ✨ Priority Items
+### Additional Statistical Models
+- [ ] **Recurrent Events Model**: Generate data with multiple events per subject
+- [ ] **Time-Varying Effects**: Support for non-proportional hazards with coefficients that change over time
+- [ ] **Extended Competing Risks**: Allow for correlation between competing risks
 
-- [✅] Add property-based tests using Hypothesis to cover edge cases
-- [✅] Build a CLI for generating datasets from the terminal
-- [ ] Expand documentation with multilingual support and more usage examples
-- [ ] Implement Weibull and log-logistic AFT models and add visualization utilities
-- [✅] Provide CITATION metadata for proper referencing
-- [ ] Ensure all functions include Google-style docstrings with inline comments
+### Visualization and Analysis
+- [ ] **Enhanced Visualization Toolkit**: Add more plot types and customization options
+- [ ] **Interactive Visualizations**: Add options using Plotly for interactive exploration
+- [ ] **Data Quality Reports**: Generate reports on statistical properties of generated datasets
 
----
+### Usability Improvements
+- [ ] **Dataset Catalog**: Pre-configured parameters to mimic classic survival datasets
+- [ ] **Parameter Estimation**: Tools to estimate generation parameters from existing datasets
+- [ ] **Extended CLI**: Add more command-line options for all models
 
-## 📦 1. Interface and UX
+## Medium-term Goals (v1.2.x)
 
-- [✅] Create a `generate(..., return_type="df" | "dict")` interface
-- [✅] Add `__version__` using `importlib.metadata` or `poetry-dynamic-versioning`
-- [✅] Build a CLI with `typer` or `click`
-- [✅] Add example notebooks or scripts for each model (`examples/` folder)
+### Advanced Statistical Models
+- [ ] **Joint Longitudinal-Survival Models**: Generators for models that simultaneously handle longitudinal outcomes and time-to-event data
+- [ ] **Frailty Models**: Support for shared and nested frailty models
+- [ ] **Interval Censoring**: Support for interval-censored data generation
 
----
+### Technical Enhancements
+- [ ] **Parallel Processing**: Multi-core support for faster generation of large datasets
+- [ ] **Memory Optimization**: Streaming data generation for very large datasets
+- [ ] **Performance Benchmarks**: Systematic benchmarking of data generation speed
 
-## 📚 2. Documentation
+### Integration and Ecosystem
+- [ ] **scikit-learn Extensions**: More scikit-learn compatible estimators and transformers
+- [ ] **Stan/PyMC Integration**: Export data in formats suitable for Bayesian modeling
+- [ ] **Dashboard**: Simple Streamlit app for data exploration and generation
 
-- [✅] Add a "Model Comparison Guide" section (`index.md` + `theory.md`)
-- [✅] Add "How It Works" sections for each model (`theory.md`)
-- [✅] Include usage examples in index with real calls
-- [ ] Optional: add multilingual docs using `sphinx-intl`
+## Long-term Goals (v2.x)
 
----
+### Advanced Features
+- [ ] **Bayesian Survival Models**: Generators for Bayesian survival analysis with various priors
+- [ ] **Spatial Survival Models**: Generate survival data with spatial correlation
+- [ ] **Survival Neural Networks**: Integration with deep learning approaches to survival analysis
 
-## 🧪 3. Testing and Quality
+### Infrastructure and Performance
+- [ ] **GPU Acceleration**: Optional GPU support for large dataset generation
+- [ ] **JAX/Numba Implementation**: High-performance implementations of key algorithms
+- [ ] **R Interface**: Create an R package that interfaces with gen_surv
 
-- [✅] Add tests for each model (e.g., `test_tdcm.py`, `test_thmm.py`, `test_aft.py`)
-- [✅] Add property-based tests with `hypothesis`
-- [ ] Cover edge cases (e.g., invalid parameters, n=0, negative censoring)
-- [ ] Run tests on multiple Python versions (CI matrix)
+### Community and Documentation
+- [ ] **Interactive Tutorials**: Using Jupyter Book or similar tools
+- [ ] **Video Tutorials**: Short video demonstrations of key features
+- [ ] **Case Studies**: Real-world examples showing how gen_surv can be used for teaching or research
+- [ ] **User Showcase**: Gallery of research or teaching that uses gen_surv
 
----
+## How to Contribute
 
-## 🧠 4. Advanced Models
+We welcome contributions that help us achieve these roadmap goals! If you're interested in working on any of these features, please check the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines and open an issue to discuss your approach before submitting a pull request.
 
-- [ ] Add Piecewise Exponential Model support
-- [ ] Add competing risks / multi-event simulation
-- [✅] Implement parametric AFT models (log-normal)
-- [ ] Implement parametric AFT models (log-logistic, weibull)
-- [ ] Simulate time-varying hazards
-- [ ] Add informative or covariate-dependent censoring
+For suggesting new features or modifications to this roadmap, please open an issue with the "enhancement" tag.
 
----
+## Version History
 
-## 📊 5. Visualization and Analysis
-
-- [ ] Create `plot_survival(df, model=...)` utilities
-- [ ] Create `describe_survival(df)` summary helpers
-- [ ] Export data to CSV / JSON / Feather
-
----
-
-## 🌍 6. Ecosystem Integration
-
-- [ ] Add a `GenSurvDataGenerator` compatible with `sklearn`
-- [ ] Enable use with `lifelines`, `scikit-survival`, `sksurv`
-- [ ] Export in R-compatible formats (.csv, .rds)
-
----
-
-## 🔁 7. Other Ideas
-
-- [ ] Add performance benchmarks for each model
-- [✅] Improve PyPI discoverability (added tags, keywords, docs)
-- [ ] Create a Streamlit or Gradio live demo
-
----
-
-## 🧠 8. New Survival Models to Implement
-
-- [✅] Log-Normal AFT
-- [ ] Log-Logistic AFT
-- [ ] Weibull AFT
-- [ ] Piecewise Exponential
-- [ ] Competing Risks
-- [ ] Recurrent Events
-- [ ] Mixture Cure Model
-
----
-
-## 🧬 9. Advanced Data Simulation Features
-
-- [ ] Recurrent events (multiple events per individual)
-- [ ] Frailty models (random effects)
-- [ ] Time-varying hazard functions
-- [ ] Multi-line start-stop formatted data
-- [ ] Competing risks with cause-specific hazards
-- [ ] Simulate violations of PH assumption
-- [ ] Grouped / clustered data generation
-- [ ] Mixed covariates: categorical, continuous, binary
-- [ ] Joint models (longitudinal + survival outcome)
-- [ ] Controlled scenarios for robustness tests
+For a detailed history of past releases, please see our [CHANGELOG.md](CHANGELOG.md).

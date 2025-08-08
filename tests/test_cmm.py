@@ -1,10 +1,86 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from gen_surv.cmm import gen_cmm
+import numpy as np
+import pandas as pd
 
-def test_gen_cmm_shape():
-    df = gen_cmm(n=50, model_cens="uniform", cens_par=1.0, beta=[0.1, 0.2, 0.3],
-                 covar=2.0, rate=[0.1, 1.0, 0.2, 1.0, 0.3, 1.0])
-    assert df.shape[1] == 6
-    assert "transition" in df.columns
+from gen_surv.cmm import gen_cmm, generate_event_times
+
+
+def test_generate_event_times_reproducible():
+    np.random.seed(0)
+    result = generate_event_times(
+        z1=1.0,
+        beta=[0.1, 0.2, 0.3],
+        rate=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    )
+    assert np.isclose(result["t12"], 0.7201370350469476)
+    assert np.isclose(result["t13"], 1.0282691393768246)
+    assert np.isclose(result["t23"], 0.6839405281667484)
+
+
+def test_gen_cmm_uniform_reproducible():
+    df = gen_cmm(
+        n=5,
+        model_cens="uniform",
+        cens_par=1.0,
+        beta=[0.1, 0.2, 0.3],
+        covariate_range=2.0,
+        rate=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        seed=42,
+    )
+    expected = pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4, 5],
+            "start": [0.0] * 5,
+            "stop": [
+                0.18915094163423693,
+                0.6785349983450479,
+                0.046776460564183294,
+                0.12811363267554587,
+                0.45038631001973155,
+            ],
+            "status": [1, 1, 1, 0, 0],
+            "X0": [
+                1.5479119272347037,
+                0.8777564989945617,
+                1.7171958398225217,
+                1.3947360581187287,
+                0.1883555828087116,
+            ],
+            "transition": [2.0, 2.0, 2.0, float("nan"), float("nan")],
+        }
+    )
+    pd.testing.assert_frame_equal(df, expected)
+
+
+def test_gen_cmm_exponential_reproducible():
+    df = gen_cmm(
+        n=5,
+        model_cens="exponential",
+        cens_par=1.0,
+        beta=[0.1, 0.2, 0.3],
+        covariate_range=2.0,
+        rate=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        seed=42,
+    )
+    expected = pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4, 5],
+            "start": [0.0] * 5,
+            "stop": [
+                0.18915094163423693,
+                0.6785349983450479,
+                0.046776460564183294,
+                0.07929383504134148,
+                0.5750008479681584,
+            ],
+            "status": [1, 1, 1, 0, 1],
+            "X0": [
+                1.5479119272347037,
+                0.8777564989945617,
+                1.7171958398225217,
+                1.3947360581187287,
+                0.1883555828087116,
+            ],
+            "transition": [2.0, 2.0, 2.0, float("nan"), 1.0],
+        }
+    )
+    pd.testing.assert_frame_equal(df, expected)
