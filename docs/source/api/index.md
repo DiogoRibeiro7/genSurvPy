@@ -14,85 +14,76 @@ or `pip install scikit-survival` to enable this functionality.
 
 ## Core Interface
 
-```{eval-rst}
-.. automodule:: gen_surv.interface
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.interface
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ## Model Generators
 
 ### Cox Proportional Hazards Model
-```{eval-rst}
-.. automodule:: gen_surv.cphm
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.cphm
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ### Accelerated Failure Time Models
-```{eval-rst}
-.. automodule:: gen_surv.aft
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.aft
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ### Continuous-Time Markov Models
-```{eval-rst}
-.. automodule:: gen_surv.cmm
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.cmm
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ### Time-Dependent Covariate Models
-```{eval-rst}
-.. automodule:: gen_surv.tdcm
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.tdcm
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ### Time-Homogeneous Markov Models
-```{eval-rst}
-.. automodule:: gen_surv.thmm
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.thmm
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ## Utility Functions
 
 ### Censoring Functions
-```{eval-rst}
-.. automodule:: gen_surv.censoring
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.censoring
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ### Bivariate Distributions
-```{eval-rst}
-.. automodule:: gen_surv.bivariate
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.bivariate
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ### Validation Functions
-```{eval-rst}
-.. automodule:: gen_surv.validate
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.validation
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
 
 ### Command Line Interface
-```{eval-rst}
-.. automodule:: gen_surv.cli
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+::: gen_surv.cli
+    options:
+      members: true
+      undoc-members: true
+      show-inheritance: true
+

@@ -12,7 +12,7 @@ from typing import Optional
 import pandas as pd
 import pyreadr
 
-from ._validation import ensure_in_choices
+from .validation import ensure_in_choices
 
 
 def export_dataset(df: pd.DataFrame, path: str, fmt: Optional[str] = None) -> None:

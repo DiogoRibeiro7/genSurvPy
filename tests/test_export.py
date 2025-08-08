@@ -2,8 +2,8 @@ import pandas as pd
 import pyreadr
 import pytest
 
-from gen_surv._validation import ChoiceError
 from gen_surv.export import export_dataset
+from gen_surv.validation import ChoiceError
 
 
 @pytest.mark.parametrize(

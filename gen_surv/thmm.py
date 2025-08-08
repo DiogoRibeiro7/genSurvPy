@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
-from gen_surv.validate import validate_gen_thmm_inputs
+from gen_surv.validation import validate_gen_thmm_inputs
 
 
 class TransitionTimes(TypedDict):

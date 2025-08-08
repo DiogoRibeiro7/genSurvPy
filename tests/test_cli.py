@@ -1,11 +1,10 @@
-import os
 import runpy
 import sys
+from typing import Any
 
 import pandas as pd
 import pytest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from gen_surv.cli import dataset, visualize
 
 
@@ -16,7 +15,7 @@ def test_cli_dataset_stdout(monkeypatch, capsys):
     and asserts that the expected CSV header appears in the captured standard output.
     """
 
-    def fake_generate(model: str, n: int):
+    def fake_generate(**_: Any):
         return pd.DataFrame({"time": [1.0], "status": [1], "X0": [0.1], "X1": [0.2]})
 
     # Patch the generate function used in the CLI to avoid heavy computation.
@@ -37,7 +36,7 @@ def test_main_entry_point(monkeypatch):
 
     # Patch the CLI app before the module is executed
     monkeypatch.setattr("gen_surv.cli.app", fake_app)
-    monkeypatch.setattr("sys.argv", ["gen_surv", "dataset", "cphm"])
+    monkeypatch.setattr(sys, "argv", ["gen_surv", "dataset", "cphm"])
     runpy.run_module("gen_surv.__main__", run_name="__main__")
     assert called
 
@@ -45,7 +44,7 @@ def test_main_entry_point(monkeypatch):
 def test_cli_dataset_file_output(monkeypatch, tmp_path):
     """Dataset command writes CSV to file when output path is provided."""
 
-    def fake_generate(model: str, n: int):
+    def fake_generate(**_: Any):
         return pd.DataFrame({"time": [1.0], "status": [1], "X0": [0.1], "X1": [0.2]})
 
     monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
@@ -54,23 +53,6 @@ def test_cli_dataset_file_output(monkeypatch, tmp_path):
     assert out_file.exists()
     content = out_file.read_text()
     assert "time,status,X0,X1" in content
-
-
-def test_dataset_fallback(monkeypatch):
-    """If generate fails with additional kwargs, dataset retries with minimal args."""
-    calls = []
-
-    def fake_generate(**kwargs):
-        calls.append(kwargs)
-        if len(calls) == 1:
-            raise TypeError("bad args")
-        return pd.DataFrame({"time": [0], "status": [1]})
-
-    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
-    dataset(model="cphm", n=2, output=None)
-    # first call has many parameters, second only model and n
-    assert calls[-1] == {"model": "cphm", "n": 2}
-    assert len(calls) == 2
 
 
 def test_dataset_weibull_parameters(monkeypatch):

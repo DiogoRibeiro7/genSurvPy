@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
-from gen_surv.validate import validate_gen_cmm_inputs
+from gen_surv.validation import validate_gen_cmm_inputs
 
 
 class EventTimes(TypedDict):
@@ -46,6 +46,7 @@ def gen_cmm(
     beta: Sequence[float],
     covariate_range: float,
     rate: Sequence[float],
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """
     Generate survival data using a continuous-time Markov model (CMM).
@@ -63,12 +64,13 @@ def gen_cmm(
     """
     validate_gen_cmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
 
+    rng = np.random.default_rng(seed)
     rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
 
-    z1 = np.random.uniform(0, covariate_range, size=n)
-    c = rfunc(n, cens_par)
+    z1 = rng.uniform(0, covariate_range, size=n)
+    c = rfunc(n, cens_par, rng)
 
-    u = np.random.uniform(size=(3, n))
+    u = rng.uniform(size=(3, n))
     t12 = (-np.log(1 - u[0]) / (rate[0] * np.exp(beta[0] * z1))) ** (1 / rate[1])
     t13 = (-np.log(1 - u[1]) / (rate[2] * np.exp(beta[1] * z1))) ** (1 / rate[3])
 

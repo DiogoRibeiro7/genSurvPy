@@ -1,11 +1,14 @@
+import numpy as np
 import pytest
 
-import gen_surv.validate as v
-from gen_surv._validation import (
+import gen_surv.validation as v
+from gen_surv.validation import (
     ChoiceError,
     ParameterError,
     PositiveIntegerError,
+    PositiveValueError,
     ensure_censoring_model,
+    ensure_positive,
     ensure_positive_int,
 )
 
@@ -193,6 +196,18 @@ def test_validate_gen_aft_log_logistic_valid():
     v.validate_gen_aft_log_logistic_inputs(1, [0.1], 1.0, 1.0, "uniform", 1.0)
 
 
+def test_positive_sequence_nan_inf():
+    with pytest.raises(v.PositiveSequenceError):
+        v.ensure_positive_sequence([1.0, float("nan")], "x")
+    with pytest.raises(v.PositiveSequenceError):
+        v.ensure_positive_sequence([1.0, float("inf")], "x")
+
+
+def test_numeric_sequence_rejects_bool():
+    with pytest.raises(v.NumericSequenceError):
+        v.ensure_numeric_sequence([1, True], "x")
+
+
 def test_validate_competing_risks_inputs():
     with pytest.raises(ValueError):
         v.validate_competing_risks_inputs(1, 2, [0.1], None, "uniform", 1.0)
@@ -224,6 +239,18 @@ def test_validate_gen_thmm_inputs_valid():
 def test_positive_integer_error():
     with pytest.raises(PositiveIntegerError):
         ensure_positive_int(-1, "n")
+
+
+def test_ensure_positive_int_accepts_numpy_and_rejects_bool():
+    ensure_positive_int(np.int64(5), "n")
+    with pytest.raises(PositiveIntegerError):
+        ensure_positive_int(True, "n")
+
+
+def test_ensure_positive_accepts_numpy_and_rejects_bool():
+    ensure_positive(np.float64(0.1), "val")
+    with pytest.raises(PositiveValueError):
+        ensure_positive(True, "val")
 
 
 def test_censoring_model_choice_error():
