@@ -1,4 +1,7 @@
+import pytest
+
 from gen_surv.sklearn_adapter import GenSurvDataGenerator
+from gen_surv.validation import ChoiceError
 
 
 def test_sklearn_generator_dataframe():
@@ -29,3 +32,16 @@ def test_sklearn_generator_dict():
     assert isinstance(data, dict)
     assert set(data.keys()) >= {"time", "status"}
     assert len(data["time"]) == 3
+
+
+def test_sklearn_generator_invalid_return_type():
+    with pytest.raises(ChoiceError):
+        GenSurvDataGenerator(
+            "cphm",
+            return_type="bad",
+            n=1,
+            beta=0.5,
+            covariate_range=1.0,
+            model_cens="uniform",
+            cens_par=1.0,
+        )

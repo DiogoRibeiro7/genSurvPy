@@ -9,7 +9,7 @@ from typing import Any
 
 import pandas as pd
 
-from ._validation import ParameterError
+from .validation import ParameterError
 
 
 def summarize_survival_dataset(
@@ -231,7 +231,7 @@ def check_survival_data_quality(
         data = data.copy()
 
     # Initialize issues report
-    issues = {
+    issues: dict[str, dict[str, int | None]] = {
         "missing_data": {"time": 0, "status": 0, "id": 0 if id_col else None},
         "invalid_values": {
             "negative_time": 0,

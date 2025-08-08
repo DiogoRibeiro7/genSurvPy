@@ -12,7 +12,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
-from gen_surv.validate import validate_gen_cphm_inputs
+from gen_surv.validation import validate_gen_cphm_inputs
 
 
 def generate_cphm_data(
@@ -46,15 +46,14 @@ def generate_cphm_data(
     NDArray[np.float64]
         Array with shape ``(n, 3)``: ``[time, status, X0]``
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     data: NDArray[np.float64] = np.zeros((n, 3), dtype=float)
 
     for k in range(n):
-        z = np.random.uniform(0, covariate_range)
-        c = rfunc(1, cens_par)[0]
-        x = np.random.exponential(scale=1 / np.exp(beta * z))
+        z = rng.uniform(0, covariate_range)
+        c = rfunc(1, cens_par, rng)[0]
+        x = rng.exponential(scale=1 / np.exp(beta * z))
 
         time = min(x, c)
         status = int(x <= c)

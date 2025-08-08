@@ -1,36 +1,58 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Optional, Protocol
 
 import pandas as pd
 
-from ._validation import ensure_in_choices
-from .interface import generate
-
-try:  # pragma: no cover - only imported if sklearn is installed
-    from sklearn.base import BaseEstimator
-except Exception:  # pragma: no cover - fallback when sklearn missing
-
-    class BaseEstimator:  # type: ignore
-        """Minimal stub if scikit-learn is not installed."""
+from .interface import ModelType, generate
+from .validation import ensure_in_choices
 
 
-class GenSurvDataGenerator(BaseEstimator):
+class BaseEstimatorProto(Protocol):
+    """Protocol capturing the minimal scikit-learn estimator interface."""
+
+    def get_params(self, deep: bool = ...) -> dict[str, object]: ...
+
+    def set_params(self, **params: object) -> "BaseEstimatorProto": ...
+
+
+if TYPE_CHECKING:  # pragma: no cover - import for type checkers only
+    from sklearn.base import BaseEstimator as SklearnBase
+else:  # pragma: no cover - runtime import with fallback
+    try:
+        from sklearn.base import BaseEstimator as SklearnBase
+    except Exception:
+
+        class SklearnBase:  # noqa: D401 - simple runtime stub
+            """Minimal stub if scikit-learn is not installed."""
+
+            def get_params(self, deep: bool = True) -> dict[str, object]:
+                return {}
+
+            def set_params(self, **params: object) -> "SklearnBase":
+                return self
+
+
+class GenSurvDataGenerator(SklearnBase, BaseEstimatorProto):
     """Scikit-learn compatible wrapper around :func:`gen_surv.generate`."""
 
-    def __init__(self, model: str, return_type: str = "df", **kwargs: Any) -> None:
+    def __init__(
+        self, model: ModelType, return_type: str = "df", **kwargs: object
+    ) -> None:
+        ensure_in_choices(return_type, "return_type", {"df", "dict"})
         self.model = model
         self.return_type = return_type
         self.kwargs = kwargs
 
     def fit(
-        self, X: Optional[Any] = None, y: Optional[Any] = None
+        self, X: Optional[pd.DataFrame] = None, y: Optional[pd.Series] = None
     ) -> "GenSurvDataGenerator":
         return self
 
-    def transform(self, X: Optional[Any] = None) -> pd.DataFrame | dict[str, list[Any]]:
+    def transform(
+        self, X: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame | dict[str, list[object]]:
         df = generate(self.model, **self.kwargs)
-        ensure_in_choices(self.return_type, "return_type", {"df", "dict"})
         if self.return_type == "df":
             return df
         if self.return_type == "dict":
@@ -38,6 +60,9 @@ class GenSurvDataGenerator(BaseEstimator):
         raise AssertionError("Unreachable due to validation")
 
     def fit_transform(
-        self, X: Optional[Any] = None, y: Optional[Any] = None, **fit_params: Any
-    ) -> pd.DataFrame | dict[str, list[Any]]:
+        self,
+        X: Optional[pd.DataFrame] = None,
+        y: Optional[pd.Series] = None,
+        **fit_params: object,
+    ) -> pd.DataFrame | dict[str, list[object]]:
         return self.fit(X, y).transform(X)

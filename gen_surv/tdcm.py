@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 
 from gen_surv.bivariate import sample_bivariate_distribution
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
-from gen_surv.validate import validate_gen_tdcm_inputs
+from gen_surv.validation import validate_gen_tdcm_inputs
 
 
 def generate_censored_observations(

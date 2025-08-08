@@ -1,13 +1,16 @@
 from typing import Protocol
 
 import numpy as np
+from numpy.random import Generator, default_rng
 from numpy.typing import NDArray
 
 
 class CensoringFunc(Protocol):
     """Protocol for censoring time generators."""
 
-    def __call__(self, size: int, cens_par: float) -> NDArray[np.float64]:
+    def __call__(
+        self, size: int, cens_par: float, rng: Generator | None = None
+    ) -> NDArray[np.float64]:
         """Generate ``size`` censoring times given ``cens_par``."""
         ...
 
@@ -20,7 +23,9 @@ class CensoringModel(Protocol):
         ...
 
 
-def runifcens(size: int, cens_par: float) -> NDArray[np.float64]:
+def runifcens(
+    size: int, cens_par: float, rng: Generator | None = None
+) -> NDArray[np.float64]:
     """
     Generate uniform censoring times.
 
@@ -31,10 +36,13 @@ def runifcens(size: int, cens_par: float) -> NDArray[np.float64]:
     Returns:
     - NDArray of censoring times.
     """
-    return np.random.uniform(0, cens_par, size)
+    r = default_rng() if rng is None else rng
+    return r.uniform(0, cens_par, size)
 
 
-def rexpocens(size: int, cens_par: float) -> NDArray[np.float64]:
+def rexpocens(
+    size: int, cens_par: float, rng: Generator | None = None
+) -> NDArray[np.float64]:
     """
     Generate exponential censoring times.
 
@@ -45,22 +53,32 @@ def rexpocens(size: int, cens_par: float) -> NDArray[np.float64]:
     Returns:
     - NDArray of censoring times.
     """
-    return np.random.exponential(scale=cens_par, size=size)
+    r = default_rng() if rng is None else rng
+    return r.exponential(scale=cens_par, size=size)
 
 
-def rweibcens(size: int, scale: float, shape: float) -> NDArray[np.float64]:
+def rweibcens(
+    size: int, scale: float, shape: float, rng: Generator | None = None
+) -> NDArray[np.float64]:
     """Generate Weibull-distributed censoring times."""
-    return np.random.weibull(shape, size) * scale
+    r = default_rng() if rng is None else rng
+    return r.weibull(shape, size) * scale
 
 
-def rlognormcens(size: int, mean: float, sigma: float) -> NDArray[np.float64]:
+def rlognormcens(
+    size: int, mean: float, sigma: float, rng: Generator | None = None
+) -> NDArray[np.float64]:
     """Generate log-normal-distributed censoring times."""
-    return np.random.lognormal(mean, sigma, size)
+    r = default_rng() if rng is None else rng
+    return r.lognormal(mean, sigma, size)
 
 
-def rgammacens(size: int, shape: float, scale: float) -> NDArray[np.float64]:
+def rgammacens(
+    size: int, shape: float, scale: float, rng: Generator | None = None
+) -> NDArray[np.float64]:
     """Generate Gamma-distributed censoring times."""
-    return np.random.gamma(shape, scale, size)
+    r = default_rng() if rng is None else rng
+    return r.gamma(shape, scale, size)
 
 
 class WeibullCensoring:
@@ -70,9 +88,10 @@ class WeibullCensoring:
         self.scale = scale
         self.shape = shape
 
-    def __call__(self, size: int) -> NDArray[np.float64]:
+    def __call__(self, size: int, rng: Generator | None = None) -> NDArray[np.float64]:
         """Generate ``size`` censoring times from a Weibull distribution."""
-        return np.random.weibull(self.shape, size) * self.scale
+        r = default_rng() if rng is None else rng
+        return r.weibull(self.shape, size) * self.scale
 
 
 class LogNormalCensoring:
@@ -82,9 +101,10 @@ class LogNormalCensoring:
         self.mean = mean
         self.sigma = sigma
 
-    def __call__(self, size: int) -> NDArray[np.float64]:
+    def __call__(self, size: int, rng: Generator | None = None) -> NDArray[np.float64]:
         """Generate ``size`` censoring times from a log-normal distribution."""
-        return np.random.lognormal(self.mean, self.sigma, size)
+        r = default_rng() if rng is None else rng
+        return r.lognormal(self.mean, self.sigma, size)
 
 
 class GammaCensoring:
@@ -94,6 +114,7 @@ class GammaCensoring:
         self.shape = shape
         self.scale = scale
 
-    def __call__(self, size: int) -> NDArray[np.float64]:
+    def __call__(self, size: int, rng: Generator | None = None) -> NDArray[np.float64]:
         """Generate ``size`` censoring times from a Gamma distribution."""
-        return np.random.gamma(self.shape, self.scale, size)
+        r = default_rng() if rng is None else rng
+        return r.gamma(self.shape, self.scale, size)

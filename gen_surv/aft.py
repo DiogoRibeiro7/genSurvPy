@@ -7,8 +7,8 @@ from typing import List, Literal, Optional
 import numpy as np
 import pandas as pd
 
-from ._validation import ensure_censoring_model, ensure_positive
 from .censoring import rexpocens, runifcens
+from .validation import ensure_censoring_model, ensure_positive
 
 
 def gen_aft_log_normal(
@@ -42,18 +42,17 @@ def gen_aft_log_normal(
     pd.DataFrame
         DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     p = len(beta)
-    X = np.random.normal(size=(n, p))
-    epsilon = np.random.normal(loc=0.0, scale=sigma, size=n)
+    X = rng.normal(size=(n, p))
+    epsilon = rng.normal(loc=0.0, scale=sigma, size=n)
     log_T = X @ np.array(beta) + epsilon
     T = np.exp(log_T)
 
     ensure_censoring_model(model_cens)
     rfunc = runifcens if model_cens == "uniform" else rexpocens
-    C = rfunc(n, cens_par)
+    C = rfunc(n, cens_par, rng)
 
     observed_time = np.minimum(T, C)
     status = (T <= C).astype(int)
@@ -103,26 +102,25 @@ def gen_aft_weibull(
     pd.DataFrame
         DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     ensure_positive(shape, "shape")
     ensure_positive(scale, "scale")
 
     p = len(beta)
-    X = np.random.normal(size=(n, p))
+    X = rng.normal(size=(n, p))
 
     # Linear predictor
     eta = X @ np.array(beta)
 
     # Generate Weibull survival times
-    U = np.random.uniform(size=n)
+    U = rng.uniform(size=n)
     T = scale * (-np.log(U) * np.exp(-eta)) ** (1 / shape)
 
     # Generate censoring times
     ensure_censoring_model(model_cens)
     rfunc = runifcens if model_cens == "uniform" else rexpocens
-    C = rfunc(n, cens_par)
+    C = rfunc(n, cens_par, rng)
 
     # Observed time is the minimum of event time and censoring time
     observed_time = np.minimum(T, C)
@@ -175,20 +173,19 @@ def gen_aft_log_logistic(
     pd.DataFrame
         DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     ensure_positive(shape, "shape")
     ensure_positive(scale, "scale")
 
     p = len(beta)
-    X = np.random.normal(size=(n, p))
+    X = rng.normal(size=(n, p))
 
     # Linear predictor
     eta = X @ np.array(beta)
 
     # Generate Log-Logistic survival times
-    U = np.random.uniform(size=n)
+    U = rng.uniform(size=n)
 
     # Inverse CDF method: S(t) = 1/(1 + (t/scale)^shape)
     # so t = scale * (1/S - 1)^(1/shape)
@@ -203,7 +200,7 @@ def gen_aft_log_logistic(
     # Generate censoring times
     ensure_censoring_model(model_cens)
     rfunc = runifcens if model_cens == "uniform" else rexpocens
-    C = rfunc(n, cens_par)
+    C = rfunc(n, cens_par, rng)
 
     # Observed time is the minimum of event time and censoring time
     observed_time = np.minimum(T, C)

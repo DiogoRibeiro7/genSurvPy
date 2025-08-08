@@ -6,7 +6,8 @@ Example:
     >>> df = generate(model="cphm", n=100, model_cens="uniform", cens_par=1.0, beta=0.5, covariate_range=2.0)
 """
 
-from typing import Any, Dict, Literal, Protocol
+from collections.abc import Callable
+from typing import Dict, Literal
 
 import pandas as pd
 
@@ -19,7 +20,7 @@ from gen_surv.piecewise import gen_piecewise_exponential
 from gen_surv.tdcm import gen_tdcm
 from gen_surv.thmm import gen_thmm
 
-from ._validation import ensure_in_choices
+from .validation import ensure_in_choices
 
 # Type definitions for model names
 ModelType = Literal[
@@ -38,8 +39,7 @@ ModelType = Literal[
 
 
 # Interface for generator callables
-class DataGenerator(Protocol):
-    def __call__(self, **kwargs: Any) -> pd.DataFrame: ...
+DataGenerator = Callable[..., pd.DataFrame]
 
 
 # Map model names to their generator functions
@@ -58,7 +58,7 @@ _model_map: Dict[ModelType, DataGenerator] = {
 }
 
 
-def generate(model: ModelType, **kwargs: Any) -> pd.DataFrame:
+def generate(model: ModelType, **kwargs: object) -> pd.DataFrame:
     """Generate survival data from a specific model.
 
     Args:
@@ -88,6 +88,5 @@ def generate(model: ModelType, **kwargs: Any) -> pd.DataFrame:
     Raises:
         ChoiceError: If an unknown model name is provided.
     """
-    model_lower = model.lower()
-    ensure_in_choices(model_lower, "model", _model_map.keys())
-    return _model_map[model_lower](**kwargs)
+    ensure_in_choices(model, "model", _model_map.keys())
+    return _model_map[model](**kwargs)

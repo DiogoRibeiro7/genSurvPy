@@ -103,17 +103,28 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
-ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
-    "gen_surv.interface",
-    "gen_surv.competing_risks",
-    "gen_surv.mixture",
-    "gen_surv.sklearn_adapter",
-    "gen_surv.summary",
+    "typer",
+    "typer.models",
+    "matplotlib",
+    "matplotlib.*",
+    "lifelines",
+    "lifelines.*",
+    "sklearn",
+    "sklearn.*",
+    "numpy",
+    "numpy.*",
+    "pandas",
+    "pandas.*",
+    "scipy",
+    "scipy.*",
+    "pyreadr",
+    "sksurv",
+    "sksurv.*",
 ]
-ignore_errors = true
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core"]

@@ -3,7 +3,7 @@ import pytest
 
 pytest.importorskip("pytest_benchmark")
 
-from gen_surv._validation import ensure_positive_sequence
+from gen_surv.validation import ensure_positive_sequence
 
 
 def test_positive_sequence_benchmark(benchmark):

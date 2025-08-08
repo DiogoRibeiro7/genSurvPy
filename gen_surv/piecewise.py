@@ -12,7 +12,8 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from ._covariates import generate_covariates, set_covariate_params
-from ._validation import (
+from .censoring import rexpocens, runifcens
+from .validation import (
     ParameterError,
     ensure_censoring_model,
     ensure_in_choices,
@@ -22,7 +23,6 @@ from ._validation import (
     ensure_positive_sequence,
     ensure_sequence_length,
 )
-from .censoring import rexpocens, runifcens
 
 
 def _validate_piecewise_params(
@@ -47,7 +47,7 @@ def gen_piecewise_exponential(
     betas: list[float] | NDArray[np.float64] | None = None,
     n_covariates: int = 2,
     covariate_dist: Literal["normal", "uniform", "binary"] = "normal",
-    covariate_params: dict[str, float | tuple[float, float]] | None = None,
+    covariate_params: dict[str, float] | None = None,
     model_cens: Literal["uniform", "exponential"] = "uniform",
     cens_par: float = 5.0,
     seed: int | None = None,
@@ -105,8 +105,7 @@ def gen_piecewise_exponential(
     ...     seed=42
     ... )
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     ensure_positive_int(n, "n")
     ensure_positive_int(n_covariates, "n_covariates")
@@ -121,14 +120,14 @@ def gen_piecewise_exponential(
 
     # Set default betas if not provided
     if betas is None:
-        betas = np.random.normal(0, 0.5, size=n_covariates)
+        betas = rng.normal(0, 0.5, size=n_covariates)
     else:
         ensure_numeric_sequence(betas, "betas")
         betas = np.array(betas, dtype=float)
         n_covariates = len(betas)
 
     # Generate covariates
-    X = generate_covariates(n, n_covariates, covariate_dist, covariate_params)
+    X = generate_covariates(n, n_covariates, covariate_dist, covariate_params, rng)
 
     # Calculate linear predictor
     linear_predictor = X @ betas
@@ -141,7 +140,7 @@ def gen_piecewise_exponential(
         adjusted_hazard_rates = [h * np.exp(linear_predictor[i]) for h in hazard_rates]
 
         # Generate random uniform between 0 and 1
-        u = np.random.uniform(0, 1)
+        u = rng.uniform(0, 1)
 
         # Calculate survival time using inverse CDF method for piecewise exponential
         remaining_time = -np.log(u)  # Initial time remaining (for standard exponential)
@@ -184,7 +183,7 @@ def gen_piecewise_exponential(
 
     # Generate censoring times
     rfunc = runifcens if model_cens == "uniform" else rexpocens
-    cens_times = rfunc(n, cens_par)
+    cens_times = rfunc(n, cens_par, rng)
 
     # Determine observed time and status
     observed_times = np.minimum(survival_times, cens_times)

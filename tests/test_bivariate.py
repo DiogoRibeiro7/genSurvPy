@@ -1,13 +1,8 @@
-import os
-import sys
-
 import numpy as np
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pytest
 
-from gen_surv._validation import ChoiceError, LengthError
 from gen_surv.bivariate import sample_bivariate_distribution
+from gen_surv.validation import ChoiceError, LengthError
 
 
 def test_sample_bivariate_exponential_shape():

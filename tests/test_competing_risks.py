@@ -9,11 +9,18 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 import gen_surv.competing_risks as cr
-from gen_surv._validation import ChoiceError, LengthError, ParameterError
 from gen_surv.competing_risks import (
     cause_specific_cumulative_incidence,
     gen_competing_risks,
     gen_competing_risks_weibull,
+)
+from gen_surv.validation import (
+    ChoiceError,
+    LengthError,
+    NumericSequenceError,
+    ParameterError,
+    PositiveSequenceError,
+    PositiveValueError,
 )
 
 os.environ.setdefault("MPLBACKEND", "Agg")
@@ -92,6 +99,49 @@ def test_invalid_covariate_dist():
         gen_competing_risks_weibull(n=5, n_risks=2, covariate_dist="unknown", seed=1)
 
 
+def test_competing_risks_positive_params():
+    with pytest.raises(PositiveValueError):
+        gen_competing_risks(n=5, n_risks=2, cens_par=0.0, seed=0)
+    with pytest.raises(PositiveValueError):
+        gen_competing_risks(n=5, n_risks=2, max_time=-1.0, seed=0)
+
+
+def test_competing_risks_invalid_covariate_params():
+    with pytest.raises(ParameterError):
+        gen_competing_risks(
+            n=5,
+            n_risks=2,
+            covariate_dist="normal",
+            covariate_params={"mean": 0.0},
+            seed=1,
+        )
+    with pytest.raises(PositiveValueError):
+        gen_competing_risks(
+            n=5,
+            n_risks=2,
+            covariate_dist="normal",
+            covariate_params={"mean": 0.0, "std": -1.0},
+            seed=1,
+        )
+    with pytest.raises(ParameterError):
+        gen_competing_risks_weibull(
+            n=5,
+            n_risks=2,
+            covariate_dist="binary",
+            covariate_params={"p": 1.5},
+            seed=1,
+        )
+
+
+def test_competing_risks_invalid_beta_values():
+    with pytest.raises(NumericSequenceError):
+        gen_competing_risks(n=5, n_risks=2, betas=[[0.1, "x"], [0.2, 0.3]], seed=0)
+    with pytest.raises(NumericSequenceError):
+        gen_competing_risks_weibull(
+            n=5, n_risks=2, betas=[[0.1, np.nan], [0.2, 0.3]], seed=0
+        )
+
+
 def test_competing_risks_weibull_parameters():
     """Test parameter validation in Weibull competing risks model."""
     # Test with invalid number of shape parameters
@@ -111,6 +161,17 @@ def test_competing_risks_weibull_parameters():
             scale_params=[2.0, 3.0],  # Only 2 provided, but 3 risks
             seed=42,
         )
+
+
+def test_competing_risks_weibull_positive_params():
+    with pytest.raises(PositiveSequenceError):
+        gen_competing_risks_weibull(n=5, n_risks=2, shape_params=[1.0, -1.0], seed=0)
+    with pytest.raises(PositiveSequenceError):
+        gen_competing_risks_weibull(n=5, n_risks=2, scale_params=[2.0, 0.0], seed=0)
+    with pytest.raises(PositiveValueError):
+        gen_competing_risks_weibull(n=5, n_risks=2, cens_par=-1.0, seed=0)
+    with pytest.raises(PositiveValueError):
+        gen_competing_risks_weibull(n=5, n_risks=2, max_time=0.0, seed=0)
 
 
 def test_cause_specific_cumulative_incidence():
@@ -133,6 +194,18 @@ def test_cause_specific_cumulative_incidence():
     # Test with invalid cause
     with pytest.raises(ParameterError):
         cause_specific_cumulative_incidence(df, time_points, cause=3)
+
+
+def test_cause_specific_cumulative_incidence_handles_ties():
+    df = pd.DataFrame(
+        {
+            "id": [0, 1, 2, 3],
+            "time": [1.0, 1.0, 2.0, 2.0],
+            "status": [1, 2, 1, 0],
+        }
+    )
+    cif = cause_specific_cumulative_incidence(df, [1.0, 2.0], cause=1)
+    assert np.allclose(cif["incidence"].to_numpy(), [0.25, 0.5])
 
 
 def test_cause_specific_cumulative_incidence_bounds():

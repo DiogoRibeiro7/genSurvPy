@@ -5,23 +5,117 @@ This module provides functions to generate survival data with
 competing risks under different hazard specifications.
 """
 
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
 
-from ._validation import (
+from .censoring import rexpocens, runifcens
+from .validation import (
+    NumericSequenceError,
     ParameterError,
     ensure_censoring_model,
     ensure_in_choices,
+    ensure_numeric_sequence,
+    ensure_positive,
+    ensure_positive_int,
     ensure_positive_sequence,
+    ensure_probability,
     ensure_sequence_length,
 )
-from .censoring import rexpocens, runifcens
 
 if TYPE_CHECKING:  # pragma: no cover - used only for type hints
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
+
+
+def _prepare_covariates(
+    rng: np.random.Generator,
+    n: int,
+    n_risks: int,
+    betas: Optional[Union[List[List[float]], np.ndarray]],
+    covariate_dist: Literal["normal", "uniform", "binary"],
+    covariate_params: Optional[Dict[str, float]],
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """Generate covariates and validate associated parameters.
+
+    Returns
+    -------
+    betas : ndarray
+        Coefficient matrix of shape ``(n_risks, n_covariates)``.
+    X : ndarray
+        Generated covariate matrix of shape ``(n, n_covariates)``.
+    n_covariates : int
+        Number of covariates.
+    """
+
+    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
+    n_covariates = 2
+
+    params: Dict[str, float]
+    if covariate_params is None:
+        if covariate_dist == "normal":
+            params = {"mean": 0.0, "std": 1.0}
+        elif covariate_dist == "uniform":
+            params = {"low": 0.0, "high": 1.0}
+        else:
+            params = {"p": 0.5}
+    else:
+        params = dict(covariate_params)
+    if covariate_dist == "normal":
+        mean = params.get("mean")
+        std = params.get("std")
+        if mean is None or std is None:
+            raise ParameterError(
+                "covariate_params", params, "must include 'mean' and 'std'"
+            )
+        ensure_positive(std, "covariate_params['std']")
+        mean_f = float(mean)
+        std_f = float(std)
+    elif covariate_dist == "uniform":
+        low = params.get("low")
+        high = params.get("high")
+        if low is None or high is None:
+            raise ParameterError(
+                "covariate_params", params, "must include 'low' and 'high'"
+            )
+        low_f = float(low)
+        high_f = float(high)
+        if high_f <= low_f:
+            raise ParameterError(
+                "covariate_params['high']", high_f, "must be greater than 'low'"
+            )
+    else:  # binary
+        p = params.get("p")
+        if p is None:
+            raise ParameterError("covariate_params", params, "must include 'p'")
+        p_f = float(p)
+        ensure_probability(p_f, "covariate_params['p']")
+
+    if betas is None:
+        betas_arr = rng.normal(0, 0.5, size=(n_risks, n_covariates))
+    else:
+        try:
+            betas_arr = np.asarray(betas, dtype=float)
+        except (TypeError, ValueError) as exc:
+            raise NumericSequenceError("betas", betas) from exc
+        ensure_sequence_length(betas_arr, n_risks, "betas")
+        for j in range(n_risks):
+            ensure_numeric_sequence(betas_arr[j], f"betas[{j}]")
+            nonfinite = np.where(~np.isfinite(betas_arr[j]))[0]
+            if nonfinite.size:
+                idx = int(nonfinite[0])
+                raise NumericSequenceError(f"betas[{j}]", betas_arr[j][idx], idx)
+        n_covariates = betas_arr.shape[1]
+
+    if covariate_dist == "normal":
+        X = rng.normal(mean_f, std_f, size=(n, n_covariates))
+    elif covariate_dist == "uniform":
+        X = rng.uniform(low_f, high_f, size=(n, n_covariates))
+    else:  # binary
+        X = rng.binomial(1, p_f, size=(n, n_covariates))
+
+    return betas_arr, X, n_covariates
 
 
 def gen_competing_risks(
@@ -30,7 +124,7 @@ def gen_competing_risks(
     baseline_hazards: Optional[Union[List[float], np.ndarray]] = None,
     betas: Optional[Union[List[List[float]], np.ndarray]] = None,
     covariate_dist: Literal["normal", "uniform", "binary"] = "normal",
-    covariate_params: Optional[Dict[str, Union[float, Tuple[float, float]]]] = None,
+    covariate_params: Optional[Dict[str, float]] = None,
     max_time: Optional[float] = 10.0,
     model_cens: Literal["uniform", "exponential"] = "uniform",
     cens_par: float = 5.0,
@@ -94,8 +188,14 @@ def gen_competing_risks(
     >>> # Distribution of event types
     >>> df["status"].value_counts()
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
+
+    ensure_positive_int(n, "n")
+    ensure_positive_int(n_risks, "n_risks")
+    ensure_censoring_model(model_cens)
+    ensure_positive(cens_par, "cens_par")
+    if max_time is not None:
+        ensure_positive(max_time, "max_time")
 
     # Set default baseline hazards if not provided
     if baseline_hazards is None:
@@ -105,50 +205,9 @@ def gen_competing_risks(
         ensure_sequence_length(baseline_hazards, n_risks, "baseline_hazards")
         ensure_positive_sequence(baseline_hazards, "baseline_hazards")
 
-    # Set default number of covariates and their parameters
-    n_covariates = 2  # Default number of covariates
-
-    # Set default covariate parameters if not provided
-    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
-    if covariate_params is None:
-        if covariate_dist == "normal":
-            covariate_params = {"mean": 0.0, "std": 1.0}
-        elif covariate_dist == "uniform":
-            covariate_params = {"low": 0.0, "high": 1.0}
-        elif covariate_dist == "binary":
-            covariate_params = {"p": 0.5}
-
-    # Set default betas if not provided
-    if betas is None:
-        betas = np.random.normal(0, 0.5, size=(n_risks, n_covariates))
-    else:
-        betas = np.asarray(betas, dtype=float)
-        ensure_sequence_length(betas, n_risks, "betas")
-        n_covariates = betas.shape[1]
-
-    # Generate covariates
-    if covariate_dist == "normal":
-        X = np.random.normal(
-            covariate_params.get("mean", 0.0),
-            covariate_params.get("std", 1.0),
-            size=(n, n_covariates),
-        )
-    elif covariate_dist == "uniform":
-        X = np.random.uniform(
-            covariate_params.get("low", 0.0),
-            covariate_params.get("high", 1.0),
-            size=(n, n_covariates),
-        )
-    elif covariate_dist == "binary":
-        X = np.random.binomial(
-            1, covariate_params.get("p", 0.5), size=(n, n_covariates)
-        )
-    else:  # pragma: no cover - validated above
-        raise ParameterError(
-            "covariate_dist",
-            covariate_dist,
-            "must be one of {'normal', 'uniform', 'binary'}",
-        )
+    betas, X, n_covariates = _prepare_covariates(
+        rng, n, n_risks, betas, covariate_dist, covariate_params
+    )
 
     # Calculate linear predictors for each risk
     linear_predictors = np.zeros((n, n_risks))
@@ -164,12 +223,11 @@ def gen_competing_risks(
     event_times = np.zeros((n, n_risks))
     for j in range(n_risks):
         # Use exponential distribution with rate = hazard
-        event_times[:, j] = np.random.exponential(1 / hazard_rates[:, j])
+        event_times[:, j] = rng.exponential(1 / hazard_rates[:, j])
 
     # Generate censoring times
-    ensure_censoring_model(model_cens)
     rfunc = runifcens if model_cens == "uniform" else rexpocens
-    cens_times = rfunc(n, cens_par)
+    cens_times = rfunc(n, cens_par, rng)
 
     # Find the minimum time for each subject (first event or censoring)
     min_event_times = np.min(event_times, axis=1)
@@ -182,16 +240,6 @@ def gen_competing_risks(
             # Find which risk occurred first
             risk_index = np.argmin(event_times[i])
             status[i] = risk_index + 1  # 1-based indexing for event types
-
-    if len(np.unique(status)) <= 1 and n_risks > 1:
-        status[0] = 1
-        if n > 1:
-            status[1] = 2
-
-    if len(np.unique(status)) <= 1 and n_risks > 1:
-        status[0] = 1
-        if n > 1:
-            status[1] = 2
 
     # Ensure at least two event types are present for small n
     if len(np.unique(status)) <= 1 and n_risks > 1:
@@ -222,7 +270,7 @@ def gen_competing_risks_weibull(
     scale_params: Optional[Union[List[float], np.ndarray]] = None,
     betas: Optional[Union[List[List[float]], np.ndarray]] = None,
     covariate_dist: Literal["normal", "uniform", "binary"] = "normal",
-    covariate_params: Optional[Dict[str, Union[float, Tuple[float, float]]]] = None,
+    covariate_params: Optional[Dict[str, float]] = None,
     max_time: Optional[float] = 10.0,
     model_cens: Literal["uniform", "exponential"] = "uniform",
     cens_par: float = 5.0,
@@ -287,8 +335,14 @@ def gen_competing_risks_weibull(
     ...     seed=42
     ... )
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
+
+    ensure_positive_int(n, "n")
+    ensure_positive_int(n_risks, "n_risks")
+    ensure_censoring_model(model_cens)
+    ensure_positive(cens_par, "cens_par")
+    if max_time is not None:
+        ensure_positive(max_time, "max_time")
 
     # Set default shape and scale parameters if not provided
     if shape_params is None:
@@ -296,57 +350,18 @@ def gen_competing_risks_weibull(
     else:
         shape_params = np.asarray(shape_params, dtype=float)
         ensure_sequence_length(shape_params, n_risks, "shape_params")
+        ensure_positive_sequence(shape_params, "shape_params")
 
     if scale_params is None:
         scale_params = np.array([2.0 + i for i in range(n_risks)])
     else:
         scale_params = np.asarray(scale_params, dtype=float)
         ensure_sequence_length(scale_params, n_risks, "scale_params")
+        ensure_positive_sequence(scale_params, "scale_params")
 
-    # Set default number of covariates and their parameters
-    n_covariates = 2  # Default number of covariates
-
-    # Set default covariate parameters if not provided
-    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
-    if covariate_params is None:
-        if covariate_dist == "normal":
-            covariate_params = {"mean": 0.0, "std": 1.0}
-        elif covariate_dist == "uniform":
-            covariate_params = {"low": 0.0, "high": 1.0}
-        elif covariate_dist == "binary":
-            covariate_params = {"p": 0.5}
-
-    # Set default betas if not provided
-    if betas is None:
-        betas = np.random.normal(0, 0.5, size=(n_risks, n_covariates))
-    else:
-        betas = np.asarray(betas, dtype=float)
-        ensure_sequence_length(betas, n_risks, "betas")
-        n_covariates = betas.shape[1]
-
-    # Generate covariates
-    if covariate_dist == "normal":
-        X = np.random.normal(
-            covariate_params.get("mean", 0.0),
-            covariate_params.get("std", 1.0),
-            size=(n, n_covariates),
-        )
-    elif covariate_dist == "uniform":
-        X = np.random.uniform(
-            covariate_params.get("low", 0.0),
-            covariate_params.get("high", 1.0),
-            size=(n, n_covariates),
-        )
-    elif covariate_dist == "binary":
-        X = np.random.binomial(
-            1, covariate_params.get("p", 0.5), size=(n, n_covariates)
-        )
-    else:  # pragma: no cover - validated above
-        raise ParameterError(
-            "covariate_dist",
-            covariate_dist,
-            "must be one of {'normal', 'uniform', 'binary'}",
-        )
+    betas, X, n_covariates = _prepare_covariates(
+        rng, n, n_risks, betas, covariate_dist, covariate_params
+    )
 
     # Calculate linear predictors for each risk
     linear_predictors = np.zeros((n, n_risks))
@@ -362,15 +377,14 @@ def gen_competing_risks_weibull(
         )
 
         # Generate random uniform between 0 and 1
-        u = np.random.uniform(0, 1, size=n)
+        u = rng.uniform(0, 1, size=n)
 
         # Convert to Weibull using inverse CDF: t = scale * (-log(1-u))^(1/shape)
         event_times[:, j] = adjusted_scale * (-np.log(1 - u)) ** (1 / shape_params[j])
 
     # Generate censoring times
-    ensure_censoring_model(model_cens)
     rfunc = runifcens if model_cens == "uniform" else rexpocens
-    cens_times = rfunc(n, cens_par)
+    cens_times = rfunc(n, cens_par, rng)
 
     # Find the minimum time for each subject (first event or censoring)
     min_event_times = np.min(event_times, axis=1)
@@ -446,46 +460,41 @@ def cause_specific_cumulative_incidence(
             "cause", cause, f"not found in the data. Available causes: {unique_causes}"
         )
 
-    # Sort data by time
     sorted_data = data.sort_values(by=time_col).copy()
+    times = sorted_data[time_col].to_numpy()
+    status = sorted_data[status_col].to_numpy()
 
-    # Initialize arrays for calculations
-    times = sorted_data[time_col].values
-    status = sorted_data[status_col].values
-    n = len(times)
+    unique_times, idx = np.unique(times, return_index=True)
+    counts = np.diff(np.append(idx, len(times)))
+    at_risk = len(times) - idx
 
-    # Calculate the survival function (probability of no event of any type)
-    survival = np.ones(n)
-    cumulative_incidence = np.zeros(n)
+    d_all = np.zeros_like(unique_times, dtype=int)
+    d_cause = np.zeros_like(unique_times, dtype=int)
+    inverse = np.repeat(np.arange(len(unique_times)), counts)
+    for i, s in enumerate(status):
+        if s > 0:
+            d_all[inverse[i]] += 1
+            if s == cause:
+                d_cause[inverse[i]] += 1
 
-    for i in range(n):
-        if i > 0:
-            survival[i] = survival[i - 1]
-            cumulative_incidence[i] = cumulative_incidence[i - 1]
+    surv = 1.0
+    cif_vals = np.zeros_like(unique_times, dtype=float)
+    ci = 0.0
+    for i, t in enumerate(unique_times):
+        prev_surv = surv
+        surv *= 1 - d_all[i] / at_risk[i]
+        ci += prev_surv * d_cause[i] / at_risk[i]
+        cif_vals[i] = ci
 
-        # Count subjects at risk at this time
-        at_risk = n - i
-
-        if status[i] > 0:  # Any event
-            # Update overall survival
-            survival[i] *= 1 - 1 / at_risk
-
-            # Update cause-specific cumulative incidence
-            if status[i] == cause:
-                prev_survival = survival[i - 1] if i > 0 else 1.0
-                cumulative_incidence[i] += prev_survival * (1 / at_risk)
-
-    # Interpolate values at the requested time points
     result = []
     for t in time_points:
         if t <= 0:
             result.append({"time": t, "incidence": 0.0})
-        elif t >= max(times):
-            result.append({"time": t, "incidence": cumulative_incidence[-1]})
+        elif t >= unique_times[-1]:
+            result.append({"time": t, "incidence": cif_vals[-1]})
         else:
-            # Find the index where time >= t
-            idx = np.searchsorted(times, t)
-            result.append({"time": t, "incidence": cumulative_incidence[idx - 1]})
+            idx = np.searchsorted(unique_times, t, side="right") - 1
+            result.append({"time": t, "incidence": cif_vals[idx]})
 
     return pd.DataFrame(result)
 
@@ -567,7 +576,7 @@ def competing_risks_summary(
             median_time_by_cause[int(cause)] = float(cause_times.median())
 
     # Covariate statistics
-    covariate_stats = {}
+    covariate_stats: dict[str, dict[str, float | int | dict[str, float]]] = {}
     for col in covariate_cols:
         col_data = data[col]
 
@@ -661,27 +670,21 @@ def plot_cause_specific_hazards(
     # Create plot
     fig, ax = plt.subplots(figsize=figsize)
 
+    times_sorted = np.sort(data[time_col].to_numpy())
+    total = len(times_sorted)
+
     # Plot hazard for each cause
     for cause in causes:
-        # Filter data for this cause
         cause_data = data[data[status_col] == cause]
-
-        if len(cause_data) < 5:  # Skip if too few events
+        if len(cause_data) < 5:
             continue
 
-        # Estimate hazard using kernel density
         kde = gaussian_kde(cause_data[time_col], bw_method=bandwidth)
 
-        # Calculate hazard rate
-        at_risk = np.array([len(data[data[time_col] >= t]) for t in time_points])
-
-        # Avoid division by zero
+        at_risk = total - np.searchsorted(times_sorted, time_points, side="left")
         at_risk = np.maximum(at_risk, 1)
 
-        # Hazard = density / survival
-        hazard = kde(time_points) * len(data) / at_risk
-
-        # Plot
+        hazard = kde(time_points) * total / at_risk
         ax.plot(time_points, hazard, label=f"Cause {cause}")
 
     # Format plot

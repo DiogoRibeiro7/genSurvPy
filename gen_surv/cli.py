@@ -153,11 +153,7 @@ def dataset(
         kwargs["betas"] = _val(beta)
 
     # Generate the data
-    try:
-        df = generate(**kwargs)  # type: ignore[arg-type]
-    except TypeError:
-        # Fallback for tests where generate accepts only model and n
-        df = generate(model=model_str, n=_val(n))  # type: ignore[arg-type]
+    df = generate(**kwargs)
 
     # Output the data
     if output:
