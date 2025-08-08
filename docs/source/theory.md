@@ -1,7 +1,3 @@
----
-orphan: true
----
-
 # 📘 Mathematical Foundations of `gen_surv`
 
 This page presents the mathematical formulation behind the survival models implemented in the `gen_surv` package.
@@ -10,9 +6,7 @@ This page presents the mathematical formulation behind the survival models imple
 
 ## 1. Cox Proportional Hazards Model (CPHM)
 
-This semi-parametric approach models the hazard as a baseline component
-multiplied by an exponential term involving the covariates. The hazard
-function conditioned on covariates is:
+The hazard function conditioned on covariates is:
 
 $$
 h(t \mid X) = h_0(t) \exp(X \\beta)
@@ -45,8 +39,7 @@ $$
 
 ## 2. Time-Dependent Covariate Model (TDCM)
 
-This extension of the Cox model allows covariate values to vary during
-follow-up, accommodating exposures or treatments that change over time:
+A generalization of CPHM where covariates change over time:
 
 $$
 h(t \mid Z(t)) = h_0(t) \\exp(Z(t) \\beta)
@@ -58,8 +51,7 @@ In this package, piecewise covariate values are simulated with dependence across
 
 ## 3. Continuous-Time Multi-State Markov Model (CMM)
 
-This framework captures transitions between a finite set of states where
-waiting times are exponentially distributed. With generator matrix \( Q \), the transition probability matrix is given by:
+Markov model with generator matrix \( Q \). The transition probability matrix is given by:
 
 $$
 P(t) = \\exp(Qt)
@@ -74,9 +66,7 @@ Where:
 
 ## 4. Time-Homogeneous Hidden Markov Model (THMM)
 
-This model handles situations where the process evolves through unobserved
-states that generate the observed responses. It simulates observed states with
-latent transitions.
+This model simulates observed states with unobserved latent state transitions.
 
 Let:
 
@@ -94,9 +84,7 @@ $$
 
 ## 5. Accelerated Failure Time (AFT) Models
 
-These fully parametric models relate covariates to the logarithm of the
-survival time. They assume the effect of a covariate speeds up or slows down the
-event time directly, rather than acting on the hazard.
+AFT models assume that the effect of covariates accelerates or decelerates time to event directly, rather than the hazard.
 
 ### Log-Normal AFT
 
@@ -128,25 +116,5 @@ This model is especially useful when the proportional hazards assumption is not 
 
 All models support censoring:
 
-- **Uniform:** \( C_i \sim U(0, \text{cens\_par}) \)
-- **Exponential:** \( C_i \sim \text{Exp}(\text{cens\_par}) \)
-
-## 6. Competing Risks Models
-
-These models handle scenarios where several distinct failure types can occur.
-Each cause has its own hazard function, and the observed status indicates which
-event occurred (1, 2, ...). The package includes constant-hazard and
-Weibull-hazard versions.
-
-## 7. Mixture Cure Models
-
-These models posit that a subset of the population is cured and will never
-experience the event of interest. The generator mixes a logistic cure component
-with an exponential hazard for the uncured, returning a ``cured`` indicator
-column alongside the usual time and status.
-
-## 8. Piecewise Exponential Model
-
-Here the baseline hazard is assumed constant within each of several
-user-specified intervals. This allows flexible hazard shapes over time while
-remaining easy to simulate.
+- **Uniform:** \( C_i \\sim U(0, \\text{cens\\_par}) \)
+- **Exponential:** \( C_i \\sim \\text{Exp}(\\text{cens\\_par}) \)

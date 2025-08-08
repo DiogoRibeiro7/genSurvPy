@@ -1,6 +1,5 @@
-import pytest
-
 from gen_surv import generate
+import pytest
 
 
 def test_generate_tdcm_runs():

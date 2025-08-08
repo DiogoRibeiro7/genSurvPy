@@ -1,21 +1,10 @@
-from typing import Sequence, TypedDict
-
-import numpy as np
 import pandas as pd
-
-from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
-from gen_surv.validation import validate_gen_cmm_inputs
-
-
-class EventTimes(TypedDict):
-    t12: float
-    t13: float
-    t23: float
+import numpy as np
+from gen_surv.validate import validate_gen_cmm_inputs
+from gen_surv.censoring import runifcens, rexpocens
 
 
-def generate_event_times(
-    z1: float, beta: Sequence[float], rate: Sequence[float]
-) -> EventTimes:
+def generate_event_times(z1: float, beta: list, rate: list) -> dict:
     """
     Generate event times for a continuous-time multi-state Markov model.
 
@@ -28,26 +17,17 @@ def generate_event_times(
     - dict: {'t12': float, 't13': float, 't23': float}
     """
     u = np.random.uniform()
-    t12 = (-np.log(1 - u) / (rate[0] * np.exp(beta[0] * z1))) ** (1 / rate[1])
+    t12 = (-np.log(1 - u) / (rate[0] * np.exp(beta[0] * z1)))**(1 / rate[1])
 
     u = np.random.uniform()
-    t13 = (-np.log(1 - u) / (rate[2] * np.exp(beta[1] * z1))) ** (1 / rate[3])
+    t13 = (-np.log(1 - u) / (rate[2] * np.exp(beta[1] * z1)))**(1 / rate[3])
 
     u = np.random.uniform()
-    t23 = (-np.log(1 - u) / (rate[4] * np.exp(beta[2] * z1))) ** (1 / rate[5])
+    t23 = (-np.log(1 - u) / (rate[4] * np.exp(beta[2] * z1)))**(1 / rate[5])
 
     return {"t12": t12, "t13": t13, "t23": t23}
 
-
-def gen_cmm(
-    n: int,
-    model_cens: str,
-    cens_par: float,
-    beta: Sequence[float],
-    covariate_range: float,
-    rate: Sequence[float],
-    seed: int | None = None,
-) -> pd.DataFrame:
+def gen_cmm(n, model_cens, cens_par, beta, covar, rate):
     """
     Generate survival data using a continuous-time Markov model (CMM).
 
@@ -56,38 +36,35 @@ def gen_cmm(
     - model_cens (str): "uniform" or "exponential".
     - cens_par (float): Parameter for censoring.
     - beta (list): Regression coefficients (length 3).
-    - covariate_range (float): Upper bound for the covariate values.
+    - covar (float): Covariate range (uniformly sampled from [0, covar]).
     - rate (list): Transition rates (length 6).
 
     Returns:
-    - pd.DataFrame with columns: id, start, stop, status, X0, transition
+    - pd.DataFrame with columns: id, start, stop, status, covariate, transition
     """
-    validate_gen_cmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
+    validate_gen_cmm_inputs(n, model_cens, cens_par, beta, covar, rate)
 
-    rng = np.random.default_rng(seed)
-    rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
+    rfunc = runifcens if model_cens == "uniform" else rexpocens
+    rows = []
 
-    z1 = rng.uniform(0, covariate_range, size=n)
-    c = rfunc(n, cens_par, rng)
+    for k in range(n):
+        z1 = np.random.uniform(0, covar)
+        c = rfunc(1, cens_par)[0]
+        events = generate_event_times(z1, beta, rate)
 
-    u = rng.uniform(size=(3, n))
-    t12 = (-np.log(1 - u[0]) / (rate[0] * np.exp(beta[0] * z1))) ** (1 / rate[1])
-    t13 = (-np.log(1 - u[1]) / (rate[2] * np.exp(beta[1] * z1))) ** (1 / rate[3])
+        t12, t13, t23 = events["t12"], events["t13"], events["t23"]
+        min_event_time = min(t12, t13, c)
 
-    first_event = np.minimum(t12, t13)
-    censored = first_event >= c
+        if min_event_time < c:
+            if t12 <= t13:
+                transition = 1  # 1 -> 2
+                rows.append([k + 1, 0, t12, 1, z1, transition])
+            else:
+                transition = 2  # 1 -> 3
+                rows.append([k + 1, 0, t13, 1, z1, transition])
+        else:
+            # Censored before any event
+            rows.append([k + 1, 0, c, 0, z1, np.nan])
 
-    status = (~censored).astype(int)
-    transition = np.where(censored, np.nan, np.where(t12 <= t13, 1, 2))
-    stop = np.where(censored, c, first_event)
+    return pd.DataFrame(rows, columns=["id", "start", "stop", "status", "covariate", "transition"])
 
-    return pd.DataFrame(
-        {
-            "id": np.arange(1, n + 1),
-            "start": np.zeros(n),
-            "stop": stop,
-            "status": status,
-            "X0": z1,
-            "transition": transition,
-        }
-    )
