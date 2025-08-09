@@ -5,11 +5,12 @@ This module provides a command-line interface for generating survival data
 using the gen_surv package.
 """
 
-from typing import Any, Dict, List, Optional, TypeVar, cast
+from typing import Any, Dict, List, TypeVar, cast
 
 import typer
 
 from gen_surv.interface import generate
+from gen_surv.validation import ValidationError
 
 app = typer.Typer(help="Generate synthetic survival datasets.")
 
@@ -31,21 +32,17 @@ def dataset(
         [0.5],
         help="Regression coefficient(s). Provide multiple values for multi-parameter models.",
     ),
-    covariate_range: Optional[float] = typer.Option(
+    covariate_range: float | None = typer.Option(
         2.0,
         "--covariate-range",
         "--covar",
         help="Upper bound for covariate values (for CPHM, CMM, THMM)",
     ),
-    sigma: Optional[float] = typer.Option(
+    sigma: float | None = typer.Option(
         1.0, help="Standard deviation parameter (for log-normal AFT)"
     ),
-    shape: Optional[float] = typer.Option(
-        1.5, help="Shape parameter (for Weibull AFT)"
-    ),
-    scale: Optional[float] = typer.Option(
-        2.0, help="Scale parameter (for Weibull AFT)"
-    ),
+    shape: float | None = typer.Option(1.5, help="Shape parameter (for Weibull AFT)"),
+    scale: float | None = typer.Option(2.0, help="Scale parameter (for Weibull AFT)"),
     n_risks: int = typer.Option(2, help="Number of competing risks"),
     baseline_hazards: List[float] = typer.Option(
         [], help="Baseline hazards for competing risks"
@@ -56,10 +53,10 @@ def dataset(
     scale_params: List[float] = typer.Option(
         [], help="Scale parameters for Weibull competing risks"
     ),
-    cure_fraction: Optional[float] = typer.Option(
+    cure_fraction: float | None = typer.Option(
         None, help="Cure fraction for mixture cure model"
     ),
-    baseline_hazard: Optional[float] = typer.Option(
+    baseline_hazard: float | None = typer.Option(
         None, help="Baseline hazard for mixture cure model"
     ),
     breakpoints: List[float] = typer.Option(
@@ -68,8 +65,8 @@ def dataset(
     hazard_rates: List[float] = typer.Option(
         [], help="Hazard rates for piecewise exponential model"
     ),
-    seed: Optional[int] = typer.Option(None, help="Random seed for reproducibility"),
-    output: Optional[str] = typer.Option(
+    seed: int | None = typer.Option(None, help="Random seed for reproducibility"),
+    output: str | None = typer.Option(
         None, "-o", help="Output CSV file. Prints to stdout if omitted."
     ),
 ) -> None:
@@ -153,7 +150,11 @@ def dataset(
         kwargs["betas"] = _val(beta)
 
     # Generate the data
-    df = generate(**kwargs)
+    try:
+        df = generate(**kwargs)
+    except ValidationError as exc:
+        typer.echo(f"Input error: {exc}")
+        raise typer.Exit(1)
 
     # Output the data
     if output:
@@ -172,9 +173,7 @@ def visualize(
     status_col: str = typer.Option(
         "status", help="Column containing event indicator (1=event, 0=censored)"
     ),
-    group_col: Optional[str] = typer.Option(
-        None, help="Column to use for stratification"
-    ),
+    group_col: str | None = typer.Option(None, help="Column to use for stratification"),
     output: str = typer.Option("survival_plot.png", help="Output image file"),
 ) -> None:
     """Visualize survival data from a CSV file.

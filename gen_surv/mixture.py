@@ -15,48 +15,14 @@ from numpy.typing import NDArray
 _TAIL_FRACTION: float = 0.1
 _SMOOTH_MIN_TAIL: int = 3
 
-from ._covariates import generate_covariates, set_covariate_params
+from ._covariates import generate_covariates, prepare_betas, set_covariate_params
 from .censoring import rexpocens, runifcens
-from .validation import (
-    LengthError,
-    ParameterError,
-    ensure_censoring_model,
-    ensure_in_choices,
-    ensure_numeric_sequence,
-    ensure_positive,
-    ensure_positive_int,
-)
-
-
-def _prepare_betas(
-    betas_survival: list[float] | None,
-    betas_cure: list[float] | None,
-    n_covariates: int,
-    rng: Generator,
-) -> tuple[NDArray[np.float64], NDArray[np.float64], int]:
-    if betas_survival is None:
-        betas_survival_arr = rng.normal(0, 0.5, size=n_covariates)
-    else:
-        ensure_numeric_sequence(betas_survival, "betas_survival")
-        betas_survival_arr = np.asarray(betas_survival, dtype=float)
-        n_covariates = len(betas_survival_arr)
-
-    if betas_cure is None:
-        betas_cure_arr = rng.normal(0, 0.5, size=n_covariates)
-    else:
-        ensure_numeric_sequence(betas_cure, "betas_cure")
-        betas_cure_arr = np.asarray(betas_cure, dtype=float)
-        if len(betas_cure_arr) != n_covariates:
-            raise LengthError("betas_cure", len(betas_cure_arr), n_covariates)
-
-    return betas_survival_arr, betas_cure_arr, n_covariates
+from .validation import ParameterError, ensure_positive, validate_gen_mixture_inputs
 
 
 def _cure_status(
     lp_cure: NDArray[np.float64], cure_fraction: float, rng: Generator
 ) -> NDArray[np.int64]:
-    if not 0 < cure_fraction < 1:
-        raise ParameterError("cure_fraction", cure_fraction, "must be between 0 and 1")
     cure_probs = 1 / (
         1 + np.exp(-(np.log(cure_fraction / (1 - cure_fraction)) + lp_cure))
     )
@@ -70,9 +36,6 @@ def _survival_times(
     max_time: float | None,
     rng: Generator,
 ) -> NDArray[np.float64]:
-    ensure_positive(baseline_hazard, "baseline_hazard")
-    if max_time is not None:
-        ensure_positive(max_time, "max_time")
     n = cured.size
     times = np.zeros(n, dtype=float)
     non_cured = cured == 0
@@ -92,10 +55,6 @@ def _apply_censoring(
     max_time: float | None,
     rng: Generator,
 ) -> tuple[NDArray[np.float64], NDArray[np.int64]]:
-    ensure_censoring_model(model_cens)
-    ensure_positive(cens_par, "cens_par")
-    if max_time is not None:
-        ensure_positive(max_time, "max_time")
     rfunc = runifcens if model_cens == "uniform" else rexpocens
     cens_times = rfunc(len(survival_times), cens_par, rng)
     observed = np.minimum(survival_times, cens_times)
@@ -185,28 +144,28 @@ def gen_mixture_cure(
     >>> print(f"Cured subjects: {df['cured'].mean():.2%}")
     """
     rng = np.random.default_rng(seed)
-
-    ensure_positive_int(n, "n")
-    ensure_positive_int(n_covariates, "n_covariates")
-    ensure_positive(baseline_hazard, "baseline_hazard")
-    ensure_positive(cens_par, "cens_par")
-    if max_time is not None:
-        ensure_positive(max_time, "max_time")
-    if not 0 <= cure_fraction <= 1:
-        raise ParameterError("cure_fraction", cure_fraction, "must be between 0 and 1")
-
-    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
+    validate_gen_mixture_inputs(
+        n,
+        cure_fraction,
+        baseline_hazard,
+        n_covariates,
+        model_cens,
+        cens_par,
+        max_time,
+        covariate_dist,
+    )
     covariate_params = set_covariate_params(covariate_dist, covariate_params)
-    betas_survival_arr, betas_cure_arr, n_covariates = _prepare_betas(
-        betas_survival, betas_cure, n_covariates, rng
+    betas_survival_arr, n_covariates = prepare_betas(
+        betas_survival, n_covariates, rng, name="betas_survival"
+    )
+    betas_cure_arr, _ = prepare_betas(
+        betas_cure, n_covariates, rng, name="betas_cure", enforce_length=True
     )
     X = generate_covariates(n, n_covariates, covariate_dist, covariate_params, rng)
     lp_survival = X @ betas_survival_arr
     lp_cure = X @ betas_cure_arr
     cured = _cure_status(lp_cure, cure_fraction, rng)
     survival_times = _survival_times(cured, lp_survival, baseline_hazard, max_time, rng)
-
-    ensure_censoring_model(model_cens)
     observed_times, status = _apply_censoring(
         survival_times, model_cens, cens_par, max_time, rng
     )

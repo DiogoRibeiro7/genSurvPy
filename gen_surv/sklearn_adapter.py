@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import pandas as pd
 
@@ -45,12 +45,12 @@ class GenSurvDataGenerator(SklearnBase, BaseEstimatorProto):
         self.kwargs = kwargs
 
     def fit(
-        self, X: Optional[pd.DataFrame] = None, y: Optional[pd.Series] = None
+        self, X: pd.DataFrame | None = None, y: pd.Series | None = None
     ) -> "GenSurvDataGenerator":
         return self
 
     def transform(
-        self, X: Optional[pd.DataFrame] = None
+        self, X: pd.DataFrame | None = None
     ) -> pd.DataFrame | dict[str, list[object]]:
         df = generate(self.model, **self.kwargs)
         if self.return_type == "df":
@@ -61,8 +61,8 @@ class GenSurvDataGenerator(SklearnBase, BaseEstimatorProto):
 
     def fit_transform(
         self,
-        X: Optional[pd.DataFrame] = None,
-        y: Optional[pd.Series] = None,
+        X: pd.DataFrame | None = None,
+        y: pd.Series | None = None,
         **fit_params: object,
     ) -> pd.DataFrame | dict[str, list[object]]:
         return self.fit(X, y).transform(X)

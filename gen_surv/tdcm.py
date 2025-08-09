@@ -18,22 +18,30 @@ def generate_censored_observations(
     lam: float,
     b: NDArray[np.float64],
 ) -> NDArray[np.float64]:
-    """
-    Generate censored TDCM observations.
+    """Generate censored TDCM observations.
 
-    Parameters:
+    Parameters
+    ----------
+    n : int
+        Number of individuals.
+    dist_par : Sequence[float]
+        Not directly used here (kept for API compatibility).
+    model_cens : {"uniform", "exponential"}
+        Censoring model.
+    cens_par : float
+        Parameter for the censoring model.
+    beta : Sequence[float]
+        Length-2 list of regression coefficients.
+    lam : float
+        Rate parameter.
+    b : NDArray[np.float64]
+        Covariate matrix with two columns ``[., z1]``.
 
-        - n (int): Number of individuals
-        - dist_par (list): Not directly used here (kept for API compatibility)
-        - model_cens (str): "uniform" or "exponential"
-        - cens_par (float): Parameter for the censoring model
-        - beta (list): Length-2 list of regression coefficients
-        - lam (float): Rate parameter
-        - b (np.ndarray): Covariate matrix with 2 columns [., z1]
-
-    Returns:
-        - np.ndarray: Shape (n, 6) with columns:
-          [id, start, stop, status, covariate1 (z1), covariate2 (z2)]
+    Returns
+    -------
+    NDArray[np.float64]
+        Array of shape ``(n, 6)`` with columns
+        ``[id, start, stop, status, covariate1 (z1), covariate2 (z2)]``.
     """
     rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
 
@@ -69,21 +77,45 @@ def gen_tdcm(
     beta: Sequence[float],
     lam: float,
 ) -> pd.DataFrame:
-    """
-    Generate TDCM (Time-Dependent Covariate Model) survival data.
+    """Generate TDCM (Time-Dependent Covariate Model) survival data.
 
-    Parameters:
-    - n (int): Number of individuals.
-    - dist (str): "weibull" or "exponential".
-    - corr (float): Correlation coefficient.
-    - dist_par (list): Distribution parameters.
-    - model_cens (str): "uniform" or "exponential".
-    - cens_par (float): Censoring parameter.
-    - beta (list): Length-2 regression coefficients.
-    - lam (float): Lambda rate parameter.
+    Parameters
+    ----------
+    n : int
+        Number of individuals.
+    dist : {"weibull", "exponential"}
+        Type of marginal distributions.
+    corr : float
+        Correlation coefficient between covariates.
+    dist_par : Sequence[float]
+        Distribution parameters.
+    model_cens : {"uniform", "exponential"}
+        Censoring model.
+    cens_par : float
+        Censoring parameter.
+    beta : Sequence[float]
+        Length-2 regression coefficients.
+    lam : float
+        Lambda rate parameter.
 
-    Returns:
-    - pd.DataFrame: Columns are ["id", "start", "stop", "status", "covariate", "tdcov"]
+    Returns
+    -------
+    pd.DataFrame
+        Columns are ``["id", "start", "stop", "status", "covariate", "tdcov"]``.
+
+    Examples
+    --------
+    >>> from gen_surv.tdcm import gen_tdcm
+    >>> df = gen_tdcm(
+    ...     n=5,
+    ...     dist="exponential",
+    ...     corr=0.3,
+    ...     dist_par=[0.5, 1.0],
+    ...     model_cens="uniform",
+    ...     cens_par=2.0,
+    ...     beta=[0.1, 0.2],
+    ...     lam=0.5,
+    ... )
     """
     validate_gen_tdcm_inputs(n, dist, corr, dist_par, model_cens, cens_par, beta, lam)
 

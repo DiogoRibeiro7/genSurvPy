@@ -61,6 +61,7 @@ api/index
 theory
 algorithms
 examples/index
+troubleshooting
 rtd
 contributing
 changelog

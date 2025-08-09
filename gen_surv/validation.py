@@ -23,7 +23,8 @@ class PositiveIntegerError(ValidationError):
 
     def __init__(self, name: str, value: Any) -> None:
         super().__init__(
-            f"Argument '{name}' must be a positive integer; got {value!r} of type {type(value).__name__}"
+            f"Argument '{name}' must be a positive integer; got {value!r} of type {type(value).__name__}. "
+            "Please provide a whole number greater than 0."
         )
 
 
@@ -32,7 +33,8 @@ class PositiveValueError(ValidationError):
 
     def __init__(self, name: str, value: Any) -> None:
         super().__init__(
-            f"Argument '{name}' must be greater than 0; got {value!r} of type {type(value).__name__}"
+            f"Argument '{name}' must be greater than 0; got {value!r} of type {type(value).__name__}. "
+            "Try a positive number such as 1.0."
         )
 
 
@@ -42,7 +44,8 @@ class ChoiceError(ValidationError):
     def __init__(self, name: str, value: Any, choices: Iterable[str]) -> None:
         choices_str = "', '".join(sorted(choices))
         super().__init__(
-            f"Argument '{name}' must be one of '{choices_str}'; got {value!r} of type {type(value).__name__}"
+            f"Argument '{name}' must be one of '{choices_str}'; got {value!r} of type {type(value).__name__}. "
+            "Choose a valid option."
         )
 
 
@@ -51,7 +54,8 @@ class LengthError(ValidationError):
 
     def __init__(self, name: str, actual: int, expected: int) -> None:
         super().__init__(
-            f"Argument '{name}' must be a sequence of length {expected}; got length {actual}"
+            f"Argument '{name}' must be a sequence of length {expected}; got length {actual}. "
+            "Adjust the number of elements."
         )
 
 
@@ -60,10 +64,14 @@ class NumericSequenceError(ValidationError):
 
     def __init__(self, name: str, value: Any, index: int | None = None) -> None:
         if index is None:
-            super().__init__(f"All elements in '{name}' must be numeric; got {value!r}")
+            super().__init__(
+                f"All elements in '{name}' must be numeric; got {value!r}. "
+                "Convert or remove non-numeric values."
+            )
         else:
             super().__init__(
-                f"All elements in '{name}' must be numeric; found {value!r} of type {type(value).__name__} at index {index}"
+                f"All elements in '{name}' must be numeric; found {value!r} of type {type(value).__name__} at index {index}. "
+                "Replace or remove this entry."
             )
 
 
@@ -72,7 +80,8 @@ class PositiveSequenceError(ValidationError):
 
     def __init__(self, name: str, value: Any, index: int) -> None:
         super().__init__(
-            f"All elements in '{name}' must be greater than 0; found {value!r} at index {index}"
+            f"All elements in '{name}' must be greater than 0; found {value!r} at index {index}. "
+            "Use positive numbers only."
         )
 
 
@@ -81,7 +90,8 @@ class ListOfListsError(ValidationError):
 
     def __init__(self, name: str, value: Any) -> None:
         super().__init__(
-            f"Argument '{name}' must be a list of lists; got {value!r} of type {type(value).__name__}"
+            f"Argument '{name}' must be a list of lists; got {value!r} of type {type(value).__name__}. "
+            "Wrap items in a list."
         )
 
 
@@ -90,7 +100,8 @@ class ParameterError(ValidationError):
 
     def __init__(self, name: str, value: Any, constraint: str) -> None:
         super().__init__(
-            f"Invalid value for '{name}': {value!r} (type {type(value).__name__}). {constraint}"
+            f"Invalid value for '{name}': {value!r} (type {type(value).__name__}). {constraint}. "
+            "Check and adjust this parameter."
         )
 
 
@@ -265,6 +276,39 @@ def _validate_aft_common(
     ensure_numeric_sequence(beta, "beta")
 
 
+def _validate_covariate_inputs(
+    n: int,
+    n_covariates: int | None,
+    model_cens: str,
+    cens_par: float,
+    covariate_dist: str,
+    max_time: float | None = None,
+) -> None:
+    """Common checks for generators with covariates.
+
+    Parameters
+    ----------
+    n:
+        Number of samples to generate.
+    n_covariates:
+        Expected number of covariates or ``None`` to skip the check.
+    model_cens:
+        Name of the censoring model.
+    cens_par:
+        Parameter for the censoring model.
+    covariate_dist:
+        Name of the covariate distribution.
+    max_time:
+        Optional maximum follow-up time. If provided, must be positive.
+    """
+    _validate_base(n, model_cens, cens_par)
+    if n_covariates is not None:
+        ensure_positive_int(n_covariates, "n_covariates")
+    if max_time is not None:
+        ensure_positive(max_time, "max_time")
+    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
+
+
 def validate_gen_cphm_inputs(
     n: int, model_cens: str, cens_par: float, covariate_range: float
 ) -> None:
@@ -397,11 +441,13 @@ def validate_competing_risks_inputs(
     n_risks: int,
     baseline_hazards: Sequence[float] | None,
     betas: Sequence[Sequence[float]] | None,
+    covariate_dist: str,
+    max_time: float | None,
     model_cens: str,
     cens_par: float,
 ) -> None:
     """Validate parameters for competing risks data generation."""
-    _validate_base(n, model_cens, cens_par)
+    _validate_covariate_inputs(n, None, model_cens, cens_par, covariate_dist, max_time)
     ensure_positive_int(n_risks, "n_risks")
 
     if baseline_hazards is not None:
@@ -413,3 +459,55 @@ def validate_competing_risks_inputs(
             raise ListOfListsError("betas", betas)
         for b in betas:
             ensure_numeric_sequence(b, "betas")
+
+
+def validate_piecewise_params(
+    breakpoints: Sequence[float], hazard_rates: Sequence[float]
+) -> None:
+    """Validate breakpoint and hazard rate sequences."""
+    ensure_sequence_length(hazard_rates, len(breakpoints) + 1, "hazard_rates")
+    ensure_positive_sequence(breakpoints, "breakpoints")
+    ensure_positive_sequence(hazard_rates, "hazard_rates")
+    if np.any(np.diff(breakpoints) <= 0):
+        raise ParameterError(
+            "breakpoints",
+            breakpoints,
+            "must be a strictly increasing sequence. Sort the list and remove duplicates.",
+        )
+
+
+def validate_gen_piecewise_inputs(
+    n: int,
+    breakpoints: Sequence[float],
+    hazard_rates: Sequence[float],
+    n_covariates: int,
+    model_cens: str,
+    cens_par: float,
+    covariate_dist: str,
+) -> None:
+    """Validate parameters for :func:`gen_piecewise_exponential`."""
+    _validate_covariate_inputs(n, n_covariates, model_cens, cens_par, covariate_dist)
+    validate_piecewise_params(breakpoints, hazard_rates)
+
+
+def validate_gen_mixture_inputs(
+    n: int,
+    cure_fraction: float,
+    baseline_hazard: float,
+    n_covariates: int,
+    model_cens: str,
+    cens_par: float,
+    max_time: float | None,
+    covariate_dist: str,
+) -> None:
+    """Validate parameters for :func:`gen_mixture_cure`."""
+    _validate_covariate_inputs(
+        n, n_covariates, model_cens, cens_par, covariate_dist, max_time
+    )
+    ensure_positive(baseline_hazard, "baseline_hazard")
+    if not 0 < cure_fraction < 1:
+        raise ParameterError(
+            "cure_fraction",
+            cure_fraction,
+            "must be between 0 and 1 (exclusive). Try a value like 0.5",
+        )

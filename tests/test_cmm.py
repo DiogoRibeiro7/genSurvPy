@@ -5,15 +5,16 @@ from gen_surv.cmm import gen_cmm, generate_event_times
 
 
 def test_generate_event_times_reproducible():
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     result = generate_event_times(
         z1=1.0,
         beta=[0.1, 0.2, 0.3],
         rate=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        rng=rng,
     )
-    assert np.isclose(result["t12"], 0.7201370350469476)
-    assert np.isclose(result["t13"], 1.0282691393768246)
-    assert np.isclose(result["t23"], 0.6839405281667484)
+    assert np.isclose(result["t12"], 0.9168237140025525)
+    assert np.isclose(result["t13"], 0.2574241891031173)
+    assert np.isclose(result["t23"], 0.030993312969869156)
 
 
 def test_gen_cmm_uniform_reproducible():

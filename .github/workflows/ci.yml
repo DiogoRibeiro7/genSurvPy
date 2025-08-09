@@ -39,7 +39,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: poetry install --with dev --no-interaction --no-root
+        run: poetry install --with dev --no-interaction
 
       - name: Check runtime dependencies
         run: |
@@ -90,7 +90,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: poetry install --with dev --no-interaction --no-root
+        run: poetry install --with dev --no-interaction
 
       - name: Run pre-commit checks
         run: poetry run pre-commit run --all-files

@@ -31,6 +31,17 @@ def sample_bivariate_distribution(
     NDArray[np.float64]
         Array of shape ``(n, 2)`` with the sampled pairs.
 
+    Examples
+    --------
+    >>> from gen_surv.bivariate import sample_bivariate_distribution
+    >>> sample_bivariate_distribution(
+    ...     3,
+    ...     "weibull",
+    ...     0.3,
+    ...     [1.0, 2.0, 1.5, 2.5],
+    ... )  # doctest: +ELLIPSIS
+    array([[...], [...], [...]])
+
     Raises
     ------
     ValidationError

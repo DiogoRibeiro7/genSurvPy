@@ -20,7 +20,7 @@ from gen_surv.piecewise import gen_piecewise_exponential
 from gen_surv.tdcm import gen_tdcm
 from gen_surv.thmm import gen_thmm
 
-from .validation import ensure_in_choices
+from .validation import ValidationError, ensure_in_choices
 
 # Type definitions for model names
 ModelType = Literal[
@@ -61,32 +61,50 @@ _model_map: Dict[ModelType, DataGenerator] = {
 def generate(model: ModelType, **kwargs: object) -> pd.DataFrame:
     """Generate survival data from a specific model.
 
-    Args:
-        model: Name of the generator to run. Must be one of ``cphm``, ``cmm``,
-            ``tdcm``, ``thmm``, ``aft_ln``, ``aft_weibull``, ``aft_log_logistic``,
-            ``competing_risks``, ``competing_risks_weibull``, ``mixture_cure``,
-            or ``piecewise_exponential``.
-        **kwargs: Arguments forwarded to the chosen generator. These vary by model.
+    Parameters
+    ----------
+    model : ModelType
+        Name of the generator to run. Must be one of ``cphm``, ``cmm``,
+        ``tdcm``, ``thmm``, ``aft_ln``, ``aft_weibull``, ``aft_log_logistic``,
+        ``competing_risks``, ``competing_risks_weibull``, ``mixture_cure``,
+        or ``piecewise_exponential``.
+    **kwargs
+        Arguments forwarded to the chosen generator. These vary by model.
 
-            - cphm: n, model_cens, cens_par, beta, covariate_range
-            - cmm: n, model_cens, cens_par, beta, covariate_range, rate
-            - tdcm: n, dist, corr, dist_par, model_cens, cens_par, beta, lam
-            - thmm: n, model_cens, cens_par, beta, covariate_range, rate
-            - aft_ln: n, beta, sigma, model_cens, cens_par, seed
-            - aft_weibull: n, beta, shape, scale, model_cens, cens_par, seed
-            - aft_log_logistic: n, beta, shape, scale, model_cens, cens_par, seed
-            - competing_risks: n, n_risks, baseline_hazards, betas, covariate_dist, etc.
-            - competing_risks_weibull: n, n_risks, shape_params, scale_params, betas, etc.
-            - mixture_cure: n, cure_fraction, baseline_hazard, betas_survival,
-              betas_cure, etc.
-            - piecewise_exponential: n, breakpoints, hazard_rates, betas, etc.
+        - cphm: n, model_cens, cens_par, beta, covariate_range
+        - cmm: n, model_cens, cens_par, beta, covariate_range, rate
+        - tdcm: n, dist, corr, dist_par, model_cens, cens_par, beta, lam
+        - thmm: n, model_cens, cens_par, beta, covariate_range, rate
+        - aft_ln: n, beta, sigma, model_cens, cens_par, seed
+        - aft_weibull: n, beta, shape, scale, model_cens, cens_par, seed
+        - aft_log_logistic: n, beta, shape, scale, model_cens, cens_par, seed
+        - competing_risks: n, n_risks, baseline_hazards, betas, covariate_dist, etc.
+        - competing_risks_weibull: n, n_risks, shape_params, scale_params, betas, etc.
+        - mixture_cure: n, cure_fraction, baseline_hazard, betas_survival,
+          betas_cure, etc.
+        - piecewise_exponential: n, breakpoints, hazard_rates, betas, etc.
 
-    Returns:
-        pd.DataFrame: Simulated survival data with columns specific to the chosen model.
-            All models include time/duration and status columns.
+    Returns
+    -------
+    pd.DataFrame
+        Simulated survival data with columns specific to the chosen model.
+        All models include time/duration and status columns.
 
-    Raises:
-        ChoiceError: If an unknown model name is provided.
+    Raises
+    ------
+    ChoiceError
+        If an unknown model name is provided.
+
+    Examples
+    --------
+    >>> from gen_surv import generate
+    >>> df = generate(model="cphm", n=100, beta=0.5, covariate_range=2.0,
+    ...               model_cens="uniform", cens_par=1.0)
+    >>> df.head()
     """
     ensure_in_choices(model, "model", _model_map.keys())
-    return _model_map[model](**kwargs)
+    try:
+        return _model_map[model](**kwargs)
+    except ValidationError as exc:
+        exc.args = (f"{exc} (while validating inputs for model '{model}')",)
+        raise exc

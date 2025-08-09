@@ -1,5 +1,5 @@
 # .github/workflows/bump-version.yml
-name: Tag Version on Merge to Main
+name: Sync Version on Merge to Main
 
 on:
   push:
@@ -21,6 +21,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Tag repository from pyproject
-        run: python scripts/check_version_match.py --fix
+      - name: Synchronize tag and pyproject version
+        run: python scripts/check_version_match.py --fix --write
 

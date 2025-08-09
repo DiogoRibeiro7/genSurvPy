@@ -11,33 +11,9 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from ._covariates import generate_covariates, set_covariate_params
+from ._covariates import generate_covariates, prepare_betas, set_covariate_params
 from .censoring import rexpocens, runifcens
-from .validation import (
-    ParameterError,
-    ensure_censoring_model,
-    ensure_in_choices,
-    ensure_numeric_sequence,
-    ensure_positive,
-    ensure_positive_int,
-    ensure_positive_sequence,
-    ensure_sequence_length,
-)
-
-
-def _validate_piecewise_params(
-    breakpoints: list[float], hazard_rates: list[float]
-) -> None:
-    """Validate breakpoint and hazard rate sequences."""
-    ensure_sequence_length(hazard_rates, len(breakpoints) + 1, "hazard_rates")
-    ensure_positive_sequence(breakpoints, "breakpoints")
-    ensure_positive_sequence(hazard_rates, "hazard_rates")
-    if np.any(np.diff(breakpoints) <= 0):
-        raise ParameterError(
-            "breakpoints",
-            breakpoints,
-            "must be a strictly increasing sequence",
-        )
+from .validation import validate_gen_piecewise_inputs, validate_piecewise_params
 
 
 def gen_piecewise_exponential(
@@ -107,24 +83,19 @@ def gen_piecewise_exponential(
     """
     rng = np.random.default_rng(seed)
 
-    ensure_positive_int(n, "n")
-    ensure_positive_int(n_covariates, "n_covariates")
-    ensure_positive(cens_par, "cens_par")
-
-    # Validate inputs
-    _validate_piecewise_params(breakpoints, hazard_rates)
-
-    ensure_censoring_model(model_cens)
-    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
+    validate_gen_piecewise_inputs(
+        n,
+        breakpoints,
+        hazard_rates,
+        n_covariates,
+        model_cens,
+        cens_par,
+        covariate_dist,
+    )
     covariate_params = set_covariate_params(covariate_dist, covariate_params)
 
     # Set default betas if not provided
-    if betas is None:
-        betas = rng.normal(0, 0.5, size=n_covariates)
-    else:
-        ensure_numeric_sequence(betas, "betas")
-        betas = np.array(betas, dtype=float)
-        n_covariates = len(betas)
+    betas, n_covariates = prepare_betas(betas, n_covariates, rng)
 
     # Generate covariates
     X = generate_covariates(n, n_covariates, covariate_dist, covariate_params, rng)
@@ -221,7 +192,7 @@ def piecewise_hazard_function(
     float or array
         Hazard function value(s) at time t.
     """
-    _validate_piecewise_params(breakpoints, hazard_rates)
+    validate_piecewise_params(breakpoints, hazard_rates)
 
     # Convert scalar input to array for consistent processing
     scalar_input = np.isscalar(t)
@@ -269,7 +240,7 @@ def piecewise_survival_function(
     float or array
         Survival function value(s) at time t.
     """
-    _validate_piecewise_params(breakpoints, hazard_rates)
+    validate_piecewise_params(breakpoints, hazard_rates)
 
     # Convert scalar input to array for consistent processing
     scalar_input = np.isscalar(t)
