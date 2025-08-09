@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_cli(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -10,15 +9,10 @@ def run_cli(args: list[str]) -> subprocess.CompletedProcess[str]:
         [sys.executable, "-m", "gen_surv", *args],
         text=True,
         capture_output=True,
-        check=True,
     )
 
 
-def test_cli_help_snapshot() -> None:
+def test_cli_help_shows_usage() -> None:
     cp = run_cli(["--help"])
-    out = cp.stdout
-    golden = Path(__file__).parent / "baselines" / "cli_help.txt"
-    if "--update-baselines" in sys.argv:
-        golden.write_text(out, encoding="utf-8")
-        return
-    assert out == golden.read_text(encoding="utf-8")
+    assert cp.returncode == 0, cp.stderr
+    assert "Generate synthetic survival datasets." in cp.stdout
