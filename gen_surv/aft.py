@@ -2,13 +2,17 @@
 Accelerated Failure Time (AFT) models including Weibull, Log-Normal, and Log-Logistic distributions.
 """
 
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 import numpy as np
 import pandas as pd
 
 from .censoring import rexpocens, runifcens
-from .validation import ensure_censoring_model, ensure_positive
+from .validation import (
+    validate_gen_aft_log_logistic_inputs,
+    validate_gen_aft_log_normal_inputs,
+    validate_gen_aft_weibull_inputs,
+)
 
 
 def gen_aft_log_normal(
@@ -17,7 +21,7 @@ def gen_aft_log_normal(
     sigma: float,
     model_cens: Literal["uniform", "exponential"],
     cens_par: float,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """
     Simulate survival data under a Log-Normal Accelerated Failure Time (AFT) model.
@@ -37,12 +41,26 @@ def gen_aft_log_normal(
     seed : int, optional
         Random seed for reproducibility
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+      Returns
+      -------
+      pd.DataFrame
+          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+
+      Examples
+      --------
+      >>> from gen_surv.aft import gen_aft_log_normal
+      >>> df = gen_aft_log_normal(
+      ...     n=100,
+      ...     beta=[0.5, -0.3],
+      ...     sigma=1.0,
+      ...     model_cens="uniform",
+      ...     cens_par=2.0,
+      ...     seed=42,
+      ... )
+      >>> df.head()
     """
     rng = np.random.default_rng(seed)
+    validate_gen_aft_log_normal_inputs(n, beta, sigma, model_cens, cens_par)
 
     p = len(beta)
     X = rng.normal(size=(n, p))
@@ -50,7 +68,6 @@ def gen_aft_log_normal(
     log_T = X @ np.array(beta) + epsilon
     T = np.exp(log_T)
 
-    ensure_censoring_model(model_cens)
     rfunc = runifcens if model_cens == "uniform" else rexpocens
     C = rfunc(n, cens_par, rng)
 
@@ -72,7 +89,7 @@ def gen_aft_weibull(
     scale: float,
     model_cens: Literal["uniform", "exponential"],
     cens_par: float,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """
     Simulate survival data under a Weibull Accelerated Failure Time (AFT) model.
@@ -97,15 +114,27 @@ def gen_aft_weibull(
     seed : int, optional
         Random seed for reproducibility
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+      Returns
+      -------
+      pd.DataFrame
+          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+
+      Examples
+      --------
+      >>> from gen_surv.aft import gen_aft_weibull
+      >>> df = gen_aft_weibull(
+      ...     n=100,
+      ...     beta=[0.5, -0.3],
+      ...     shape=1.2,
+      ...     scale=2.0,
+      ...     model_cens="uniform",
+      ...     cens_par=2.0,
+      ...     seed=42,
+      ... )
+      >>> df.head()
     """
     rng = np.random.default_rng(seed)
-
-    ensure_positive(shape, "shape")
-    ensure_positive(scale, "scale")
+    validate_gen_aft_weibull_inputs(n, beta, shape, scale, model_cens, cens_par)
 
     p = len(beta)
     X = rng.normal(size=(n, p))
@@ -118,7 +147,6 @@ def gen_aft_weibull(
     T = scale * (-np.log(U) * np.exp(-eta)) ** (1 / shape)
 
     # Generate censoring times
-    ensure_censoring_model(model_cens)
     rfunc = runifcens if model_cens == "uniform" else rexpocens
     C = rfunc(n, cens_par, rng)
 
@@ -141,7 +169,7 @@ def gen_aft_log_logistic(
     scale: float,
     model_cens: Literal["uniform", "exponential"],
     cens_par: float,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """
     Simulate survival data under a Log-Logistic Accelerated Failure Time (AFT) model.
@@ -168,15 +196,27 @@ def gen_aft_log_logistic(
     seed : int, optional
         Random seed for reproducibility
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+      Returns
+      -------
+      pd.DataFrame
+          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+
+      Examples
+      --------
+      >>> from gen_surv.aft import gen_aft_log_logistic
+      >>> df = gen_aft_log_logistic(
+      ...     n=100,
+      ...     beta=[0.5, -0.3],
+      ...     shape=1.2,
+      ...     scale=2.0,
+      ...     model_cens="uniform",
+      ...     cens_par=2.0,
+      ...     seed=42,
+      ... )
+      >>> df.head()
     """
     rng = np.random.default_rng(seed)
-
-    ensure_positive(shape, "shape")
-    ensure_positive(scale, "scale")
+    validate_gen_aft_log_logistic_inputs(n, beta, shape, scale, model_cens, cens_par)
 
     p = len(beta)
     X = rng.normal(size=(n, p))
@@ -198,7 +238,6 @@ def gen_aft_log_logistic(
     T = scale * (U / (1 - U)) ** (1 / shape) * np.exp(-eta / shape)
 
     # Generate censoring times
-    ensure_censoring_model(model_cens)
     rfunc = runifcens if model_cens == "uniform" else rexpocens
     C = rfunc(n, cens_par, rng)
 

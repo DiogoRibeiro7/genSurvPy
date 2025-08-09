@@ -210,8 +210,16 @@ def test_numeric_sequence_rejects_bool():
 
 def test_validate_competing_risks_inputs():
     with pytest.raises(ValueError):
-        v.validate_competing_risks_inputs(1, 2, [0.1], None, "uniform", 1.0)
-    v.validate_competing_risks_inputs(1, 1, [0.5], [[0.1]], "uniform", 0.5)
+        v.validate_competing_risks_inputs(
+            1, 2, [0.1], None, "normal", None, "uniform", 1.0
+        )
+    with pytest.raises(v.ChoiceError):
+        v.validate_competing_risks_inputs(
+            1, 1, [0.5], [[0.1]], "gaussian", None, "uniform", 0.5
+        )
+    v.validate_competing_risks_inputs(
+        1, 1, [0.5], [[0.1]], "normal", 10.0, "uniform", 0.5
+    )
 
 
 @pytest.mark.parametrize(
@@ -269,4 +277,41 @@ def test_parameter_error_from_validator():
             1.0,
             beta=[0.1, 0.2, 0.3],
             lam=1.0,
+        )
+
+
+def test_validate_gen_piecewise_inputs_invalid():
+    with pytest.raises(ValueError):
+        v.validate_gen_piecewise_inputs(
+            0,
+            [1.0],
+            [0.2],
+            2,
+            "uniform",
+            1.0,
+            "normal",
+        )
+
+
+def test_validate_gen_mixture_inputs_valid_and_invalid():
+    v.validate_gen_mixture_inputs(
+        10,
+        0.3,
+        0.5,
+        2,
+        "uniform",
+        5.0,
+        10.0,
+        "normal",
+    )
+    with pytest.raises(ValueError):
+        v.validate_gen_mixture_inputs(
+            10,
+            1.5,
+            0.5,
+            2,
+            "uniform",
+            5.0,
+            10.0,
+            "normal",
         )

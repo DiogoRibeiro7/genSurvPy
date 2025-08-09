@@ -7,7 +7,6 @@ survival datasets in various formats.
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 import pandas as pd
 import pyreadr
@@ -15,7 +14,7 @@ import pyreadr
 from .validation import ensure_in_choices
 
 
-def export_dataset(df: pd.DataFrame, path: str, fmt: Optional[str] = None) -> None:
+def export_dataset(df: pd.DataFrame, path: str, fmt: str | None = None) -> None:
     """Save a DataFrame to disk.
 
     Parameters

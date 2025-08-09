@@ -221,9 +221,6 @@
 - Update pyproject
   ([`a4b25e4`](https://github.com/DiogoRibeiro7/genSurvPy/commit/a4b25e470954091254b1384a44a991a47341bf80))
 
-- Work
-  ([`5ac5130`](https://github.com/DiogoRibeiro7/genSurvPy/commit/5ac513098238a8298430d1a95c6fbeed99db4cad))
-
 ### Continuous Integration
 
 - Add GitHub Actions workflow for test automation
@@ -253,6 +250,3 @@
 
 - Implement THMM data generator and finalize full model suite
   ([`1e667ba`](https://github.com/DiogoRibeiro7/genSurvPy/commit/1e667babf28892c3a85c43477562f2de85f07f3c))
-
-- Work
-  ([`45de359`](https://github.com/DiogoRibeiro7/genSurvPy/commit/45de359bbb0d7fbc671e41fa07d3a37b09e68e18))

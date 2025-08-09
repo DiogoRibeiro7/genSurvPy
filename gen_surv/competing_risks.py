@@ -5,23 +5,18 @@ This module provides functions to generate survival data with
 competing risks under different hazard specifications.
 """
 
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union
 
 import numpy as np
 import pandas as pd
 
+from ._covariates import generate_covariates, prepare_betas_matrix, set_covariate_params
 from .censoring import rexpocens, runifcens
 from .validation import (
-    NumericSequenceError,
     ParameterError,
-    ensure_censoring_model,
-    ensure_in_choices,
-    ensure_numeric_sequence,
-    ensure_positive,
-    ensure_positive_int,
     ensure_positive_sequence,
-    ensure_probability,
     ensure_sequence_length,
+    validate_competing_risks_inputs,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - used only for type hints
@@ -29,106 +24,17 @@ if TYPE_CHECKING:  # pragma: no cover - used only for type hints
     from matplotlib.figure import Figure
 
 
-def _prepare_covariates(
-    rng: np.random.Generator,
-    n: int,
-    n_risks: int,
-    betas: Optional[Union[List[List[float]], np.ndarray]],
-    covariate_dist: Literal["normal", "uniform", "binary"],
-    covariate_params: Optional[Dict[str, float]],
-) -> tuple[np.ndarray, np.ndarray, int]:
-    """Generate covariates and validate associated parameters.
-
-    Returns
-    -------
-    betas : ndarray
-        Coefficient matrix of shape ``(n_risks, n_covariates)``.
-    X : ndarray
-        Generated covariate matrix of shape ``(n, n_covariates)``.
-    n_covariates : int
-        Number of covariates.
-    """
-
-    ensure_in_choices(covariate_dist, "covariate_dist", {"normal", "uniform", "binary"})
-    n_covariates = 2
-
-    params: Dict[str, float]
-    if covariate_params is None:
-        if covariate_dist == "normal":
-            params = {"mean": 0.0, "std": 1.0}
-        elif covariate_dist == "uniform":
-            params = {"low": 0.0, "high": 1.0}
-        else:
-            params = {"p": 0.5}
-    else:
-        params = dict(covariate_params)
-    if covariate_dist == "normal":
-        mean = params.get("mean")
-        std = params.get("std")
-        if mean is None or std is None:
-            raise ParameterError(
-                "covariate_params", params, "must include 'mean' and 'std'"
-            )
-        ensure_positive(std, "covariate_params['std']")
-        mean_f = float(mean)
-        std_f = float(std)
-    elif covariate_dist == "uniform":
-        low = params.get("low")
-        high = params.get("high")
-        if low is None or high is None:
-            raise ParameterError(
-                "covariate_params", params, "must include 'low' and 'high'"
-            )
-        low_f = float(low)
-        high_f = float(high)
-        if high_f <= low_f:
-            raise ParameterError(
-                "covariate_params['high']", high_f, "must be greater than 'low'"
-            )
-    else:  # binary
-        p = params.get("p")
-        if p is None:
-            raise ParameterError("covariate_params", params, "must include 'p'")
-        p_f = float(p)
-        ensure_probability(p_f, "covariate_params['p']")
-
-    if betas is None:
-        betas_arr = rng.normal(0, 0.5, size=(n_risks, n_covariates))
-    else:
-        try:
-            betas_arr = np.asarray(betas, dtype=float)
-        except (TypeError, ValueError) as exc:
-            raise NumericSequenceError("betas", betas) from exc
-        ensure_sequence_length(betas_arr, n_risks, "betas")
-        for j in range(n_risks):
-            ensure_numeric_sequence(betas_arr[j], f"betas[{j}]")
-            nonfinite = np.where(~np.isfinite(betas_arr[j]))[0]
-            if nonfinite.size:
-                idx = int(nonfinite[0])
-                raise NumericSequenceError(f"betas[{j}]", betas_arr[j][idx], idx)
-        n_covariates = betas_arr.shape[1]
-
-    if covariate_dist == "normal":
-        X = rng.normal(mean_f, std_f, size=(n, n_covariates))
-    elif covariate_dist == "uniform":
-        X = rng.uniform(low_f, high_f, size=(n, n_covariates))
-    else:  # binary
-        X = rng.binomial(1, p_f, size=(n, n_covariates))
-
-    return betas_arr, X, n_covariates
-
-
 def gen_competing_risks(
     n: int,
     n_risks: int = 2,
-    baseline_hazards: Optional[Union[List[float], np.ndarray]] = None,
-    betas: Optional[Union[List[List[float]], np.ndarray]] = None,
+    baseline_hazards: Union[List[float], np.ndarray] | None = None,
+    betas: Union[List[List[float]], np.ndarray] | None = None,
     covariate_dist: Literal["normal", "uniform", "binary"] = "normal",
-    covariate_params: Optional[Dict[str, float]] = None,
-    max_time: Optional[float] = 10.0,
+    covariate_params: Dict[str, float] | None = None,
+    max_time: float | None = 10.0,
     model_cens: Literal["uniform", "exponential"] = "uniform",
     cens_par: float = 5.0,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """
     Generate survival data with competing risks.
@@ -190,24 +96,27 @@ def gen_competing_risks(
     """
     rng = np.random.default_rng(seed)
 
-    ensure_positive_int(n, "n")
-    ensure_positive_int(n_risks, "n_risks")
-    ensure_censoring_model(model_cens)
-    ensure_positive(cens_par, "cens_par")
-    if max_time is not None:
-        ensure_positive(max_time, "max_time")
+    validate_competing_risks_inputs(
+        n,
+        n_risks,
+        baseline_hazards,
+        betas,
+        covariate_dist,
+        max_time,
+        model_cens,
+        cens_par,
+    )
 
     # Set default baseline hazards if not provided
     if baseline_hazards is None:
         baseline_hazards = np.array([0.5 / (i + 1) for i in range(n_risks)])
     else:
         baseline_hazards = np.asarray(baseline_hazards, dtype=float)
-        ensure_sequence_length(baseline_hazards, n_risks, "baseline_hazards")
-        ensure_positive_sequence(baseline_hazards, "baseline_hazards")
 
-    betas, X, n_covariates = _prepare_covariates(
-        rng, n, n_risks, betas, covariate_dist, covariate_params
-    )
+    covariate_params = set_covariate_params(covariate_dist, covariate_params)
+    n_covariates = 2
+    betas, n_covariates = prepare_betas_matrix(betas, n_risks, n_covariates, rng)
+    X = generate_covariates(n, n_covariates, covariate_dist, covariate_params, rng)
 
     # Calculate linear predictors for each risk
     linear_predictors = np.zeros((n, n_risks))
@@ -266,15 +175,15 @@ def gen_competing_risks(
 def gen_competing_risks_weibull(
     n: int,
     n_risks: int = 2,
-    shape_params: Optional[Union[List[float], np.ndarray]] = None,
-    scale_params: Optional[Union[List[float], np.ndarray]] = None,
-    betas: Optional[Union[List[List[float]], np.ndarray]] = None,
+    shape_params: Union[List[float], np.ndarray] | None = None,
+    scale_params: Union[List[float], np.ndarray] | None = None,
+    betas: Union[List[List[float]], np.ndarray] | None = None,
     covariate_dist: Literal["normal", "uniform", "binary"] = "normal",
-    covariate_params: Optional[Dict[str, float]] = None,
-    max_time: Optional[float] = 10.0,
+    covariate_params: Dict[str, float] | None = None,
+    max_time: float | None = 10.0,
     model_cens: Literal["uniform", "exponential"] = "uniform",
     cens_par: float = 5.0,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """
     Generate survival data with competing risks using Weibull hazards.
@@ -337,12 +246,16 @@ def gen_competing_risks_weibull(
     """
     rng = np.random.default_rng(seed)
 
-    ensure_positive_int(n, "n")
-    ensure_positive_int(n_risks, "n_risks")
-    ensure_censoring_model(model_cens)
-    ensure_positive(cens_par, "cens_par")
-    if max_time is not None:
-        ensure_positive(max_time, "max_time")
+    validate_competing_risks_inputs(
+        n,
+        n_risks,
+        None,
+        betas,
+        covariate_dist,
+        max_time,
+        model_cens,
+        cens_par,
+    )
 
     # Set default shape and scale parameters if not provided
     if shape_params is None:
@@ -359,9 +272,10 @@ def gen_competing_risks_weibull(
         ensure_sequence_length(scale_params, n_risks, "scale_params")
         ensure_positive_sequence(scale_params, "scale_params")
 
-    betas, X, n_covariates = _prepare_covariates(
-        rng, n, n_risks, betas, covariate_dist, covariate_params
-    )
+    covariate_params = set_covariate_params(covariate_dist, covariate_params)
+    n_covariates = 2
+    betas, n_covariates = prepare_betas_matrix(betas, n_risks, n_covariates, rng)
+    X = generate_covariates(n, n_covariates, covariate_dist, covariate_params, rng)
 
     # Calculate linear predictors for each risk
     linear_predictors = np.zeros((n, n_risks))

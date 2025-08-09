@@ -4,8 +4,10 @@ from typing import Any
 
 import pandas as pd
 import pytest
+import typer
 
 from gen_surv.cli import dataset, visualize
+from gen_surv.validation import ValidationError
 
 
 def test_cli_dataset_stdout(monkeypatch, capsys):
@@ -237,3 +239,16 @@ def test_dataset_piecewise(monkeypatch):
     assert captured["breakpoints"] == [1.0]
     assert captured["hazard_rates"] == [0.2, 0.3]
     assert captured["betas"] == [0.4]
+
+
+def test_dataset_validation_error(monkeypatch, capsys):
+    def bad_generate(**kwargs: Any):
+        raise ValidationError("invalid n")
+
+    monkeypatch.setattr("gen_surv.cli.generate", bad_generate)
+
+    with pytest.raises(typer.Exit):
+        dataset(model="cphm", n=1, output=None)
+
+    captured = capsys.readouterr()
+    assert "Input error: invalid n" in captured.out

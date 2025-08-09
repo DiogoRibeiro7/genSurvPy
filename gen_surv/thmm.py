@@ -54,19 +54,39 @@ def gen_thmm(
     covariate_range: float,
     rate: Sequence[float],
 ) -> pd.DataFrame:
-    """
-    Generate THMM (Time-Homogeneous Markov Model) survival data.
+    """Generate THMM (Time-Homogeneous Markov Model) survival data.
 
-    Parameters:
-    - n (int): Number of individuals.
-    - model_cens (str): "uniform" or "exponential".
-    - cens_par (float): Censoring parameter.
-    - beta (list): Length-3 regression coefficients.
-    - covariate_range (float): Upper bound for the covariate values.
-    - rate (list): Length-3 transition rates.
+    Parameters
+    ----------
+    n : int
+        Number of individuals.
+    model_cens : {"uniform", "exponential"}
+        Censoring model.
+    cens_par : float
+        Censoring parameter.
+    beta : Sequence[float]
+        Length-3 regression coefficients.
+    covariate_range : float
+        Upper bound for the covariate values.
+    rate : Sequence[float]
+        Length-3 transition rates.
 
-    Returns:
-    - pd.DataFrame: Columns = ["id", "time", "state", "X0"]
+    Returns
+    -------
+    pd.DataFrame
+        Columns = ``["id", "time", "state", "X0"]``.
+
+    Examples
+    --------
+    >>> from gen_surv.thmm import gen_thmm
+    >>> df = gen_thmm(
+    ...     n=3,
+    ...     model_cens="uniform",
+    ...     cens_par=5.0,
+    ...     beta=[0.1, 0.2, 0.3],
+    ...     covariate_range=1.0,
+    ...     rate=[0.1, 0.1, 0.2],
+    ... )
     """
     validate_gen_thmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
     rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens

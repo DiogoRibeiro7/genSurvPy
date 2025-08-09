@@ -103,6 +103,26 @@ plt.tight_layout()
 plt.show()
 ```
 
+## Additional Example: Mixture Cure Model
+
+The mixture cure model separates subjects into cured and susceptible groups.
+Here's how to simulate data using this model:
+
+```python
+from gen_surv import generate
+
+df_mixture = generate(
+    model="mixture_cure",
+    n=200,
+    cure_fraction=0.3,
+    betas_survival=[0.8, -0.4],
+    betas_cure=[-0.6, 0.2],
+    seed=123,
+)
+
+print(df_mixture[["time", "status", "cured"]].head())
+```
+
 ## Next Steps
 
 - Try different models (model_comparison)
