@@ -50,34 +50,6 @@ def test(c: Context) -> None:
 
 
 @task
-def checkversion(c: Context) -> None:
-    """Check that ``pyproject.toml`` matches the latest Git tag.
-
-    This task executes ``scripts/check_version_match.py`` to ensure the version
-    declared in ``pyproject.toml`` agrees with the most recent tag.
-
-    Args:
-        c: Invoke context used to run shell commands.
-
-    Raises:
-        TypeError: If ``c`` is not an Invoke :class:`Context`.
-    """
-    if not isinstance(c, Context):
-        raise TypeError(f"Expected Invoke Context, got {type(c).__name__!r}")
-
-    # Execute the version check script with Poetry.
-    cmd = "poetry run python scripts/check_version_match.py"
-    result = c.run(cmd, warn=True, pty=False)
-
-    # Report based on the exit code from the script.
-    if result.ok:
-        print("✔️  pyproject version matches the latest git tag.")
-    else:
-        print("❌  Version mismatch detected.")
-        print(result.stderr)
-
-
-@task
 def docs(c: Context) -> None:
     """Build the Sphinx documentation.
 
