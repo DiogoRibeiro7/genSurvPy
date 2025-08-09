@@ -1,5 +1,10 @@
-import pandas as pd
 import pytest
+
+pytest.importorskip("matplotlib")
+pytest.importorskip("lifelines")
+pytest.importorskip("gen_surv")
+
+import pandas as pd
 import typer
 
 from gen_surv import generate
@@ -22,6 +27,21 @@ def test_plot_survival_curve_runs():
         covariate_range=2.0,
     )
     fig, ax = plot_survival_curve(df)
+    assert fig is not None
+    assert ax is not None
+
+
+def test_plot_survival_curve_by_group_runs():
+    df = generate(
+        model="cphm",
+        n=10,
+        model_cens="uniform",
+        cens_par=1.0,
+        beta=0.5,
+        covariate_range=2.0,
+    )
+    df["group"] = (df["X0"] > df["X0"].median()).astype(int)
+    fig, ax = plot_survival_curve(df, group_col="group")
     assert fig is not None
     assert ax is not None
 

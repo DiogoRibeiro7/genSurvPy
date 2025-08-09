@@ -14,16 +14,6 @@ Thank you for taking the time to contribute to **gen_surv**! This document provi
 4. Ensure the test suite passes with `poetry run pytest`.
 5. If you add a feature or fix a bug, update `CHANGELOG.md` accordingly.
 
-## Version Consistency
-
-Releases are tagged in Git. Before creating a release, verify that the version declared in `pyproject.toml` matches the latest Git tag:
-
-```bash
-python scripts/check_version_match.py
-```
-
-The CI workflow `version-check.yml` runs this same script on pull requests to `main`.
-
 ## Submitting Changes
 
 1. Commit your changes with clear messages.

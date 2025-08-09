@@ -16,7 +16,7 @@
 [ci-link]: https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml
 [py-badge]: https://img.shields.io/pypi/pyversions/gen_surv
 
-**gen_surv** is a Python library for simulating survival data under a wide range of statistical models. Inspired by the R package [genSurv](https://cran.r-project.org/package=genSurv), it offers a unified interface for generating realistic datasets for research, teaching and benchmarking.
+**gen_surv** is a Python library for simulating survival data and producing visualizations under a wide range of statistical models. Inspired by the R package [genSurv](https://cran.r-project.org/package=genSurv), it offers a unified interface for generating realistic datasets for research, teaching and benchmarking.
 
 ---
 
@@ -29,10 +29,10 @@
 - Time-homogeneous hidden Markov model (THMM)
 - Mixture cure and piecewise exponential models
 - Competing risks generators (constant and Weibull hazards)
-- Visualization utilities for simulated datasets
+- Visualization helpers built on matplotlib and lifelines
 - Scikit-learn compatible data generator
-- Conversion helpers for scikit-survival and lifelines
-- Command-line interface and export utilities
+- Conversion utilities for scikit-survival
+- Command-line interface for dataset creation and visualization
 
 ## Installation
 
@@ -44,28 +44,33 @@ Install the latest release from PyPI:
 pip install gen-surv
 ```
 
+`gen_surv` installs matplotlib and lifelines for visualization. Support for scikit-survival is optional; install it to enable integration with the scikit-survival ecosystem or to run the full test suite:
+
+```bash
+pip install gen-surv[dev]
+```
+
 To develop locally with all extras:
 
 ```bash
 git clone https://github.com/DiogoRibeiro7/genSurvPy.git
 cd genSurvPy
-# Install runtime and development dependencies
-# (scikit-survival is optional but required for integration tests).
-# On Debian/Ubuntu you may need `build-essential gfortran libopenblas-dev` to
-# build scikit-survival.
 poetry install --with dev
 ```
 
-Integration tests that rely on scikit-survival are automatically skipped if the package is not installed.
+On Debian/Ubuntu you may need `build-essential gfortran libopenblas-dev` to build scikit-survival.
 
-## Development Setup
+## Development
 
-Before committing changes, install the pre-commit hooks:
+Before committing changes, install the pre-commit hooks and run the tests:
 
 ```bash
 pre-commit install
 pre-commit run --all-files
+pytest
 ```
+
+Tests that depend on optional packages such as scikit-survival are skipped automatically when those packages are missing.
 
 ## Usage
 
@@ -75,7 +80,6 @@ pre-commit run --all-files
 from gen_surv import generate, export_dataset, to_sksurv
 from gen_surv.visualization import plot_survival_curve
 
-# basic Cox proportional hazards data
 sim = generate(
     model="cphm",
     n=100,
@@ -96,11 +100,15 @@ See the [usage guide](https://gensurvpy.readthedocs.io/en/latest/getting_started
 
 ### Command Line
 
-Datasets can be generated without writing Python code:
+Generate datasets and plots without writing Python code:
 
 ```bash
 python -m gen_surv dataset cphm --n 1000 -o survival.csv
+
+python -m gen_surv visualize survival.csv --output survival_plot.png
 ```
+
+`visualize` accepts custom column names via `--time-col` and `--status-col` and can stratify by group with `--group-col`.
 
 ## Supported Models
 
@@ -145,3 +153,4 @@ If you use **gen_surv** in your research, please cite the project using the meta
 - ORCID: <https://orcid.org/0009-0001-2022-7072>
 - Professional email: <dfr@esmad.ipp.pt>
 - Personal email: <diogo.debastos.ribeiro@gmail.com>
+- GitHub: [@DiogoRibeiro7](https://github.com/DiogoRibeiro7)
