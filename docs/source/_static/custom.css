@@ -1,0 +1,56 @@
+/* Custom styling for gen_surv documentation */
+
+/* Improve code block appearance */
+.highlight {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+/* Style admonitions */
+.admonition {
+    border-radius: 6px;
+    margin: 1em 0;
+    padding: 1em;
+}
+
+.admonition.tip {
+    border-left: 4px solid #28a745;
+    background-color: #d4edda;
+}
+
+.admonition.note {
+    border-left: 4px solid #007bff;
+    background-color: #cce5ff;
+}
+
+.admonition.warning {
+    border-left: 4px solid #ffc107;
+    background-color: #fff3cd;
+}
+
+/* Table styling */
+table.docutils {
+    border-collapse: collapse;
+    margin: 1em 0;
+    width: 100%;
+}
+
+table.docutils th,
+table.docutils td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+table.docutils th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
+/* Math styling */
+.math {
+    font-size: 1.1em;
+}

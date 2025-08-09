@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## v1.0.9 (2025-08-02)
+
+### Features
+- export datasets to RDS files
+- test workflow runs on a Python version matrix
+- scikit-learn compatible data generator
+- compatibility helpers for lifelines and scikit-survival
+
+### Documentation
+- updated usage examples and tutorials
+- document optional scikit-survival dependency throughout the docs
+
+### Continuous Integration
+- auto-tag releases using the version check script
+
+### Misc
+- README quick example uses `covariate_range`
+
+## v1.0.8 (2025-07-30)
+
+### Documentation
+- ensure absolute path resolution in `conf.py`
+- drop unsupported theme option
+- define bibliography anchors and headings
+- fix tutorial links to non-existing docs
+- add additional references to the bibliography
+
+### Testing
+- add CLI integration test
+- expand piecewise generator test coverage
+
+### Misc
+- remove fix_recommendations.md
+
+
 
 ## v1.0.0 (2025-06-06)
 
@@ -186,9 +221,6 @@
 - Update pyproject
   ([`a4b25e4`](https://github.com/DiogoRibeiro7/genSurvPy/commit/a4b25e470954091254b1384a44a991a47341bf80))
 
-- Work
-  ([`5ac5130`](https://github.com/DiogoRibeiro7/genSurvPy/commit/5ac513098238a8298430d1a95c6fbeed99db4cad))
-
 ### Continuous Integration
 
 - Add GitHub Actions workflow for test automation
@@ -218,6 +250,3 @@
 
 - Implement THMM data generator and finalize full model suite
   ([`1e667ba`](https://github.com/DiogoRibeiro7/genSurvPy/commit/1e667babf28892c3a85c43477562f2de85f07f3c))
-
-- Work
-  ([`45de359`](https://github.com/DiogoRibeiro7/genSurvPy/commit/45de359bbb0d7fbc671e41fa07d3a37b09e68e18))
