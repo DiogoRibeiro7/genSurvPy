@@ -10,7 +10,7 @@ except ImportError:
     SKSURV_AVAILABLE = False
 
 
-def to_sksurv(df, time_col="time", event_col="status"):
+def to_sksurv(df: pd.DataFrame, time_col="time", event_col="status"):
     """
     Convert a pandas DataFrame to a scikit-survival structured array.
     
@@ -51,7 +51,7 @@ def to_sksurv(df, time_col="time", event_col="status"):
     return Surv.from_dataframe(event_col, time_col, df)
 
 
-def from_sksurv(y, time_col="time", event_col="status"):
+def from_sksurv(y: np.ndarray, time_col="time", event_col="status"):
     """
     Convert a scikit-survival structured array to a pandas DataFrame.
     
