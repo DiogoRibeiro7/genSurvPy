@@ -47,10 +47,28 @@ try:
 except ImportError:
     _has_visualization = False
 
+"""Top-level package for ``gen_surv``.
+
+This module exposes the :func:`generate` function and provides access to the
+package version via ``__version__``.
+"""
+
+from importlib.metadata import PackageNotFoundError, version
+
+from .interface import generate
+
 try:
     __version__ = version("gen_surv")
 except PackageNotFoundError:  # pragma: no cover - fallback when package not installed
     __version__ = "0.0.0"
+
+# Optional imports - only available if dependencies are installed
+try:
+    from .integration import to_sksurv, from_sksurv
+    __all__ = ["generate", "__version__", "to_sksurv", "from_sksurv"]
+except ImportError:
+    # scikit-survival not available
+    __all__ = ["generate", "__version__"]
 
 __all__ = [
     # Main interface

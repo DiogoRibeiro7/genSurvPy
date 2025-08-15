@@ -1,49 +1,85 @@
-from __future__ import annotations
+"""Integration utilities for interfacing with scikit-survival."""
 
 import numpy as np
 import pandas as pd
-from numpy.typing import NDArray
+
+try:
+    from sksurv.util import Surv
+    SKSURV_AVAILABLE = True
+except ImportError:
+    SKSURV_AVAILABLE = False
 
 
-def to_sksurv(
-    df: pd.DataFrame, time_col: str = "time", event_col: str = "status"
-) -> NDArray[np.void]:
-    """Convert a DataFrame to a scikit-survival structured array.
-
+def to_sksurv(df, time_col="time", event_col="status"):
+    """
+    Convert a pandas DataFrame to a scikit-survival structured array.
+    
     Parameters
     ----------
     df : pd.DataFrame
-        DataFrame containing survival data.
+        DataFrame containing survival data
     time_col : str, default "time"
-        Column storing durations.
+        Name of the column containing survival times
     event_col : str, default "status"
-        Column storing event indicators (1=event, 0=censored).
-
+        Name of the column containing event indicators (0/1 or boolean)
+        
     Returns
     -------
-    numpy.ndarray
-        Structured array suitable for scikit-survival estimators.
-
-    Notes
-    -----
-    The ``sksurv`` package is imported lazily inside the function. It must be
-    installed separately, for instance with ``pip install scikit-survival``.
+    y : structured array
+        Structured array suitable for scikit-survival functions
+        
+    Raises
+    ------
+    ImportError
+        If scikit-survival is not installed
+    ValueError
+        If the DataFrame is empty or columns are missing
     """
+    if not SKSURV_AVAILABLE:
+        raise ImportError("scikit-survival is required but not installed")
+    
+    if df.empty:
+        # Handle empty DataFrame case by creating a minimal valid structured array
+        # This avoids the "event indicator must be binary" error for empty arrays
+        return np.array([], dtype=[(event_col, bool), (time_col, float)])
+    
+    if time_col not in df.columns:
+        raise ValueError(f"Column '{time_col}' not found in DataFrame")
+    if event_col not in df.columns:
+        raise ValueError(f"Column '{event_col}' not found in DataFrame")
+    
+    return Surv.from_dataframe(event_col, time_col, df)
 
-    try:
-        from sksurv.util import Surv
-    except ImportError as exc:  # pragma: no cover - optional dependency
-        raise ImportError("scikit-survival is required for this feature.") from exc
 
-    # ``Surv.from_dataframe`` expects the event indicator to be boolean.
-    # Validate the column is binary before casting to avoid silently
-    # accepting unexpected values (e.g., NaNs or numbers other than 0/1).
-    df_copy = df.copy()
-    events = df_copy[event_col]
-    if events.isna().any():
-        raise ValueError("event indicator contains missing values")
-    if not events.isin([0, 1, False, True]).all():
-        raise ValueError("event indicator must be binary")
-    df_copy[event_col] = events.astype(bool)
-
-    return Surv.from_dataframe(event_col, time_col, df_copy)
+def from_sksurv(y, time_col="time", event_col="status"):
+    """
+    Convert a scikit-survival structured array to a pandas DataFrame.
+    
+    Parameters
+    ----------
+    y : structured array
+        Structured array from scikit-survival
+    time_col : str, default "time"
+        Name for the time column in the resulting DataFrame
+    event_col : str, default "status"  
+        Name for the event column in the resulting DataFrame
+        
+    Returns
+    -------
+    df : pd.DataFrame
+        DataFrame with time and event columns
+    """
+    if not SKSURV_AVAILABLE:
+        raise ImportError("scikit-survival is required but not installed")
+    
+    if len(y) == 0:
+        return pd.DataFrame({time_col: [], event_col: []})
+    
+    # Extract field names from structured array
+    event_field = y.dtype.names[0]
+    time_field = y.dtype.names[1]
+    
+    return pd.DataFrame({
+        time_col: y[time_field],
+        event_col: y[event_field].astype(int)
+    })
