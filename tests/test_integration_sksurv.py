@@ -4,20 +4,17 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from gen_surv.integration import to_sksurv, from_sksurv
+from gen_surv.integration import from_sksurv, to_sksurv
 
 
 def test_to_sksurv_basic():
     """Test basic conversion from DataFrame to sksurv format."""
     pytest.importorskip("sksurv.util")
-    
-    df = pd.DataFrame({
-        "time": [1.0, 2.0, 3.0],
-        "status": [1, 0, 1]
-    })
-    
+
+    df = pd.DataFrame({"time": [1.0, 2.0, 3.0], "status": [1, 0, 1]})
+
     arr = to_sksurv(df)
-    
+
     assert len(arr) == 3
     assert arr.dtype.names == ("status", "time")
     assert list(arr["time"]) == [1.0, 2.0, 3.0]
@@ -27,14 +24,11 @@ def test_to_sksurv_basic():
 def test_to_sksurv_custom_columns():
     """Test conversion with custom column names."""
     pytest.importorskip("sksurv.util")
-    
-    df = pd.DataFrame({
-        "survival_time": [1.0, 2.0],
-        "event": [1, 0]
-    })
-    
+
+    df = pd.DataFrame({"survival_time": [1.0, 2.0], "event": [1, 0]})
+
     arr = to_sksurv(df, time_col="survival_time", event_col="event")
-    
+
     assert len(arr) == 2
     assert arr.dtype.names == ("event", "survival_time")
 
@@ -42,10 +36,10 @@ def test_to_sksurv_custom_columns():
 def test_to_sksurv_empty_dataframe():
     """Test conversion of empty DataFrame."""
     pytest.importorskip("sksurv.util")
-    
+
     df = pd.DataFrame({"time": [], "status": []})
     arr = to_sksurv(df)
-    
+
     assert len(arr) == 0
     assert arr.dtype.names == ("status", "time")
 
@@ -53,9 +47,9 @@ def test_to_sksurv_empty_dataframe():
 def test_to_sksurv_missing_columns():
     """Test error handling for missing columns."""
     pytest.importorskip("sksurv.util")
-    
+
     df = pd.DataFrame({"time": [1.0, 2.0]})
-    
+
     with pytest.raises(ValueError, match="Column 'status' not found"):
         to_sksurv(df)
 
@@ -63,13 +57,15 @@ def test_to_sksurv_missing_columns():
 def test_from_sksurv_basic():
     """Test conversion from sksurv format to DataFrame."""
     pytest.importorskip("sksurv.util")
-    
+
     # Create a structured array manually
-    arr = np.array([(True, 1.0), (False, 2.0), (True, 3.0)], 
-                   dtype=[("status", bool), ("time", float)])
-    
+    arr = np.array(
+        [(True, 1.0), (False, 2.0), (True, 3.0)],
+        dtype=[("status", bool), ("time", float)],
+    )
+
     df = from_sksurv(arr)
-    
+
     assert len(df) == 3
     assert list(df.columns) == ["time", "status"]
     assert list(df["time"]) == [1.0, 2.0, 3.0]
@@ -79,10 +75,10 @@ def test_from_sksurv_basic():
 def test_from_sksurv_empty():
     """Test conversion of empty structured array."""
     pytest.importorskip("sksurv.util")
-    
+
     arr = np.array([], dtype=[("status", bool), ("time", float)])
     df = from_sksurv(arr)
-    
+
     assert len(df) == 0
     assert list(df.columns) == ["time", "status"]
 
@@ -90,16 +86,13 @@ def test_from_sksurv_empty():
 def test_roundtrip_conversion():
     """Test that conversion is bidirectional."""
     pytest.importorskip("sksurv.util")
-    
-    original_df = pd.DataFrame({
-        "time": [1.0, 2.5, 4.0],
-        "status": [1, 0, 1]
-    })
-    
+
+    original_df = pd.DataFrame({"time": [1.0, 2.5, 4.0], "status": [1, 0, 1]})
+
     # Convert to sksurv and back
     arr = to_sksurv(original_df)
     result_df = from_sksurv(arr)
-    
+
     pd.testing.assert_frame_equal(original_df, result_df)
 
 
