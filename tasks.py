@@ -1,9 +1,6 @@
-from invoke.tasks import task
-from invoke import Context, task
-from typing import Any
 import shlex
 
-
+from invoke import Context, task
 
 
 @task
@@ -25,13 +22,10 @@ def test(c: Context) -> None:
     # Build the command string. You can adjust '--cov=gen_surv' if you
     # need to cover a different package or add extra pytest flags.
     command = (
-        "poetry run pytest "
-        "--cov=gen_surv "
-        "--cov-report=term "
-        "--cov-report=xml"
+        "poetry run pytest " "--cov=gen_surv " "--cov-report=term " "--cov-report=xml"
     )
 
-    # Run pytest. 
+    # Run pytest.
     # - warn=True: capture non-zero exit codes without aborting Invoke.
     # - pty=False: pytest doesn’t require an interactive TTY here.
     result = c.run(command, warn=True, pty=False)
@@ -41,40 +35,19 @@ def test(c: Context) -> None:
         print("✔️  All tests passed.")
     else:
         print("❌  Some tests failed.")
-        exit_code = result.exited if result is not None and hasattr(result, "exited") else "Unknown"
+        exit_code = (
+            result.exited
+            if result is not None and hasattr(result, "exited")
+            else "Unknown"
+        )
         print(f"Exit code: {exit_code}")
-        stderr_output = result.stderr if result is not None and hasattr(result, "stderr") else None
+        stderr_output = (
+            result.stderr if result is not None and hasattr(result, "stderr") else None
+        )
         if stderr_output:
             print("Error output:")
             print(stderr_output)
 
-
-@task
-def checkversion(c: Context) -> None:
-    """Check that ``pyproject.toml`` matches the latest Git tag.
-
-    This task executes ``scripts/check_version_match.py`` to ensure the version
-    declared in ``pyproject.toml`` agrees with the most recent tag.
-
-    Args:
-        c: Invoke context used to run shell commands.
-
-    Raises:
-        TypeError: If ``c`` is not an Invoke :class:`Context`.
-    """
-    if not isinstance(c, Context):
-        raise TypeError(f"Expected Invoke Context, got {type(c).__name__!r}")
-
-    # Execute the version check script with Poetry.
-    cmd = "poetry run python scripts/check_version_match.py"
-    result = c.run(cmd, warn=True, pty=False)
-
-    # Report based on the exit code from the script.
-    if result.ok:
-        print("✔️  pyproject version matches the latest git tag.")
-    else:
-        print("❌  Version mismatch detected.")
-        print(result.stderr)
 
 @task
 def docs(c: Context) -> None:
@@ -103,9 +76,15 @@ def docs(c: Context) -> None:
         print("✔️  Documentation built successfully.")
     else:
         print("❌  Documentation build failed.")
-        exit_code = result.exited if result is not None and hasattr(result, "exited") else "Unknown"
+        exit_code = (
+            result.exited
+            if result is not None and hasattr(result, "exited")
+            else "Unknown"
+        )
         print(f"Exit code: {exit_code}")
-        stderr_output = result.stderr if result is not None and hasattr(result, "stderr") else None
+        stderr_output = (
+            result.stderr if result is not None and hasattr(result, "stderr") else None
+        )
         if stderr_output:
             print("Error output:")
             print(stderr_output)
@@ -138,9 +117,15 @@ def stubs(c: Context) -> None:
         print("✔️  Type stubs generated successfully in 'stubs/'.")
     else:
         print("❌  Stub generation failed.")
-        exit_code = result.exited if result is not None and hasattr(result, "exited") else "Unknown"
+        exit_code = (
+            result.exited
+            if result is not None and hasattr(result, "exited")
+            else "Unknown"
+        )
         print(f"Exit code: {exit_code}")
-        stderr_output = result.stderr if result is not None and hasattr(result, "stderr") else None
+        stderr_output = (
+            result.stderr if result is not None and hasattr(result, "stderr") else None
+        )
         if stderr_output:
             print("Error output:")
             print(stderr_output)
@@ -170,15 +155,24 @@ def build(c: Context) -> None:
 
     # Report the result of the build process.
     if result is not None and getattr(result, "ok", False):
-        print("✔️  Build completed successfully. Artifacts are in the 'dist/' directory.")
+        print(
+            "✔️  Build completed successfully. Artifacts are in the 'dist/' directory."
+        )
     else:
         print("❌  Build failed.")
-        exit_code = result.exited if result is not None and hasattr(result, "exited") else "Unknown"
+        exit_code = (
+            result.exited
+            if result is not None and hasattr(result, "exited")
+            else "Unknown"
+        )
         print(f"Exit code: {exit_code}")
-        stderr_output = result.stderr if result is not None and hasattr(result, "stderr") else None
+        stderr_output = (
+            result.stderr if result is not None and hasattr(result, "stderr") else None
+        )
         if stderr_output:
             print("Error output:")
             print(stderr_output)
+
 
 @task
 def publish(c: Context) -> None:
@@ -209,6 +203,7 @@ def publish(c: Context) -> None:
         print(result.stderr)
     else:
         print("No stderr output captured.")
+
 
 @task
 def clean(c: Context) -> None:
@@ -254,7 +249,8 @@ def clean(c: Context) -> None:
         if result.stderr:
             print("Error output:")
             print(result.stderr)
-    
+
+
 @task
 def gitpush(c: Context) -> None:
     """Commit and push all staged changes.
@@ -273,9 +269,17 @@ def gitpush(c: Context) -> None:
     result_add = c.run("git add .", warn=True, pty=False)
     if result_add is None or not getattr(result_add, "ok", False):
         print("❌ Failed to stage changes (git add).")
-        exit_code = result_add.exited if result_add is not None and hasattr(result_add, "exited") else "Unknown"
+        exit_code = (
+            result_add.exited
+            if result_add is not None and hasattr(result_add, "exited")
+            else "Unknown"
+        )
         print(f"Exit code: {exit_code}")
-        stderr_output = result_add.stderr if result_add is not None and hasattr(result_add, "stderr") else None
+        stderr_output = (
+            result_add.stderr
+            if result_add is not None and hasattr(result_add, "stderr")
+            else None
+        )
         if stderr_output:
             print("Error output:")
             print(stderr_output)
@@ -313,9 +317,17 @@ def gitpush(c: Context) -> None:
             print("✔️  Changes pushed successfully.")
         else:
             print("❌ Push failed.")
-            exit_code = getattr(result_push, "exited", "Unknown") if result_push is not None else "Unknown"
+            exit_code = (
+                getattr(result_push, "exited", "Unknown")
+                if result_push is not None
+                else "Unknown"
+            )
             print(f"Exit code: {exit_code}")
-            stderr_output = getattr(result_push, "stderr", None) if result_push is not None else None
+            stderr_output = (
+                getattr(result_push, "stderr", None)
+                if result_push is not None
+                else None
+            )
             if stderr_output:
                 print("Error output:")
                 print(stderr_output)
