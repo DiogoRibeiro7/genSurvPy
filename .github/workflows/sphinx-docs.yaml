@@ -68,3 +68,4 @@ jobs:
           else
             git commit -m "Update gensurvpy Sphinx documentation"
             git push
+          fi
