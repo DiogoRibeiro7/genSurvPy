@@ -24,7 +24,7 @@ jobs:
 
     env:
       BLOG_REPO: DiogoRibeiro7/DiogoRibeiro7.github.io
-      BLOG_DEST: packages/your-python-package
+      BLOG_DEST: packages/gensurvpy
       PYTHON_VERSION: '3.11'
 
     steps:
