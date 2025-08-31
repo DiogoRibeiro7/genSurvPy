@@ -7,8 +7,8 @@ name: sphinx-docs
 
 on:
   push:
-    branches: [main, develop]
-    tags: ['*']
+    # branches: [main, develop]
+    # tags: ['*']
   workflow_dispatch:
 
 permissions:
