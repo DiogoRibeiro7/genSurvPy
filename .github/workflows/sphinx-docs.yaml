@@ -41,8 +41,8 @@ jobs:
       - name: Install dependencies with Poetry
         run: poetry install --with docs
 
-      - name: Build Sphinx documentation
-        run: poetry run sphinx-build -W -b html docs/source docs/build
+      - name: Build Sphinx documentation for GitHub Pages
+        run: poetry run sphinx-build -b html -c docs/gh_conf docs/source docs/build
 
       - name: Checkout blog repository
         uses: actions/checkout@v4
