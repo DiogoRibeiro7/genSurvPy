@@ -1,14 +1,11 @@
 # .github/workflows/sphinx-docs.yaml
-# Build Sphinx site for this Poetry-based Python package and publish it into your blog repo at:
-#   https://diogoribeiro7.github.io/packages/your-python-package/
-# Requires a PAT with "repo" scope stored as PERSONAL_ACCESS_TOKEN in *this* repo.
 
 name: sphinx-docs
 
 on:
   push:
-    # branches: [main, develop]
-    # tags: ['*']
+    branches: [main, develop]
+    tags: ['*']
   workflow_dispatch:
 
 permissions:
@@ -24,7 +21,7 @@ jobs:
 
     env:
       BLOG_REPO: DiogoRibeiro7/DiogoRibeiro7.github.io
-      BLOG_DEST: packages/your-python-package
+      BLOG_DEST: packages/gensurvpy  # adjust as needed
       PYTHON_VERSION: '3.11'
 
     steps:
@@ -41,13 +38,11 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies with Poetry (docs group)
-        run: |
-          poetry install --no-interaction --with docs
+      - name: Install dependencies with Poetry
+        run: poetry install --with docs
 
-      - name: Build Sphinx docs (using myst-parser etc.)
-        run: |
-          poetry run sphinx-build -b html docs/ site/
+      - name: Build Sphinx documentation
+        run: poetry run sphinx-build -W -b html docs/source docs/build
 
       - name: Checkout blog repository
         uses: actions/checkout@v4
@@ -56,10 +51,10 @@ jobs:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           path: blog-repo
 
-      - name: Copy documentation to blog (includes dotfiles, cleans removed files)
+      - name: Copy documentation to blog (cleans removed files)
         run: |
           mkdir -p "blog-repo/${BLOG_DEST}"
-          rsync -av --delete site/ "blog-repo/${BLOG_DEST}/"
+          rsync -av --delete docs/build/ "blog-repo/${BLOG_DEST}/"
           ls -la "blog-repo/${BLOG_DEST}" | sed -n '1,80p'
 
       - name: Commit and push changes to blog
@@ -71,5 +66,5 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update your-python-package Sphinx documentation"
+            git commit -m "Update gensurvpy Sphinx documentation"
             git push
