@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gen_surv"
-version = "1.0.9"
+version = "1.0.10"
 description = "A Python package for simulating survival data, inspired by the R package genSurv"
 authors = ["Diogo Ribeiro <diogo.debastos.ribeiro@gmail.com>"]
 license = "MIT"

@@ -94,7 +94,7 @@ html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 
 # Add .nojekyll so GitHub Pages serves _static and other underscored folders
-html_extra_path = [".nojekyll"]
+# html_extra_path = [".nojekyll"]
 
 # Required for correct link rendering on GitHub Pages under a subpath
 html_baseurl = "https://diogoribeiro7.github.io/packages/gensurvpy/"
