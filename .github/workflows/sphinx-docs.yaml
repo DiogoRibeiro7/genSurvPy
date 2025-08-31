@@ -1,5 +1,5 @@
 # .github/workflows/sphinx-docs.yaml
-# Build Sphinx site for this Python package and publish it into your blog repo at:
+# Build Sphinx site for this Poetry-based Python package and publish it into your blog repo at:
 #   https://diogoribeiro7.github.io/packages/your-python-package/
 # Requires a PAT with "repo" scope stored as PERSONAL_ACCESS_TOKEN in *this* repo.
 
@@ -24,7 +24,7 @@ jobs:
 
     env:
       BLOG_REPO: DiogoRibeiro7/DiogoRibeiro7.github.io
-      BLOG_DEST: packages/gensurvpy
+      BLOG_DEST: packages/your-python-package
       PYTHON_VERSION: '3.11'
 
     steps:
@@ -36,15 +36,18 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
+      - name: Install Poetry
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install sphinx sphinx-rtd-theme
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Build Sphinx docs
+      - name: Install dependencies with Poetry (docs group)
         run: |
-          sphinx-build -b html docs/ site/
+          poetry install --no-interaction --with docs
+
+      - name: Build Sphinx docs (using myst-parser etc.)
+        run: |
+          poetry run sphinx-build -b html docs/ site/
 
       - name: Checkout blog repository
         uses: actions/checkout@v4
