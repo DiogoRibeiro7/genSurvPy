@@ -55,7 +55,6 @@ jobs:
         run: |
           mkdir -p "blog-repo/${BLOG_DEST}"
           rsync -av --delete docs/build/ "blog-repo/${BLOG_DEST}/"
-          ls -la "blog-repo/${BLOG_DEST}" | sed -n '1,80p'
 
       - name: Commit and push changes to blog
         run: |
