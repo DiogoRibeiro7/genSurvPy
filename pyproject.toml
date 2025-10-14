@@ -36,7 +36,7 @@ pyreadr = "^0.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
-pytest-cov = "^6.1.1"
+pytest-cov = ">=6.1.1,<8.0.0"
 pytest-benchmark = ">=4,<6"
 python-semantic-release = "^9.21.0"
 mypy = "^1.15.0"
