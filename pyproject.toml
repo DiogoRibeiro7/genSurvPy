@@ -47,7 +47,7 @@ black = ">=24.1,<26.0"
 isort = ">=5.13.2,<8.0.0"
 flake8 = "^6.1.0"
 scikit-survival = "^0.24.1"
-pre-commit = "^3.8"
+pre-commit = ">=3.8,<5.0"
 
 [tool.poetry.extras]
 dev = [
