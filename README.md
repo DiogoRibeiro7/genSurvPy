@@ -15,8 +15,8 @@
 [ci-badge]: https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml/badge.svg
 [ci-link]: https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml
 [py-badge]: https://img.shields.io/pypi/pyversions/gen_surv
-[![GitHub stars](https://img.shields.io/github/stars/diogoribeiro7/navier-stokes-solvers.svg?style=social)](https://github.com/diogoribeiro7/navier-stokes-solvers/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/diogoribeiro7/navier-stokes-solvers.svg?style=social)](https://github.com/diogoribeiro7/navier-stokes-solvers/network/members)
+[![GitHub stars](https://img.shields.io/github/stars/diogoribeiro7/genSurvPy.svg?style=social)](https://github.com/diogoribeiro7/genSurvPy/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/diogoribeiro7/genSurvPy.svg?style=social)](https://github.com/diogoribeiro7/genSurvPy/network/members)
 
 **gen_surv** is a Python library for simulating survival data and producing visualizations under a wide range of statistical models. Inspired by the R package [genSurv](https://cran.r-project.org/package=genSurv), it offers a unified interface for generating realistic datasets for research, teaching and benchmarking.
 
