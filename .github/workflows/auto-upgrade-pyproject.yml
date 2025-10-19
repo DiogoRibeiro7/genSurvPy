@@ -1,0 +1,47 @@
+# .github/workflows/auto-upgrade-pyproject.yml
+name: Auto upgrade pyproject constraints
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install tomlkit packaging
+
+      - name: Run updater (caret, no majors, no pre-releases)
+        run: |
+          python scripts/pyproject_updater.py --strategy caret --groups main,dev --respect-major --no-prerelease
+
+      - name: Create PR if changed
+        run: |
+          if ! git diff --quiet; then
+            git checkout -b chore/upgrade-pyproject-constraints
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add pyproject.toml
+            git commit -m "chore: upgrade dependency constraints in pyproject"
+            git push --force --set-upstream origin chore/upgrade-pyproject-constraints
+            gh pr create --title "chore: upgrade pyproject constraints" \
+                         --body "Automated update of dependency constraints via PyPI latest." \
+                         --base "${GITHUB_REF_NAME:-main}" || true
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
