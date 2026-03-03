@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Callable
 
 import numpy as np
 import pandas as pd
 import pytest
+
+os.environ.setdefault("MPLBACKEND", "Agg")
 
 BASELINE_DIR = Path(__file__).parent / "baselines"
 BASELINE_DIR.mkdir(exist_ok=True)

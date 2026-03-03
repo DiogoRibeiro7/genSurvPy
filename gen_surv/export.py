@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 
 import pandas as pd
-import pyreadr
 
 from .validation import ensure_in_choices
 
@@ -44,4 +43,10 @@ def export_dataset(df: pd.DataFrame, path: str, fmt: str | None = None) -> None:
     elif fmt in {"feather", "ft"}:
         df.reset_index(drop=True).to_feather(path)
     elif fmt == "rds":
+        try:
+            import pyreadr  # type: ignore
+        except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
+            raise ModuleNotFoundError(
+                "pyreadr is required for RDS export; install the 'pyreadr' package."
+            ) from exc
         pyreadr.write_rds(path, df.reset_index(drop=True))

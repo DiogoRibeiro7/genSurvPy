@@ -125,7 +125,7 @@ def gen_cmm(
 
     return pd.DataFrame(
         {
-            "id": np.arange(1, n + 1),
+            "id": np.arange(n),
             "start": np.zeros(n),
             "stop": stop,
             "status": status,

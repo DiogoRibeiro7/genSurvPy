@@ -1,5 +1,4 @@
 import pandas as pd
-import pyreadr
 import pytest
 
 from gen_surv.export import export_dataset
@@ -41,6 +40,7 @@ def test_export_dataset_json(monkeypatch, tmp_path):
 
 
 def test_export_dataset_rds(monkeypatch, tmp_path):
+    pyreadr = pytest.importorskip("pyreadr")
     df = pd.DataFrame({"time": [1.0, 2.0], "status": [1, 0]})
     out = tmp_path / "data.rds"
 

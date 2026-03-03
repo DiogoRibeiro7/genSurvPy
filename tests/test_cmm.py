@@ -29,7 +29,7 @@ def test_gen_cmm_uniform_reproducible():
     )
     expected = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5],
+            "id": [0, 1, 2, 3, 4],
             "start": [0.0] * 5,
             "stop": [
                 0.18915094163423693,
@@ -64,7 +64,7 @@ def test_gen_cmm_exponential_reproducible():
     )
     expected = pd.DataFrame(
         {
-            "id": [1, 2, 3, 4, 5],
+            "id": [0, 1, 2, 3, 4],
             "start": [0.0] * 5,
             "stop": [
                 0.18915094163423693,

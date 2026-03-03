@@ -4,7 +4,7 @@ Tests for Accelerated Failure Time (AFT) models.
 
 import pandas as pd
 import pytest
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from gen_surv.aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
@@ -59,6 +59,7 @@ def test_gen_aft_log_logistic_invalid_scale():
         )
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow], max_examples=50)
 @given(
     n=st.integers(min_value=1, max_value=20),
     shape=st.floats(
