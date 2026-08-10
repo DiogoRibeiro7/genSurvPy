@@ -3,8 +3,11 @@ from typing import Sequence, TypedDict
 import numpy as np
 import pandas as pd
 
+from gen_surv._rng import RandomStateLike, resolve_rng
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validation import validate_gen_cmm_inputs
+
+_COLUMNS = ["id", "start", "stop", "from_state", "to_state", "status", "X0"]
 
 
 class EventTimes(TypedDict):
@@ -64,7 +67,7 @@ def gen_cmm(
     beta: Sequence[float],
     covariate_range: float,
     rate: Sequence[float],
-    seed: int | None = None,
+    seed: RandomStateLike = None,
 ) -> pd.DataFrame:
     """Generate survival data using a continuous-time Markov model (CMM).
 
@@ -88,7 +91,23 @@ def gen_cmm(
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns: ``id``, ``start``, ``stop``, ``status``, ``X0``, ``transition``.
+        Counting-process records with columns ``id``, ``start``, ``stop``,
+        ``from_state``, ``to_state``, ``status``, ``X0``, sorted by ``id``,
+        ``start`` then ``to_state``.
+
+        States are 1 (healthy), 2 (illness) and 3 (death). While a subject
+        occupies state 1 it is simultaneously at risk of ``1 -> 2`` and
+        ``1 -> 3``, so it contributes one row for each, both ending when it
+        leaves state 1; ``status`` is 1 on the transition that occurred and 0 on
+        the competing one. A subject that reaches state 2 contributes a further
+        ``2 -> 3`` row. Subjects therefore contribute two or three rows each,
+        not one.
+
+    Notes
+    -----
+    Sojourn times are drawn on a reset clock, so the model is semi-Markov: the
+    ``2 -> 3`` row spans ``t12`` to ``t12 + t23`` where ``t23`` is an
+    independent draw. This matches ``genCMM`` in the R package.
 
     Examples
     --------
@@ -102,34 +121,76 @@ def gen_cmm(
     ...     rate=[0.1, 1.0, 0.2, 1.2, 0.3, 1.5],
     ...     seed=42,
     ... )
-    >>> df.head()
+    >>> list(df.columns)
+    ['id', 'start', 'stop', 'from_state', 'to_state', 'status', 'X0']
     """
     validate_gen_cmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
 
-    rng = np.random.default_rng(seed)
+    rng = resolve_rng(seed)
     rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
 
     z1 = rng.uniform(0, covariate_range, size=n)
     c = rfunc(n, cens_par, rng)
 
+    # Latent transition times. All three rate pairs and all three coefficients
+    # are used: releases up to 1.3.0 drew t23 and discarded it, leaving
+    # rate[4], rate[5] and beta[2] with no effect on the output.
     u = rng.uniform(size=(3, n))
     t12 = (-np.log(1 - u[0]) / (rate[0] * np.exp(beta[0] * z1))) ** (1 / rate[1])
     t13 = (-np.log(1 - u[1]) / (rate[2] * np.exp(beta[1] * z1))) ** (1 / rate[3])
+    t23 = (-np.log(1 - u[2]) / (rate[4] * np.exp(beta[2] * z1))) ** (1 / rate[5])
 
-    first_event = np.minimum(t12, t13)
-    censored = first_event >= c
+    # Ties go to the event, matching the R implementation's `c < min(t12, t13)`.
+    censored_in_1 = c < np.minimum(t12, t13)
+    illness_first = ~censored_in_1 & (t12 <= t13)
+    death_first = ~censored_in_1 & (t13 < t12)
 
-    status = (~censored).astype(int)
-    transition = np.where(censored, np.nan, np.where(t12 <= t13, 1, 2))
-    stop = np.where(censored, c, first_event)
+    exit_1 = np.where(censored_in_1, c, np.minimum(t12, t13))
+    ids = np.arange(n)
+    zeros = np.zeros(n)
 
-    return pd.DataFrame(
+    # Both competing transitions out of state 1 are observed until the subject
+    # leaves it, so each contributes a row over the same interval.
+    to_2 = pd.DataFrame(
         {
-            "id": np.arange(n),
-            "start": np.zeros(n),
-            "stop": stop,
-            "status": status,
+            "id": ids,
+            "start": zeros,
+            "stop": exit_1,
+            "from_state": 1,
+            "to_state": 2,
+            "status": illness_first.astype(int),
             "X0": z1,
-            "transition": transition,
         }
     )
+    to_3 = pd.DataFrame(
+        {
+            "id": ids,
+            "start": zeros,
+            "stop": exit_1,
+            "from_state": 1,
+            "to_state": 3,
+            "status": death_first.astype(int),
+            "X0": z1,
+        }
+    )
+
+    # Only subjects that reached state 2 are at risk of 2 -> 3.
+    reached_2 = np.flatnonzero(illness_first)
+    entry = t12[reached_2]
+    death_23 = entry + t23[reached_2]
+    censored_in_2 = c[reached_2] < death_23
+    from_2 = pd.DataFrame(
+        {
+            "id": ids[reached_2],
+            "start": entry,
+            "stop": np.where(censored_in_2, c[reached_2], death_23),
+            "from_state": 2,
+            "to_state": 3,
+            "status": (~censored_in_2).astype(int),
+            "X0": z1[reached_2],
+        }
+    )
+
+    data = pd.concat([to_2, to_3, from_2], ignore_index=True)
+    data = data.sort_values(["id", "start", "to_state"], kind="stable")
+    return data.reset_index(drop=True)[_COLUMNS]

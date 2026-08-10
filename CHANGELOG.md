@@ -1,5 +1,60 @@
 # CHANGELOG
 
+## v2.0.0 (2026-08-10)
+
+Completes the illness-death models. `gen_cmm` and `gen_thmm` previously reported
+only a subject's first transition, which left the `2 -> 3` transition entirely
+absent from their output and several declared parameters with no effect. Both now
+emit the full trajectory, so **their returned shape changes** and the major
+version is incremented.
+
+### Breaking Changes
+- **`gen_cmm` now returns counting-process records** with columns `id`, `start`,
+  `stop`, `from_state`, `to_state`, `status`, `X0`, replacing the previous
+  `id`, `start`, `stop`, `status`, `X0`, `transition` frame. Subjects contribute
+  two or three rows rather than one: while in state 1 a subject is at risk of
+  both `1 -> 2` and `1 -> 3`, so it gets a row for each over the same interval
+  with `status` marking whichever occurred, and a subject reaching state 2 gets a
+  further `2 -> 3` row.
+- The `transition` column is gone. It encoded the destination as an integer, and
+  in the opposite sense to the R package's `trans` codes, which made it easy to
+  misread. `from_state` and `to_state` state the transition explicitly.
+- **`gen_thmm` now returns the full state trajectory.** Columns are unchanged
+  (`id`, `time`, `state`, `X0`) but subjects contribute two or three rows instead
+  of one: an entry observation in state 1 at time 0, then one observation per
+  transition, or an observation in the occupied state at the censoring time.
+- Any code that assumed one row per subject from either generator needs to group
+  by `id`.
+
+### Bug Fixes
+- **`gen_cmm` ignored `rate[4]`, `rate[5]` and `beta[2]`.** It drew the `2 -> 3`
+  sojourn time and discarded it, so a third of its declared parameters could be
+  changed with no effect on the output whatsoever. All six rates and all three
+  coefficients now reach the result.
+- **`gen_thmm` ignored `rate[2]` and `beta[2]`** for the same reason.
+- `gen_cmm` now resolves its seed through the shared RNG helper, so it accepts a
+  `numpy.random.Generator` as well as an `int`, consistent with the other
+  generators.
+- Tie handling in both generators now matches the R implementation, which treats
+  a censoring time equal to the first transition time as an event.
+
+### Documentation
+- The CMM and THMM sections of the algorithms and theory pages now describe the
+  emitted layouts, including why the two differ: `gen_cmm` returns transition
+  intervals and `gen_thmm` returns states observed at times, mirroring `genCMM`
+  and `genTHMM` in the R package. The 1.3.0 note recording the missing
+  trajectory as a known limitation has been removed, since it is now fixed.
+
+### Testing
+- Added `tests/test_multistate_schema.py` with 21 structural tests: row counts
+  per subject, both competing transitions being at risk over a shared interval,
+  the `2 -> 3` row appearing exactly when illness was observed, the reset clock
+  on entry to state 2, monotone trajectories, death being terminal, and direct
+  guards that every rate and coefficient influences the output. The
+  parameter-influence tests were confirmed to fail against the 1.3.0 code.
+- Replaced the two `gen_cmm` snapshot tests, which asserted exact values of the
+  old one-row-per-subject frame, with reproducibility and schema tests.
+
 ## v1.3.0 (2026-08-10)
 
 A scientific-correctness release. Three of the fixes below change the numbers the

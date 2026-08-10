@@ -216,18 +216,29 @@ def _thmm(seed: object) -> np.ndarray:
 _GENERATORS = {"bivariate": _bivariate, "tdcm": _tdcm, "thmm": _thmm}
 
 
+def _same(first: np.ndarray, second: np.ndarray) -> bool:
+    """Compare draws that may differ in row count.
+
+    gen_thmm emits two or three rows per subject depending on the trajectory, so
+    two seeds can produce differently shaped arrays. np.allclose raises on a
+    shape mismatch, which a plain comparison would report as an error rather
+    than as the difference it is.
+    """
+    return first.shape == second.shape and bool(np.allclose(first, second))
+
+
 @pytest.mark.parametrize("name", sorted(_GENERATORS))
 def test_equal_seeds_give_equal_draws(name: str) -> None:
     """These three drew from the global NumPy state before 1.3.0."""
     generator = _GENERATORS[name]
-    assert np.allclose(generator(123), generator(123))
+    assert _same(generator(123), generator(123))
 
 
 @pytest.mark.parametrize("name", sorted(_GENERATORS))
 def test_different_seeds_give_different_draws(name: str) -> None:
     """A seed must actually reach the draws rather than being ignored."""
     generator = _GENERATORS[name]
-    assert not np.allclose(generator(123), generator(456))
+    assert not _same(generator(123), generator(456))
 
 
 @pytest.mark.parametrize("name", sorted(_GENERATORS))
@@ -240,14 +251,14 @@ def test_draws_ignore_the_global_numpy_state(name: str) -> None:
     np.random.seed(999)
     second = generator(2024)
 
-    assert np.allclose(first, second)
+    assert _same(first, second)
 
 
 @pytest.mark.parametrize("name", sorted(_GENERATORS))
 def test_a_shared_generator_is_accepted(name: str) -> None:
     """Passing a Generator lets callers share one stream across simulators."""
     generator = _GENERATORS[name]
-    assert np.allclose(
+    assert _same(
         generator(np.random.default_rng(7)), generator(np.random.default_rng(7))
     )
 

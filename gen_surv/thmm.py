@@ -82,7 +82,23 @@ def gen_thmm(
     Returns
     -------
     pd.DataFrame
-        Columns = ``["id", "time", "state", "X0"]``.
+        Columns = ``["id", "time", "state", "X0"]``, one row per observation
+        time giving the state occupied at that time.
+
+        States are 1 (healthy), 2 (illness) and 3 (death). Every subject starts
+        with an observation in state 1 at time 0, then contributes one or two
+        further observations, so subjects yield two or three rows each rather
+        than one. A subject still in state 1 or 2 when censoring occurs has a
+        final observation in that state at the censoring time.
+
+    Notes
+    -----
+    This panel layout -- a state recorded at each observation time -- matches
+    ``genTHMM`` in the R package, and differs deliberately from
+    :func:`gen_surv.cmm.gen_cmm`, which emits counting-process intervals.
+
+    All transition intensities are constant in time, so sojourn times are
+    exponential and the reset and forward clocks coincide.
 
     Examples
     --------
@@ -105,16 +121,26 @@ def gen_thmm(
     for k in range(n):
         z1 = rng.uniform(0, covariate_range)
         trans = calculate_transitions(z1, cens_par, beta, rate, rfunc, rng)
-        t12, t13, c = trans["t12"], trans["t13"], trans["c"]
+        t12, t13, t23, c = trans["t12"], trans["t13"], trans["t23"], trans["c"]
 
-        if min(t12, t13) < c:
-            if t12 <= t13:
-                time, state = t12, 2
-            else:
-                time, state = t13, 3
+        # Every trajectory is observed in state 1 at entry.
+        records.append([k + 1, 0.0, 1, z1])
+
+        # Ties go to the event, matching the R implementation.
+        if c < min(t12, t13):
+            # Still healthy when censoring occurs.
+            records.append([k + 1, c, 1, z1])
+        elif t13 < t12:
+            # Died without passing through the illness state.
+            records.append([k + 1, t13, 3, z1])
         else:
-            time, state = c, 1  # censored
-
-        records.append([k + 1, time, state, z1])
+            # Fell ill, then either died or was censored while ill. Releases up
+            # to 1.3.0 stopped here and discarded t23, so the 2 -> 3 transition
+            # never appeared and rate[2]/beta[2] had no effect on the output.
+            records.append([k + 1, t12, 2, z1])
+            if c < t12 + t23:
+                records.append([k + 1, c, 2, z1])
+            else:
+                records.append([k + 1, t12 + t23, 3, z1])
 
     return pd.DataFrame(records, columns=["id", "time", "state", "X0"])
