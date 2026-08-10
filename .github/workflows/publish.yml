@@ -6,6 +6,13 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      # Naming `permissions` opts every scope out by default, so `contents`
+      # has to be granted back explicitly for the checkout below.
+      contents: read
+      # Mints the OIDC token that PyPI Trusted Publishing exchanges for an
+      # upload token. Without this the upload fails with 403.
+      id-token: write
     steps:
       # This repository's default branch is `develop`, so a workflow_dispatch
       # that does not explicitly select a branch targets `develop`. Releases
@@ -134,7 +141,12 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Verify package metadata
         run: poetry check
-      - name: Publish
-        env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
-        run: poetry publish --build --no-interaction
+      - name: Build distributions
+        run: poetry build
+      # Publishes via PyPI Trusted Publishing: the OIDC identity of this
+      # workflow is exchanged for a short-lived upload token, so there is no
+      # long-lived API token stored in repository secrets. The trusted
+      # publisher registered on PyPI must name this exact workflow file
+      # (publish.yml) on DiogoRibeiro7/genSurvPy.
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
