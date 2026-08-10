@@ -1,6 +1,7 @@
 {
   "title": "gen_surv: Survival Data Simulation in Python",
   "upload_type": "software",
+  "version": "1.2.0",
   "publication_date": "2026-08-10",
   "description": "<p><strong>gen_surv</strong> is a Python library for simulating survival data and producing visualizations under a wide range of statistical models. Inspired by the R package <a href=\"https://cran.r-project.org/package=genSurv\">genSurv</a>, it provides a unified interface for generating synthetic survival datasets for research, teaching, benchmarking, and statistical software validation.</p>",
   "creators": [

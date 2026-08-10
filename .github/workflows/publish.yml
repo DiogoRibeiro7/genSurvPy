@@ -7,6 +7,20 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      # This repository's default branch is `develop`, so a workflow_dispatch
+      # that does not explicitly select a branch targets `develop`. Releases
+      # must only ever be built from `main`, so fail before doing any work.
+      - name: Verify the run is on main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Refusing to publish from '$REF'. Releases must be published from 'main'."
+            echo "The default branch of this repository is 'develop', so dispatching this workflow"
+            echo "without changing the branch selector targets 'develop'. Re-run it with 'main'."
+            exit 1
+          fi
+          echo "Publishing from $REF."
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -15,10 +29,111 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+      - name: Read project version
+        id: project
+        run: |
+          version=$(python -c "import pathlib, tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['tool']['poetry']['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "pyproject version: $version"
+      - name: Verify the version is consistent across metadata files
+        env:
+          VERSION: ${{ steps.project.outputs.version }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import sys
+
+          expected = os.environ["VERSION"]
+          problems = []
+
+          # CITATION.cff: the indented `version:` under preferred-citation, not
+          # the top-level `cff-version:` which tracks the CFF schema itself.
+          cff = pathlib.Path("CITATION.cff").read_text(encoding="utf-8")
+          match = re.search(r'(?m)^\s+version:\s*"?([^"\s]+)"?', cff)
+          if match is None:
+              problems.append("CITATION.cff: no indented 'version:' key found")
+          elif match.group(1) != expected:
+              problems.append(f"CITATION.cff: {match.group(1)}")
+
+          zenodo = json.loads(pathlib.Path(".zenodo.json").read_text(encoding="utf-8"))
+          if "version" not in zenodo:
+              problems.append(".zenodo.json: no 'version' key")
+          elif zenodo["version"] != expected:
+              problems.append(f".zenodo.json: {zenodo['version']}")
+
+          # The BibTeX snippet in the docs landing page.
+          index = pathlib.Path("docs/source/index.md").read_text(encoding="utf-8")
+          match = re.search(r"version = \{([^}]+)\}", index)
+          if match is None:
+              problems.append("docs/source/index.md: no BibTeX 'version = {...}' found")
+          elif match.group(1) != expected:
+              problems.append(f"docs/source/index.md: {match.group(1)}")
+
+          if problems:
+              print(f"::error::pyproject.toml declares {expected}, but these disagree:")
+              for problem in problems:
+                  print(f"  {problem}")
+              sys.exit(1)
+
+          print(f"Version {expected} is consistent across all metadata files.")
+          PY
+      - name: Verify a matching tag points at this commit
+        env:
+          VERSION: ${{ steps.project.outputs.version }}
+        run: |
+          tag="v$VERSION"
+          if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::Tag $tag does not exist. Tag the release commit on main before publishing."
+            exit 1
+          fi
+          tagged=$(git rev-list -n 1 "$tag")
+          head=$(git rev-parse HEAD)
+          if [ "$tagged" != "$head" ]; then
+            echo "::error::Tag $tag points at $tagged but HEAD is $head."
+            echo "Publish the commit that was tagged, or move the tag to the commit you intend to release."
+            exit 1
+          fi
+          echo "Tag $tag matches HEAD."
+      - name: Verify the version is not already on PyPI
+        env:
+          VERSION: ${{ steps.project.outputs.version }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.request
+
+          version = os.environ["VERSION"]
+          url = "https://pypi.org/pypi/gen-surv/json"
+          try:
+              with urllib.request.urlopen(url, timeout=30) as response:
+                  releases = json.load(response).get("releases", {})
+          except urllib.error.HTTPError as exc:
+              if exc.code == 404:
+                  print("gen-surv is not on PyPI yet; nothing to compare against.")
+                  sys.exit(0)
+              raise
+
+          if version in releases:
+              print(
+                  f"::error::gen-surv {version} is already on PyPI. A version can never be "
+                  "re-uploaded, even after deletion. Bump the version and tag again."
+              )
+              sys.exit(1)
+
+          print(f"gen-surv {version} is not on PyPI. Proceeding.")
+          PY
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Verify package metadata
+        run: poetry check
       - name: Publish
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
