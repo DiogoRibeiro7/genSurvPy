@@ -40,7 +40,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from difflib import unified_diff
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import tomlkit
@@ -90,7 +89,9 @@ def _layout(doc) -> str:
         return "poetry"
     if "project" in doc:
         return "pep621"
-    raise ValueError("Unsupported pyproject: neither [tool.poetry] nor [project] found.")
+    raise ValueError(
+        "Unsupported pyproject: neither [tool.poetry] nor [project] found."
+    )
 
 
 # ---------- PyPI version lookup ----------
@@ -113,7 +114,12 @@ def _fetch_pypi_versions(name: str, timeout: float) -> dict[str, bool]:
             raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
         with urllib.request.urlopen(url, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+    except (
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+        TimeoutError,
+        json.JSONDecodeError,
+    ):
         return {}
 
     versions: dict[str, bool] = {}
@@ -122,12 +128,16 @@ def _fetch_pypi_versions(name: str, timeout: float) -> dict[str, bool]:
         # files is a list of distributions; consider version yanked if all files are yanked
         if not isinstance(files, list) or len(files) == 0:
             continue
-        all_yanked = all(bool(f.get("yanked", False)) for f in files if isinstance(f, dict))
+        all_yanked = all(
+            bool(f.get("yanked", False)) for f in files if isinstance(f, dict)
+        )
         versions[ver_str] = not all_yanked
     return versions
 
 
-def _select_latest_version(versions: dict[str, bool], include_prerelease: bool) -> Version | None:
+def _select_latest_version(
+    versions: dict[str, bool], include_prerelease: bool
+) -> Version | None:
     """Pick the highest non-yanked Version. If include_prerelease=False, prefer finals."""
     valid: list[Version] = []
     for ver_str, not_yanked in versions.items():
@@ -176,7 +186,9 @@ def _pep440_string_for_strategy(v: Version, strategy: str) -> str:
     raise ValueError(f"Unknown strategy: {strategy}")
 
 
-def _respect_major_allowed(current_spec: str | None, latest: Version, allow_major: bool) -> bool:
+def _respect_major_allowed(
+    current_spec: str | None, latest: Version, allow_major: bool
+) -> bool:
     """If allow_major is False and current_spec indicates a major cap, avoid bumping across majors.
     Heuristic: extract existing max major from spec if present; otherwise compare against any pinned/ranged major.
     """
@@ -372,7 +384,8 @@ def upgrade(pyproject: Path, opts: Options) -> int:
                     v
                     for v in candidates
                     if (
-                        v.major == target_major and (opts.include_prerelease or not v.is_prerelease)
+                        v.major == target_major
+                        and (opts.include_prerelease or not v.is_prerelease)
                     )
                 ]
                 if within:
@@ -410,7 +423,9 @@ def parse_args(argv: list[str] | None = None) -> Options:
         help="How to express the updated constraint.",
     )
     p.add_argument(
-        "--allow-major", action="store_true", help="Allow bumping to a new MAJOR version."
+        "--allow-major",
+        action="store_true",
+        help="Allow bumping to a new MAJOR version.",
     )
     p.add_argument(
         "--respect-major",
@@ -443,7 +458,9 @@ def parse_args(argv: list[str] | None = None) -> Options:
         default="",
         help="Comma-separated package names to update (normalized). Empty=all.",
     )
-    p.add_argument("--check", action="store_true", help="Dry-run: show unified diff, do not write.")
+    p.add_argument(
+        "--check", action="store_true", help="Dry-run: show unified diff, do not write."
+    )
     p.add_argument("--timeout", type=float, default=8.0, help="HTTP timeout (seconds).")
 
     args = p.parse_args(argv)

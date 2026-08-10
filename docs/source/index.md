@@ -130,7 +130,7 @@ If you use gen_surv in your research, please cite:
   author = {Diogo Ribeiro},
   year = {2025},
   url = {https://github.com/DiogoRibeiro7/genSurvPy},
-  version = {1.0.9}
+  version = {1.2.0}
 }
 ```
 

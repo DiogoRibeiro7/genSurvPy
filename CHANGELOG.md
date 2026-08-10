@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## v1.2.0 (2026-08-10)
+
+### Breaking Changes
+- Python 3.10 is no longer supported; the minimum supported version is now 3.11.
+  This is required by the current `numpy` (>=2.3) and `lifelines` (>=0.30) releases,
+  neither of which ships for 3.10.
+- Removed the `dev` extra. It declared `Provides-Extra: dev` with no dependencies
+  behind it, so `pip install gen-surv[dev]` never actually installed anything.
+  Use `poetry install --with dev` for development, or `pip install scikit-survival`
+  for the optional scikit-survival integration.
+
+### Features
+- Added official support for Python 3.13; CI now tests 3.11, 3.12 and 3.13.
+
+### Bug Fixes
+- Raised the `lifelines` floor to 0.30.3. Earlier releases crash in
+  `add_at_risk_counts` under numpy 2.x with
+  `TypeError: only 0-dimensional arrays can be converted to Python scalars`,
+  which broke every survival-curve and covariate-effect plot.
+- Made optional dependencies lazy, normalized identifier handling and stabilized
+  the test suite (#116).
+
+### Continuous Integration
+- Fixed dependency resolution, which failed for every job because the declared
+  Python floor (3.10) was incompatible with the pinned `numpy` and `lifelines`
+  constraints.
+- Dropped the `scripts/check_version_match.py` steps and the `bump-version`
+  workflow. The script had been deleted in #86/#90, so all three workflows
+  referencing it failed. Release tags are now created manually.
+
+### Misc
+- Added Zenodo metadata.
+- Updated dependency constraints (`numpy`, `pandas`, `matplotlib`, `pyarrow`,
+  `typer`, `click`) and refreshed pinned GitHub Actions.
+
 ## v1.0.9 (2025-08-02)
 
 ### Features
