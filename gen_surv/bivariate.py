@@ -2,17 +2,26 @@ from typing import Sequence
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.special import ndtr
 
+from ._rng import RandomStateLike, resolve_rng
 from .validate import validate_dg_biv_inputs
 
-_CHI2_SCALE = 0.5
 _CLIP_EPS = 1e-10
 
 
 def sample_bivariate_distribution(
-    n: int, dist: str, corr: float, dist_par: Sequence[float]
+    n: int,
+    dist: str,
+    corr: float,
+    dist_par: Sequence[float],
+    seed: RandomStateLike = None,
 ) -> NDArray[np.float64]:
-    """Draw correlated samples from Weibull or exponential marginals.
+    """Draw dependent samples with Weibull or exponential marginals.
+
+    Dependence is induced with a Gaussian copula: a pair of correlated standard
+    normals is mapped to uniforms through the normal CDF, and those uniforms are
+    pushed through the inverse marginal CDFs.
 
     Parameters
     ----------
@@ -21,10 +30,16 @@ def sample_bivariate_distribution(
     dist : {"weibull", "exponential"}
         Type of marginal distributions.
     corr : float
-        Correlation coefficient.
+        Correlation of the underlying normals, in ``(-1, 1)``. Negative values
+        produce negative dependence. Note that this is the correlation on the
+        latent normal scale; because the marginals are skewed, the Pearson
+        correlation of the returned values is smaller in magnitude, while the
+        rank correlation is preserved.
     dist_par : Sequence[float]
         Distribution parameters ``[a1, b1, a2, b2]`` for the Weibull case or
         ``[lambda1, lambda2]`` for the exponential case.
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for reproducibility.
 
     Returns
     -------
@@ -39,6 +54,7 @@ def sample_bivariate_distribution(
     ...     "weibull",
     ...     0.3,
     ...     [1.0, 2.0, 1.5, 2.5],
+    ...     seed=42,
     ... )  # doctest: +ELLIPSIS
     array([[...], [...], [...]])
 
@@ -49,17 +65,18 @@ def sample_bivariate_distribution(
     """
 
     validate_dg_biv_inputs(n, dist, corr, dist_par)
+    rng = resolve_rng(seed)
 
-    # Step 1: Generate correlated standard normals using Cholesky
-    mean = [0, 0]
-    cov = [[1, corr], [corr, 1]]
-    z = np.random.multivariate_normal(mean, cov, size=n)
-    u = 1 - np.exp(
-        -_CHI2_SCALE * z**2
-    )  # transform normals to uniform via chi-squared approx
-    u = np.clip(u, _CLIP_EPS, 1 - _CLIP_EPS)  # avoid infs in tails
+    # Correlated standard normals, then the probability integral transform.
+    # Applying the normal CDF is what makes the marginals exact and keeps the
+    # sign of ``corr``. Squaring the normals instead -- as releases up to 1.2.0
+    # did -- yields chi-squared marginals and maps both +r and -r onto the same
+    # positive dependence, so negative dependence became unreachable.
+    cov = [[1.0, corr], [corr, 1.0]]
+    z = rng.multivariate_normal([0.0, 0.0], cov, size=n)
+    u = np.clip(ndtr(z), _CLIP_EPS, 1 - _CLIP_EPS)
 
-    # Step 2: Transform to marginals
+    # Inverse marginal CDFs.
     if dist == "exponential":
         x1 = -np.log(1 - u[:, 0]) / dist_par[0]
         x2 = -np.log(1 - u[:, 1]) / dist_par[1]

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from gen_surv._rng import RandomStateLike, resolve_rng
 from gen_surv.bivariate import sample_bivariate_distribution
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validation import validate_gen_tdcm_inputs
@@ -17,6 +18,7 @@ def generate_censored_observations(
     beta: Sequence[float],
     lam: float,
     b: NDArray[np.float64],
+    seed: RandomStateLike = None,
 ) -> NDArray[np.float64]:
     """Generate censored TDCM observations.
 
@@ -36,6 +38,8 @@ def generate_censored_observations(
         Rate parameter.
     b : NDArray[np.float64]
         Covariate matrix with two columns ``[., z1]``.
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for reproducibility.
 
     Returns
     -------
@@ -44,11 +48,12 @@ def generate_censored_observations(
         ``[id, start, stop, status, covariate1 (z1), covariate2 (z2)]``.
     """
     rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
+    rng = resolve_rng(seed)
 
     z1 = b[:, 1]
     x = lam * b[:, 0] * np.exp(beta[0] * z1)
-    u = np.random.uniform(size=n)
-    c = rfunc(n, cens_par)
+    u = rng.uniform(size=n)
+    c = rfunc(n, cens_par, rng)
 
     threshold = 1 - np.exp(-x)
     exp_b0_z1 = np.exp(beta[0] * z1)
@@ -76,6 +81,7 @@ def gen_tdcm(
     cens_par: float,
     beta: Sequence[float],
     lam: float,
+    seed: RandomStateLike = None,
 ) -> pd.DataFrame:
     """Generate TDCM (Time-Dependent Covariate Model) survival data.
 
@@ -94,9 +100,12 @@ def gen_tdcm(
     cens_par : float
         Censoring parameter.
     beta : Sequence[float]
-        Length-2 regression coefficients.
+        Length-2 regression coefficients: the baseline covariate effect and the
+        effect of the time-dependent covariate.
     lam : float
         Lambda rate parameter.
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for reproducibility.
 
     Returns
     -------
@@ -115,15 +124,20 @@ def gen_tdcm(
     ...     cens_par=2.0,
     ...     beta=[0.1, 0.2],
     ...     lam=0.5,
+    ...     seed=42,
     ... )
     """
     validate_gen_tdcm_inputs(n, dist, corr, dist_par, model_cens, cens_par, beta, lam)
 
+    # One generator shared by both stages, so a single seed reproduces the
+    # covariates and the event/censoring times together.
+    rng = resolve_rng(seed)
+
     # Generate covariate matrix from bivariate distribution
-    b = sample_bivariate_distribution(n, dist, corr, dist_par)
+    b = sample_bivariate_distribution(n, dist, corr, dist_par, rng)
 
     data = generate_censored_observations(
-        n, dist_par, model_cens, cens_par, beta, lam, b
+        n, dist_par, model_cens, cens_par, beta, lam, b, rng
     )
 
     return pd.DataFrame(
