@@ -17,8 +17,15 @@ gen_surv includes log-normal, log-logistic and Weibull variants allowing differe
 They are convenient when the effect of covariates accelerates or decelerates event times.
 
 ## Continuous-Time Multi-State Markov Model (CMM)
-Transitions between states are governed by a generator matrix.
-This model is suited for illness-death and other multi-state processes where state occupancy changes continuously over time.
+Simulates the illness-death process over states 1 (healthy), 2 (illness) and
+3 (death), with Weibull transition intensities scaled by a covariate.
+The three rate pairs and three coefficients map one-to-one onto the
+`1 -> 2`, `1 -> 3` and `2 -> 3` transitions.
+Output is in counting-process form: while a subject occupies state 1 it is at
+risk of both `1 -> 2` and `1 -> 3`, so it contributes a row for each over the
+same interval, and a subject that reaches state 2 contributes a further
+`2 -> 3` row. Sojourn times are drawn on a reset clock, making the model
+semi-Markov.
 The mathematical formulation follows the counting-process approach of Andersen et al. {ref}`Andersen1993`.
 
 ## Time-Dependent Covariate Model (TDCM)
@@ -31,8 +38,11 @@ intensities are constant in time, which is what makes it time-homogeneous.
 Each intensity is scaled by a covariate through `rate * exp(beta * X0)`, so the
 three rates and three coefficients are matched one-to-one with the
 `1 -> 2`, `1 -> 3` and `2 -> 3` transitions.
-Every subject is followed to the first transition or to censoring, so the
-current output holds one row per subject rather than a full trajectory.
+Output is a panel of state observations: each subject starts in state 1 at
+time 0 and contributes a further observation at each transition, or at
+censoring in whichever state it then occupies.
+This layout differs from the counting-process form used by CMM, matching the
+distinction drawn by the R package between `genTHMM` and `genCMM`.
 For background on multistate survival models see Andersen et al. {ref}`Andersen1993`.
 
 ## Competing Risks

@@ -101,10 +101,15 @@ A subject leaves state 1 at \( \min(T_{12}, T_{13}) \), and the destination is
 whichever of the two came first. If censoring occurs before that, the subject is
 recorded in state 1.
 
+The generator returns the full trajectory as a panel of state observations: an
+entry observation in state 1 at time 0, then one observation per transition, or
+an observation in the currently occupied state at the censoring time.
+
 ```{note}
-The generator currently reports only the first transition, so it emits one row
-per subject and the `2 -> 3` intensity does not appear in the returned data.
-Emitting the full trajectory is planned; see the roadmap.
+This panel layout differs from the counting-process intervals returned by the
+CMM generator. The distinction is deliberate and follows the R package, where
+`genTHMM` returns states observed at times and `genCMM` returns transition
+intervals.
 ```
 
 ---
