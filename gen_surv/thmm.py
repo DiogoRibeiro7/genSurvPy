@@ -3,6 +3,7 @@ from typing import Sequence, TypedDict
 import numpy as np
 import pandas as pd
 
+from gen_surv._rng import RandomStateLike, resolve_rng
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validation import validate_gen_thmm_inputs
 
@@ -20,6 +21,7 @@ def calculate_transitions(
     beta: Sequence[float],
     rate: Sequence[float],
     rfunc: CensoringFunc,
+    seed: RandomStateLike = None,
 ) -> TransitionTimes:
     """
     Calculate transition and censoring times for THMM.
@@ -30,18 +32,21 @@ def calculate_transitions(
     - beta (list of float): Coefficients for rate modification (length 3).
     - rate (list of float): Base rates (length 3).
     - rfunc (callable): Censoring function, e.g. runifcens or rexpocens.
+    - seed (int, Generator or None): Seed or generator for reproducibility.
 
     Returns:
     - dict with keys 'c', 't12', 't13', 't23'
     """
-    c = rfunc(1, cens_par)[0]
+    rng = resolve_rng(seed)
+
+    c = rfunc(1, cens_par, rng)[0]
     rate12 = rate[0] * np.exp(beta[0] * z1)
     rate13 = rate[1] * np.exp(beta[1] * z1)
     rate23 = rate[2] * np.exp(beta[2] * z1)
 
-    t12 = np.random.exponential(scale=1 / rate12)
-    t13 = np.random.exponential(scale=1 / rate13)
-    t23 = np.random.exponential(scale=1 / rate23)
+    t12 = rng.exponential(scale=1 / rate12)
+    t13 = rng.exponential(scale=1 / rate13)
+    t23 = rng.exponential(scale=1 / rate23)
 
     return {"c": c, "t12": t12, "t13": t13, "t23": t23}
 
@@ -53,6 +58,7 @@ def gen_thmm(
     beta: Sequence[float],
     covariate_range: float,
     rate: Sequence[float],
+    seed: RandomStateLike = None,
 ) -> pd.DataFrame:
     """Generate THMM (Time-Homogeneous Markov Model) survival data.
 
@@ -70,6 +76,8 @@ def gen_thmm(
         Upper bound for the covariate values.
     rate : Sequence[float]
         Length-3 transition rates.
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for reproducibility.
 
     Returns
     -------
@@ -86,15 +94,17 @@ def gen_thmm(
     ...     beta=[0.1, 0.2, 0.3],
     ...     covariate_range=1.0,
     ...     rate=[0.1, 0.1, 0.2],
+    ...     seed=42,
     ... )
     """
     validate_gen_thmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
     rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
+    rng = resolve_rng(seed)
     records = []
 
     for k in range(n):
-        z1 = np.random.uniform(0, covariate_range)
-        trans = calculate_transitions(z1, cens_par, beta, rate, rfunc)
+        z1 = rng.uniform(0, covariate_range)
+        trans = calculate_transitions(z1, cens_par, beta, rate, rfunc, rng)
         t12, t13, c = trans["t12"], trans["t13"], trans["c"]
 
         if min(t12, t13) < c:

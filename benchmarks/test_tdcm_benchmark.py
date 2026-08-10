@@ -14,6 +14,6 @@ def test_tdcm_generation_benchmark(benchmark):
         dist_par=[1, 2, 1, 2],
         model_cens="uniform",
         cens_par=1.0,
-        beta=[0.1, 0.2, 0.3],
+        beta=[0.1, 0.2],
         lam=1.0,
     )

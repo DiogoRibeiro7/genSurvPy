@@ -87,7 +87,7 @@ def test_validate_gen_tdcm_inputs_invalid_lambda():
             [1, 2, 1, 2],
             "uniform",
             1.0,
-            beta=[0.1, 0.2, 0.3],
+            beta=[0.1, 0.2],
             lam=0,
         )
 
@@ -112,7 +112,7 @@ def test_validate_gen_tdcm_inputs_invalid_dist(dist, corr, dist_par):
             dist_par,
             "uniform",
             1.0,
-            beta=[0.1, 0.2, 0.3],
+            beta=[0.1, 0.2],
             lam=1.0,
         )
 
@@ -125,7 +125,7 @@ def test_validate_gen_tdcm_inputs_valid():
         [1, 1, 1, 1],
         "uniform",
         1.0,
-        beta=[0.1, 0.2, 0.3],
+        beta=[0.1, 0.2],
         lam=1.0,
     )
 
@@ -275,7 +275,7 @@ def test_parameter_error_from_validator():
             [1, 2, 3, 4],
             "uniform",
             1.0,
-            beta=[0.1, 0.2, 0.3],
+            beta=[0.1, 0.2],
             lam=1.0,
         )
 

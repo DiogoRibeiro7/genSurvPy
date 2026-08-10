@@ -150,12 +150,6 @@ def gen_competing_risks(
             risk_index = np.argmin(event_times[i])
             status[i] = risk_index + 1  # 1-based indexing for event types
 
-    # Ensure at least two event types are present for small n
-    if len(np.unique(status)) <= 1 and n_risks > 1:
-        status[0] = 1
-        if n > 1:
-            status[1] = 2
-
     # Cap times at max_time if specified
     if max_time is not None:
         over_max = observed_times > max_time
@@ -311,10 +305,6 @@ def gen_competing_risks_weibull(
             # Find which risk occurred first
             risk_index = np.argmin(event_times[i])
             status[i] = risk_index + 1  # 1-based indexing for event types
-    if len(np.unique(status)) <= 1 and n_risks > 1:
-        status[0] = 1
-        if n > 1:
-            status[1] = 2
 
     # Cap times at max_time if specified
     if max_time is not None:

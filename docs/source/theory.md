@@ -72,22 +72,40 @@ Where:
 
 ---
 
-## 4. Time-Homogeneous Hidden Markov Model (THMM)
+## 4. Time-Homogeneous Markov Model (THMM)
 
-This model handles situations where the process evolves through unobserved
-states that generate the observed responses. It simulates observed states with
-latent transitions.
+This model describes a subject moving through three observed states,
+1 (healthy), 2 (illness) and 3 (death), where every transition intensity is
+constant in time. That constancy is what "time-homogeneous" refers to; the
+states themselves are observed, so this is not a hidden Markov model.
 
-Let:
-
-- \( S_t \) be the latent state at time t
-- \( Y_t \) be the observed variable conditional on \( S_t \)
-
-The transition structure is governed by a homogeneous Markov chain with transition matrix \( P \), and emissions are Gaussian:
+For a covariate \( X \), the intensity of the transition from state \( i \) to
+state \( j \) is
 
 $$
-Y_t \mid S_t = k \\sim \\mathcal{N}(\\mu_k, \\sigma_k^2)
+\alpha_{ij}(t \mid X) = \lambda_{ij} \exp(\beta_{ij} X)
 $$
+
+with \( \lambda_{ij} > 0 \) constant in \( t \). The three rates and three
+coefficients correspond to the \( 1 \to 2 \), \( 1 \to 3 \) and \( 2 \to 3 \)
+transitions.
+
+Because the intensities do not depend on \( t \), each candidate sojourn time is
+exponential:
+
+$$
+T_{ij} \mid X \sim \mathrm{Exponential}\!\left(\lambda_{ij} \exp(\beta_{ij} X)\right)
+$$
+
+A subject leaves state 1 at \( \min(T_{12}, T_{13}) \), and the destination is
+whichever of the two came first. If censoring occurs before that, the subject is
+recorded in state 1.
+
+```{note}
+The generator currently reports only the first transition, so it emits one row
+per subject and the `2 -> 3` intensity does not appear in the returned data.
+Emitting the full trajectory is planned; see the roadmap.
+```
 
 ---
 

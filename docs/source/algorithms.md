@@ -25,10 +25,15 @@ The mathematical formulation follows the counting-process approach of Andersen e
 Extends the Cox model to covariates that vary during follow-up.
 Covariates are simulated in a piecewise fashion with optional correlation across segments.
 
-## Time-Homogeneous Hidden Markov Model (THMM)
-Handles processes with unobserved states that emit observable values.
-The latent transitions follow a homogeneous Markov chain while emissions are Gaussian.
-For background on these models see Zucchini et al. {ref}`Zucchini2017`.
+## Time-Homogeneous Markov Model (THMM)
+Simulates a three-state model (1 healthy, 2 illness, 3 death) whose transition
+intensities are constant in time, which is what makes it time-homogeneous.
+Each intensity is scaled by a covariate through `rate * exp(beta * X0)`, so the
+three rates and three coefficients are matched one-to-one with the
+`1 -> 2`, `1 -> 3` and `2 -> 3` transitions.
+Every subject is followed to the first transition or to censoring, so the
+current output holds one row per subject rather than a full trajectory.
+For background on multistate survival models see Andersen et al. {ref}`Andersen1993`.
 
 ## Competing Risks
 Allows multiple failure types with cause-specific hazards.

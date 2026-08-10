@@ -28,7 +28,7 @@
 - Accelerated failure time models (log-normal, log-logistic, Weibull)
 - Continuous-time multi-state Markov model (CMM)
 - Time-dependent covariate model (TDCM)
-- Time-homogeneous hidden Markov model (THMM)
+- Time-homogeneous Markov model (THMM)
 - Mixture cure and piecewise exponential models
 - Competing risks generators (constant and Weibull hazards)
 - Visualization helpers built on matplotlib and lifelines
@@ -120,7 +120,7 @@ python -m gen_surv visualize survival.csv --output survival_plot.png
 | **AFT** | Accelerated failure time (log-normal, log-logistic, Weibull) |
 | **CMM** | Continuous-time multi-state Markov |
 | **TDCM** | Time-dependent covariates |
-| **THMM** | Time-homogeneous hidden Markov |
+| **THMM** | Time-homogeneous Markov |
 | **Competing Risks** | Multiple event types with cause-specific hazards |
 | **Mixture Cure** | Models long-term survivors |
 | **Piecewise Exponential** | Flexible baseline hazard via intervals |

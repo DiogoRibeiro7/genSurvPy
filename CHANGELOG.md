@@ -1,5 +1,79 @@
 # CHANGELOG
 
+## v1.3.0 (2026-08-10)
+
+A scientific-correctness release. Three of the fixes below change the numbers the
+simulators produce, so results generated with 1.2.0 or earlier are not comparable
+with results from this release.
+
+### Bug Fixes
+- **The bivariate sampler produced the wrong distribution entirely.** It mapped
+  correlated normals to uniforms with `u = 1 - exp(-z**2 / 2)`, which is the
+  chi-squared(2) CDF applied to a chi-squared(1) variable. The composed transform
+  reduced to `z**2 / (2 * lambda)`, so a requested Exponential(1) marginal was
+  really `chi2(1) / 2` with mean 0.5 instead of 1.0. Replaced with the normal CDF,
+  making this a correctly specified Gaussian copula with exact marginals.
+- **Negative dependence was unreachable in the bivariate sampler.** Squaring the
+  normals mapped `+r` and `-r` onto the same positive dependence, so a requested
+  correlation of `-0.8` produced roughly `+0.64`. The sign is now preserved.
+- **`gen_tdcm` was affected by both of the above**, since it draws its covariates
+  from that sampler.
+- **The competing-risks generators fabricated events.** When fewer than two
+  distinct statuses appeared in a sample, both generators overwrote `status[0]`
+  and `status[1]` with event labels, attaching events to subjects whose event
+  times had not occurred. A cause that is absent from a finite sample is a valid
+  stochastic outcome, so this post-processing has been removed.
+- **`gen_tdcm` rejected its own documented signature.** The docstring specified
+  two coefficients and the model uses two, but validation required three and
+  silently ignored the third, so the documented call raised `LengthError`. Two are
+  now accepted; three still work but emit a `DeprecationWarning`.
+
+### Breaking Changes
+- Event times, covariates and statuses differ from 1.2.0 for `gen_tdcm`,
+  `sample_bivariate_distribution`, `gen_competing_risks` and
+  `gen_competing_risks_weibull`. This is the point of the release, but it does
+  mean any stored 1.2.0 output should be regenerated.
+- `scipy` is now a declared runtime dependency. It was already installed as a
+  transitive dependency of `lifelines`, so this should not change resolution.
+- The PyPI maturity classifier moves from `5 - Production/Stable` to
+  `4 - Beta`. A package that has just corrected the marginal distribution and
+  the dependence sign of one of its core samplers is not accurately described as
+  production-stable, and known correctness gaps remain: CMM and THMM report only
+  the first transition rather than a full trajectory, and the CLI cannot drive
+  every registered generator. The classifier is intended to return to
+  `5 - Production/Stable` once the multistate output schema lands.
+
+### Features
+- Unified the RNG contract. `sample_bivariate_distribution`, `gen_tdcm` and
+  `gen_thmm` drew from the global NumPy random state and could not be seeded;
+  `gen_thmm` had no `seed` parameter at all. All three now accept
+  `seed`, which may be an `int`, a `numpy.random.Generator` for sharing one
+  stream across simulators, or `None`. No simulator touches the global state.
+- Censoring draws in `gen_tdcm` and `gen_thmm` now share the caller's generator
+  rather than creating an unseeded one, so a single seed reproduces a whole
+  dataset.
+
+### Documentation
+- **THMM was documented as a Hidden Markov Model, which it is not.** The name
+  means Time-Homogeneous Markov Model. The docs additionally described latent
+  states with Gaussian emissions, none of which exists in the implementation.
+  Rewritten to describe the three-state model with constant transition
+  intensities that the code actually simulates, and re-cited to Andersen et al.
+  instead of an HMM textbook. The known limitation that only the first transition
+  is emitted is now stated explicitly.
+
+### Testing
+- Added `tests/test_statistical_correctness.py`: Kolmogorov-Smirnov tests for the
+  exponential and Weibull marginals, moment checks, a dependence-sign test, a
+  monotonicity test, a Spearman check against the Gaussian copula identity,
+  no-fabrication tests for competing risks, and seed-reproducibility plus
+  global-state-independence tests for every affected generator. Each was
+  confirmed to fail against the 1.2.0 code.
+- Replaced two tests that asserted the fabricated competing-risks statuses as
+  required behaviour, and removed a property-based assertion that every sample
+  must contain at least two distinct statuses, which is not a property the model
+  guarantees.
+
 ## v1.2.0 (2026-08-10)
 
 ### Breaking Changes

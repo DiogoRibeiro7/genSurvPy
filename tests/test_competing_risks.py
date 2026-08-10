@@ -235,12 +235,10 @@ def test_competing_risks_properties(n, n_risks, seed):
     assert (df["time"] >= 0).all()
     assert df["status"].isin(list(range(n_risks + 1))).all()  # 0 to n_risks
 
-    # Count of each status
-    status_counts = df["status"].value_counts()
-    # There should be at least one of each status (including censoring)
-    # This might occasionally fail due to randomness, so we'll just check that
-    # we have at least 2 different status values
-    assert len(status_counts) >= 2
+    # The number of distinct statuses is a stochastic outcome, so it must not be
+    # asserted: a small sample may legitimately contain only censored subjects,
+    # or only one of the causes. Check the invariant that does hold.
+    assert df["status"].value_counts().sum() == n
 
 
 @given(
@@ -258,13 +256,19 @@ def test_competing_risks_weibull_properties(n, n_risks, seed):
     assert (df["time"] >= 0).all()
     assert df["status"].isin(list(range(n_risks + 1))).all()  # 0 to n_risks
 
-    # Count of each status
-    status_counts = df["status"].value_counts()
-    # There should be at least 2 different status values
-    assert len(status_counts) >= 2
+    # The number of distinct statuses is a stochastic outcome, so it must not be
+    # asserted: a small sample may legitimately contain only censored subjects,
+    # or only one of the causes. Check the invariant that does hold.
+    assert df["status"].value_counts().sum() == n
 
 
-def test_gen_competing_risks_forces_event_types():
+def test_gen_competing_risks_leaves_absent_event_types_absent():
+    """Hazards near zero must leave every subject censored.
+
+    Releases up to 1.2.0 overwrote ``status[0]`` and ``status[1]`` whenever fewer
+    than two distinct statuses appeared, so this returned ``{1, 2}`` and attached
+    event labels to subjects whose events had not occurred.
+    """
     df = gen_competing_risks(
         n=2,
         n_risks=2,
@@ -273,10 +277,11 @@ def test_gen_competing_risks_forces_event_types():
         cens_par=0.1,
         seed=0,
     )
-    assert set(df["status"]) == {1, 2}
+    assert set(df["status"]) == {0}
 
 
-def test_gen_competing_risks_weibull_forces_event_types():
+def test_gen_competing_risks_weibull_leaves_absent_event_types_absent():
+    """Scales large enough to prevent events must leave every subject censored."""
     df = gen_competing_risks_weibull(
         n=2,
         n_risks=2,
@@ -286,7 +291,7 @@ def test_gen_competing_risks_weibull_forces_event_types():
         cens_par=0.1,
         seed=0,
     )
-    assert set(df["status"]) == {1, 2}
+    assert set(df["status"]) == {0}
 
 
 def test_reproducibility():

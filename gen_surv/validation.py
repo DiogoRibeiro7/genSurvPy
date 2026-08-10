@@ -6,6 +6,7 @@ checks used by the data generators.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Sequence
 from numbers import Integral, Real
 from typing import Any, Iterable
@@ -249,6 +250,7 @@ def ensure_censoring_model(model_cens: str) -> None:
 # Generator-specific validation helpers
 
 _BETA_LEN = 3
+_TDCM_BETA_LEN = 2
 _CMM_RATE_LEN = 6
 _THMM_RATE_LEN = 3
 _WEIBULL_DIST_PAR_LEN = 4
@@ -266,6 +268,31 @@ def _validate_beta(beta: Sequence[float]) -> None:
     """Ensure beta is a numeric sequence of length three."""
     ensure_sequence_length(beta, _BETA_LEN, "beta")
     ensure_numeric_sequence(beta, "beta")
+
+
+def _validate_tdcm_beta(beta: Sequence[float]) -> None:
+    """Ensure beta matches the two coefficients the TDCM actually uses.
+
+    The model has one coefficient for the baseline covariate and one for the
+    effect of the time-dependent covariate. Releases up to 1.2.0 required three
+    and silently ignored the third, so a length of three is still accepted with
+    a deprecation warning to avoid breaking existing callers.
+    """
+    ensure_numeric_sequence(beta, "beta")
+
+    if len(beta) == _TDCM_BETA_LEN:
+        return
+
+    if len(beta) == _BETA_LEN:
+        warnings.warn(
+            "gen_tdcm uses two coefficients; passing three is deprecated because "
+            "the third is ignored, and it will raise in a future release.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return
+
+    raise LengthError("beta", len(beta), _TDCM_BETA_LEN)
 
 
 def _validate_aft_common(
@@ -360,7 +387,7 @@ def validate_gen_tdcm_inputs(
         ensure_sequence_length(dist_par, _EXP_DIST_PAR_LEN, "dist_par")
         ensure_positive_sequence(dist_par, "dist_par")
 
-    _validate_beta(beta)
+    _validate_tdcm_beta(beta)
     ensure_positive(lam, "lambda")
 
 
