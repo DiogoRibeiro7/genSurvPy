@@ -35,6 +35,13 @@ with results from this release.
   mean any stored 1.2.0 output should be regenerated.
 - `scipy` is now a declared runtime dependency. It was already installed as a
   transitive dependency of `lifelines`, so this should not change resolution.
+- The PyPI maturity classifier moves from `5 - Production/Stable` to
+  `4 - Beta`. A package that has just corrected the marginal distribution and
+  the dependence sign of one of its core samplers is not accurately described as
+  production-stable, and known correctness gaps remain: CMM and THMM report only
+  the first transition rather than a full trajectory, and the CLI cannot drive
+  every registered generator. The classifier is intended to return to
+  `5 - Production/Stable` once the multistate output schema lands.
 
 ### Features
 - Unified the RNG contract. `sample_bivariate_distribution`, `gen_tdcm` and
