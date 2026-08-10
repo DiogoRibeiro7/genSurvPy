@@ -38,7 +38,7 @@
 
 ## Installation
 
-Requires Python 3.10 or later.
+Requires Python 3.11 or later (tested on 3.11, 3.12 and 3.13).
 
 Install the latest release from PyPI:
 
@@ -49,7 +49,7 @@ pip install gen-surv
 `gen_surv` installs matplotlib and lifelines for visualization. Support for scikit-survival is optional; install it to enable integration with the scikit-survival ecosystem or to run the full test suite:
 
 ```bash
-pip install gen-surv[dev]
+pip install scikit-survival
 ```
 
 To develop locally with all extras:

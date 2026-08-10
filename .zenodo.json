@@ -1,0 +1,48 @@
+{
+  "title": "gen_surv: Survival Data Simulation in Python",
+  "upload_type": "software",
+  "publication_date": "2026-08-10",
+  "description": "<p><strong>gen_surv</strong> is a Python library for simulating survival data and producing visualizations under a wide range of statistical models. Inspired by the R package <a href=\"https://cran.r-project.org/package=genSurv\">genSurv</a>, it provides a unified interface for generating synthetic survival datasets for research, teaching, benchmarking, and statistical software validation.</p>",
+  "creators": [
+    {
+      "name": "Ribeiro, Diogo",
+      "orcid": "0009-0001-2022-7072",
+      "affiliation": "ESMAD - School of Media Arts and Design, Polytechnic of Porto"
+    }
+  ],
+  "access_right": "open",
+  "license": "mit",
+  "keywords": [
+    "survival-analysis",
+    "simulation",
+    "cox-model",
+    "markov-model",
+    "time-dependent",
+    "statistics",
+    "Python",
+    "synthetic data",
+    "survival analysis",
+    "statistical simulation"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/DiogoRibeiro7/genSurvPy",
+      "relation": "isAlternateIdentifier",
+      "scheme": "url",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "https://pypi.org/project/gen-surv/",
+      "relation": "isAlternateIdentifier",
+      "scheme": "url",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "https://gensurvpy.readthedocs.io/en/latest/",
+      "relation": "isDocumentedBy",
+      "scheme": "url",
+      "resource_type": "publication-softwaredocumentation"
+    }
+  ],
+  "notes": "Source repository: https://github.com/DiogoRibeiro7/genSurvPy. Documentation: https://gensurvpy.readthedocs.io/en/latest/."
+}
