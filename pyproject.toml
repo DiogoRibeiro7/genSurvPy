@@ -32,7 +32,7 @@ typer = "^0.19.2"
 click = "^8.3.0"
 matplotlib = "^3.10.7"
 lifelines = "^0.30.3"
-pyarrow = "^21.0.0"
+pyarrow = ">=21,<26"
 pyreadr = "^0.5.3"
 
 [tool.poetry.group.dev.dependencies]
