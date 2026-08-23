@@ -1,0 +1,97 @@
+# .github/workflows/gh-pages.yml
+
+name: GitHub Pages
+
+# The site documents the released version, so it is rebuilt from the tag that
+# was published to PyPI rather than from every push to main. Checking out the
+# tag also means autodoc and the version banner read the released package.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one deployment at a time and let a running one finish, so the site is
+# never left half-published.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      # A workflow_dispatch that does not select a ref targets `develop`, this
+      # repository's default branch. The published site must track the release,
+      # so refuse anything that is not a release tag or `main`.
+      - name: Verify the run is on a release
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          case "$REF" in
+            refs/tags/v*|refs/heads/main)
+              echo "Building the documentation from $REF."
+              ;;
+            *)
+              echo "::error::Refusing to publish documentation from '$REF'. The site tracks the version released to PyPI, so it can only be built from a 'v*' tag or from 'main'."
+              exit 1
+              ;;
+          esac
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pypoetry
+          key: ${{ runner.os }}-poetry-3.11-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: poetry install --with docs --no-interaction
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+
+      - name: Build documentation
+        env:
+          DOCS_BASEURL: ${{ steps.pages.outputs.base_url }}
+        run: poetry run sphinx-build -W --keep-going -b html -c docs/gh_conf docs/source docs/build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/build
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
