@@ -39,11 +39,11 @@
       "resource_type": "software"
     },
     {
-      "identifier": "https://gensurvpy.readthedocs.io/en/latest/",
+      "identifier": "https://diogoribeiro7.github.io/genSurvPy/",
       "relation": "isDocumentedBy",
       "scheme": "url",
       "resource_type": "publication-softwaredocumentation"
     }
   ],
-  "notes": "Source repository: https://github.com/DiogoRibeiro7/genSurvPy. Documentation: https://gensurvpy.readthedocs.io/en/latest/."
+  "notes": "Source repository: https://github.com/DiogoRibeiro7/genSurvPy. Documentation: https://diogoribeiro7.github.io/genSurvPy/."
 }

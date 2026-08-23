@@ -26,9 +26,12 @@ jobs:
       - name: Install dependencies
         run: poetry install --with docs
       - name: Build documentation
-        run: poetry run sphinx-build -W -b html docs/source docs/build
+        # --strict turns warnings into errors: a broken internal link, a page
+        # missing from the nav, or an unresolved mkdocstrings reference fails
+        # the build rather than shipping quietly.
+        run: poetry run mkdocs build --strict --site-dir site
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: documentation
-          path: docs/build/
+          path: site/

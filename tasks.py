@@ -51,7 +51,7 @@ def test(c: Context) -> None:
 
 @task
 def docs(c: Context) -> None:
-    """Build the Sphinx documentation.
+    """Build the MkDocs documentation.
 
     Args:
         c: Invoke context used to run shell commands.
@@ -63,12 +63,13 @@ def docs(c: Context) -> None:
     if not isinstance(c, Context):
         raise TypeError(f"Expected Invoke Context, got {type(c).__name__!r}")
 
-    # Construct the Sphinx build command. Adjust paths if needed.
-    command = "poetry run sphinx-build docs/source docs/build"
+    # --strict matches the CI build: warnings such as a broken internal link or
+    # an unresolved mkdocstrings reference fail rather than shipping quietly.
+    command = "poetry run mkdocs build --strict --site-dir site"
 
-    # Execute sphinx-build.
+    # Execute the build.
     # - warn=True: capture non-zero exits without immediately aborting Invoke.
-    # - pty=False: sphinx-build does not require interactive input.
+    # - pty=False: mkdocs does not require interactive input.
     result = c.run(command, warn=True, pty=False)
 
     # Report on the result of the documentation build.
