@@ -79,7 +79,7 @@ subjects spent at risk in it — should return each rate:
 import numpy as np
 from gen_surv import generate
 
-breakpoints, rates = [1.0], [0.5, 2.0]
+breakpoints, rates = [1.0, 3.0], [0.5, 2.0, 0.2]
 df = generate(model="piecewise_exponential", n=40000,
               breakpoints=breakpoints, hazard_rates=rates,
               betas=[0.0, 0.0], model_cens="uniform", cens_par=100.0, seed=7)
@@ -93,28 +93,14 @@ for lo, hi, true_h in zip(edges[:-1], edges[1:], rates):
 ```
 
 ```text
-[0.0, 1.00)  declared=0.5  empirical=0.501
-[1.0, 6.43)  declared=2.0  empirical=2.011
+[0.0, 1.00)   declared=0.5  empirical=0.501
+[1.0, 3.00)   declared=2.0  empirical=2.011
+[3.0, 37.31)  declared=0.2  empirical=0.202
 ```
 
-!!! danger "Known issue with two or more breakpoints — as of 2.0.1"
-
-    The check above passes with **one** breakpoint. With two or more, events
-    that fall in a *middle* interval come out wrong: their times are
-    recomputed using the **last** hazard rate instead of the interval's own.
-
-    Repeating the check with `breakpoints=[1.0, 3.0]` and
-    `hazard_rates=[0.5, 2.0, 0.2]`:
-
-    ```text
-    [0.0, 1.00)   declared=0.5  empirical=0.501   ✓
-    [1.0, 3.00)   declared=2.0  empirical=0.201   ✗ — this is the last rate, 0.2
-    [3.0, 37.31)  declared=0.2  empirical=0.222   ✗ — inflated by the spill-over
-    ```
-
-    Until this is fixed, a single breakpoint (two rates) is reliable; more than
-    one is not. Track it on the
-    [issue tracker](https://github.com/DiogoRibeiro7/genSurvPy/issues).
+Each interval carries the rate it was given. The open-ended last interval is
+populated only by the survivors of the earlier ones, so it is the noisiest of
+the three — widen `n` before reading much into it.
 
 ## Approximating a smooth hazard
 
@@ -131,7 +117,9 @@ midpoints = (grid[:-1] + grid[1:]) / 2
 hazard_rates = list(1.5 * midpoints ** 0.5)
 ```
 
-(See the known issue above before relying on a many-piece grid.)
+Ten pieces reproduce a Weibull hazard closely enough for most purposes; the
+approximation error is bounded by how much the true hazard moves within a
+piece, so refine the grid where it is steepest rather than everywhere.
 
 ## Related
 
