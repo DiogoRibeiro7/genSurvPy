@@ -1,7 +1,6 @@
 # gen_surv
 
 [![Coverage][cov-badge]][cov-link]
-[![Docs][docs-badge]][docs-link]
 [![GitHub Pages][pages-badge]][pages-link]
 [![PyPI][pypi-badge]][pypi-link]
 [![Tests][ci-badge]][ci-link]
@@ -9,8 +8,6 @@
 
 [cov-badge]: https://codecov.io/gh/DiogoRibeiro7/genSurvPy/branch/main/graph/badge.svg
 [cov-link]: https://app.codecov.io/gh/DiogoRibeiro7/genSurvPy
-[docs-badge]: https://readthedocs.org/projects/gensurvpy/badge/?version=latest
-[docs-link]: https://gensurvpy.readthedocs.io/en/latest/
 [pages-badge]: https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/gh-pages.yml/badge.svg
 [pages-link]: https://diogoribeiro7.github.io/genSurvPy/
 [pypi-badge]: https://img.shields.io/pypi/v/gen_surv
@@ -101,7 +98,7 @@ export_dataset(sim, "survival_data.rds")
 sks_dataset = to_sksurv(sim)
 ```
 
-See the [usage guide](https://gensurvpy.readthedocs.io/en/latest/getting_started.html) for more examples.
+See the [quickstart](https://diogoribeiro7.github.io/genSurvPy/getting-started/quickstart/) for more examples.
 
 ### Command Line
 
@@ -128,27 +125,34 @@ python -m gen_surv visualize survival.csv --output survival_plot.png
 | **Mixture Cure** | Models long-term survivors |
 | **Piecewise Exponential** | Flexible baseline hazard via intervals |
 
-More details on each algorithm are available in the [Algorithms](https://gensurvpy.readthedocs.io/en/latest/algorithms.html) page. For additional background, see the [theory guide](https://gensurvpy.readthedocs.io/en/latest/theory.html).
+Each model has its own page covering the parameters, the output schema and a check that the parameters can be recovered from the generated data — start at [Choosing a model](https://diogoribeiro7.github.io/genSurvPy/models/). For the mathematics, see the [theory guide](https://diogoribeiro7.github.io/genSurvPy/theory/).
 
 ## Documentation
 
-Full documentation is hosted on [Read the Docs](https://gensurvpy.readthedocs.io/en/latest/) and mirrored on [GitHub Pages](https://diogoribeiro7.github.io/genSurvPy/). Both are built from `docs/source` and include installation instructions, tutorials, API references and a bibliography. The GitHub Pages site is rebuilt from the release tag by the [`GitHub Pages` workflow](.github/workflows/gh-pages.yml), so it documents the version currently on PyPI rather than unreleased work on `develop`.
+Full documentation: **<https://diogoribeiro7.github.io/genSurvPy/>**
 
-To build the docs locally:
+It is built with [MkDocs](https://www.mkdocs.org) and
+[Material for MkDocs](https://squidfunk.github.io/mkdocs-material/), with the API
+reference generated from the docstrings by
+[mkdocstrings](https://mkdocstrings.github.io). The site is rebuilt from the
+release tag by the [`GitHub Pages` workflow](.github/workflows/gh-pages.yml), so it
+documents the version currently on PyPI rather than unreleased work on `develop`.
 
-```bash
-cd docs
-make html
-```
+| Section | What is in it |
+|---|---|
+| [Getting started](https://diogoribeiro7.github.io/genSurvPy/getting-started/) | Installation, quickstart, output schemas, reproducibility |
+| [Models](https://diogoribeiro7.github.io/genSurvPy/models/) | One page per model: parameters, mathematics, worked example, parameter-recovery check |
+| [Guides](https://diogoribeiro7.github.io/genSurvPy/guides/) | Censoring, covariates, summaries, plotting, export, interoperability, CLI |
+| [Theory](https://diogoribeiro7.github.io/genSurvPy/theory/) | The mathematics behind every generator, and the bibliography |
+| [API](https://diogoribeiro7.github.io/genSurvPy/api/) | Full reference, generated from the source |
 
-To reproduce the GitHub Pages build (same configuration as the workflow):
+To preview the docs locally:
 
 ```bash
 poetry install --with docs
-poetry run sphinx-build -b html -c docs/gh_conf docs/source docs/build
+poetry run mkdocs serve      # live reload on http://127.0.0.1:8000
+poetry run mkdocs build      # static site into ./site
 ```
-
-Open `build/html/index.html` in your browser to view the result.
 
 ## License
 

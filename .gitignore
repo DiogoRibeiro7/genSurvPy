@@ -51,3 +51,6 @@ dist/
 *.log
 *.tmp
 .hypothesis/
+
+# MkDocs build output
+site/

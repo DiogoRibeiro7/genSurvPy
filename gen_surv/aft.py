@@ -41,23 +41,23 @@ def gen_aft_log_normal(
     seed : int, optional
         Random seed for reproducibility
 
-      Returns
-      -------
-      pd.DataFrame
-          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
 
-      Examples
-      --------
-      >>> from gen_surv.aft import gen_aft_log_normal
-      >>> df = gen_aft_log_normal(
-      ...     n=100,
-      ...     beta=[0.5, -0.3],
-      ...     sigma=1.0,
-      ...     model_cens="uniform",
-      ...     cens_par=2.0,
-      ...     seed=42,
-      ... )
-      >>> df.head()
+    Examples
+    --------
+    >>> from gen_surv.aft import gen_aft_log_normal
+    >>> df = gen_aft_log_normal(
+    ...     n=100,
+    ...     beta=[0.5, -0.3],
+    ...     sigma=1.0,
+    ...     model_cens="uniform",
+    ...     cens_par=2.0,
+    ...     seed=42,
+    ... )
+    >>> df.head()
     """
     rng = np.random.default_rng(seed)
     validate_gen_aft_log_normal_inputs(n, beta, sigma, model_cens, cens_par)
@@ -114,24 +114,24 @@ def gen_aft_weibull(
     seed : int, optional
         Random seed for reproducibility
 
-      Returns
-      -------
-      pd.DataFrame
-          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
 
-      Examples
-      --------
-      >>> from gen_surv.aft import gen_aft_weibull
-      >>> df = gen_aft_weibull(
-      ...     n=100,
-      ...     beta=[0.5, -0.3],
-      ...     shape=1.2,
-      ...     scale=2.0,
-      ...     model_cens="uniform",
-      ...     cens_par=2.0,
-      ...     seed=42,
-      ... )
-      >>> df.head()
+    Examples
+    --------
+    >>> from gen_surv.aft import gen_aft_weibull
+    >>> df = gen_aft_weibull(
+    ...     n=100,
+    ...     beta=[0.5, -0.3],
+    ...     shape=1.2,
+    ...     scale=2.0,
+    ...     model_cens="uniform",
+    ...     cens_par=2.0,
+    ...     seed=42,
+    ... )
+    >>> df.head()
     """
     rng = np.random.default_rng(seed)
     validate_gen_aft_weibull_inputs(n, beta, shape, scale, model_cens, cens_par)
@@ -196,24 +196,24 @@ def gen_aft_log_logistic(
     seed : int, optional
         Random seed for reproducibility
 
-      Returns
-      -------
-      pd.DataFrame
-          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
 
-      Examples
-      --------
-      >>> from gen_surv.aft import gen_aft_log_logistic
-      >>> df = gen_aft_log_logistic(
-      ...     n=100,
-      ...     beta=[0.5, -0.3],
-      ...     shape=1.2,
-      ...     scale=2.0,
-      ...     model_cens="uniform",
-      ...     cens_par=2.0,
-      ...     seed=42,
-      ... )
-      >>> df.head()
+    Examples
+    --------
+    >>> from gen_surv.aft import gen_aft_log_logistic
+    >>> df = gen_aft_log_logistic(
+    ...     n=100,
+    ...     beta=[0.5, -0.3],
+    ...     shape=1.2,
+    ...     scale=2.0,
+    ...     model_cens="uniform",
+    ...     cens_par=2.0,
+    ...     seed=42,
+    ... )
+    >>> df.head()
     """
     rng = np.random.default_rng(seed)
     validate_gen_aft_log_logistic_inputs(n, beta, shape, scale, model_cens, cens_par)

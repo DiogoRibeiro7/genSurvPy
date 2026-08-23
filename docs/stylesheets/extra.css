@@ -1,0 +1,29 @@
+/* Wider content column: the parameter and schema tables need the room. */
+.md-grid {
+  max-width: 68rem;
+}
+
+/* Schema and parameter tables read better without the default centring. */
+.md-typeset table:not([class]) th {
+  white-space: nowrap;
+}
+
+.md-typeset table:not([class]) td code {
+  white-space: nowrap;
+}
+
+/* mkdocstrings: separate each documented symbol with a rule so long API
+   pages stay scannable. */
+.md-typeset .doc-heading {
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+  padding-top: 0.8em;
+}
+
+.md-typeset .doc-children .doc-heading {
+  border-top: none;
+}
+
+/* Signatures are the thing readers scan for; give them room to breathe. */
+.md-typeset .doc-signature {
+  margin-bottom: 0.6em;
+}
