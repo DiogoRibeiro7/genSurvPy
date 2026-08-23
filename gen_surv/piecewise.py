@@ -132,6 +132,14 @@ def gen_piecewise_exponential(
         remaining_time -= hazard * interval_width
 
         # Go through middle intervals [breakpoints[j-1], breakpoints[j])
+        #
+        # The ``else`` belongs to the ``for``: it runs only when the loop was
+        # not broken out of, meaning the subject outlived every bounded
+        # interval. Releases up to 2.0.1 used a trailing ``if remaining_time >
+        # 0`` here instead, which also ran after the ``break`` and overwrote
+        # the time just computed with one derived from the *last* hazard rate.
+        # Any event falling in a middle interval was therefore drawn at the
+        # wrong rate.
         for j in range(1, len(breakpoints)):
             interval_width = breakpoints[j] - breakpoints[j - 1]
             hazard = adjusted_hazard_rates[j]
@@ -145,10 +153,9 @@ def gen_piecewise_exponential(
             # Event occurs after this interval
             total_time += interval_width
             remaining_time -= hazard * interval_width
-
-        # If we've gone through all intervals and still no event,
-        # use the last hazard rate for the remainder
-        if remaining_time > 0:
+        else:
+            # Survived every bounded interval: the remainder is consumed at the
+            # open-ended last rate.
             hazard = adjusted_hazard_rates[-1]
             survival_times[i] = total_time + remaining_time / hazard
 
