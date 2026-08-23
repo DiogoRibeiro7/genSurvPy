@@ -46,7 +46,7 @@ hypothesis = "^6.142.1"
 tomli = "^2.3.0"
 black = ">=25.9,<27.0"
 isort = "^7.0.0"
-flake8 = "^6.1.0"
+flake8 = ">=6.1,<8.0"
 scikit-survival = "^0.25.0"
 pre-commit = "^4.3.0"
 
