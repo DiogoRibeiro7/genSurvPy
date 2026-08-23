@@ -20,10 +20,11 @@
 [pages-link]: https://diogoribeiro7.github.io/genSurvPy/
 [license-badge]: https://img.shields.io/pypi/l/gen_surv
 
-`gen_surv` generates synthetic time-to-event datasets from eleven models —
+`gen_surv` generates synthetic time-to-event datasets from twelve models —
 proportional hazards, accelerated failure time, competing risks, cure
-fractions, piecewise hazards and two illness-death processes — so you can test
-an estimator against parameters you chose yourself.
+fractions, piecewise hazards, recurrent events and two illness-death
+processes — so you can test an estimator against parameters you chose
+yourself.
 
 It is a Python port of the R package
 [genSurv](https://cran.r-project.org/package=genSurv), extended well past the
@@ -89,7 +90,7 @@ CoxPHFitter().fit(df, duration_col="time", event_col="status").params_
 That is the whole idea. Every column was produced by a mechanism you specified,
 so anything an estimator gets wrong is the estimator's fault.
 
-## The eleven models
+## The twelve models
 
 | `model=` | Family | Rows per subject |
 | --- | --- | --- |
@@ -104,6 +105,7 @@ so anything an estimator gets wrong is the estimator's fault.
 | `cmm` | Illness-death, counting-process intervals | 2 or 3 |
 | `thmm` | Illness-death, observed state panel | 2 or 3 |
 | `tdcm` | Cox with a time-dependent covariate | 1 |
+| `recurrent_events` | Repeated events: Andersen-Gill, PWP | 1 per at-risk interval |
 
 Every model has a page covering its parameters, the mathematics, a worked
 example, and a check that the parameters can be recovered from the data it

@@ -10,7 +10,7 @@ or the [model pages](../models/index.md).
 
 | Name | Kind | Page |
 |---|---|---|
-| `generate` | dispatcher over all eleven models | [generate](generate.md) |
+| `generate` | dispatcher over all twelve models | [generate](generate.md) |
 | `gen_cphm` | Cox proportional hazards | [Generators](generators.md#gen_surv.cphm) |
 | `gen_aft_log_normal`, `gen_aft_weibull`, `gen_aft_log_logistic` | AFT models | [Generators](generators.md#gen_surv.aft) |
 | `gen_piecewise_exponential` | piecewise constant hazard | [Generators](generators.md#gen_surv.piecewise) |
@@ -19,6 +19,7 @@ or the [model pages](../models/index.md).
 | `gen_cmm` | illness-death, intervals | [Generators](generators.md#gen_surv.cmm) |
 | `gen_thmm` | illness-death, panel | [Generators](generators.md#gen_surv.thmm) |
 | `gen_tdcm` | time-dependent covariates | [Generators](generators.md#gen_surv.tdcm) |
+| `gen_recurrent_events` | recurrent events (Andersen-Gill, PWP) | [Generators](generators.md#gen_surv.recurrent) |
 | `runifcens`, `rexpocens`, `rweibcens`, `rlognormcens`, `rgammacens` | censoring samplers | [Censoring](censoring.md) |
 | `WeibullCensoring`, `LogNormalCensoring`, `GammaCensoring`, `CensoringModel` | class-based censoring | [Censoring](censoring.md) |
 | `sample_bivariate_distribution` | correlated draws | [Censoring](censoring.md#gen_surv.bivariate) |

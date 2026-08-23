@@ -27,9 +27,10 @@ directory is not on `PATH`.
 gen_surv dataset MODEL [OPTIONS]
 ```
 
-`MODEL` is any of the eleven names — `cphm`, `cmm`, `tdcm`, `thmm`, `aft_ln`,
+`MODEL` is any of the twelve names — `cphm`, `cmm`, `tdcm`, `thmm`, `aft_ln`,
 `aft_weibull`, `aft_log_logistic`, `competing_risks`,
-`competing_risks_weibull`, `mixture_cure`, `piecewise_exponential`.
+`competing_risks_weibull`, `mixture_cure`, `piecewise_exponential`,
+`recurrent_events`.
 
 Writes CSV to the path given by `-o`, or to stdout when it is omitted:
 
@@ -58,6 +59,12 @@ gen_surv dataset aft_ln --n 500 --beta 0.5 --beta -0.3 --sigma 1.0 | head -5
 | `--shape-params`, `--scale-params` | — | `competing_risks_weibull` — repeat |
 | `--cure-fraction`, `--baseline-hazard` | — | `mixture_cure` |
 | `--breakpoints`, `--hazard-rates` | — | `piecewise_exponential` — repeat |
+| `--process` | `ag` | `recurrent_events` — `ag`, `pwp_tt` or `pwp_gt` |
+| `--baseline` | `exponential` | `recurrent_events` — `exponential`, `weibull` or `gompertz` |
+| `--rate` | `1.0` | `recurrent_events` — baseline rate, for exponential and Gompertz |
+| `--stratum-effects` | — | `recurrent_events` — per-event factors, repeat the flag |
+| `--max-events` | `None` | `recurrent_events` — stop a subject after this many events |
+| `--followup-time` | `10.0` | `recurrent_events` — administrative end of follow-up |
 | `--seed` | `None` | all models |
 | `-o` | stdout | output CSV path |
 

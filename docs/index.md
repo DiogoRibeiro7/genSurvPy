@@ -1,10 +1,10 @@
 # gen_surv
 
 **Simulate survival data with a known truth.** `gen_surv` generates synthetic
-time-to-event datasets from eleven models — proportional hazards, accelerated
-failure time, competing risks, cure fractions, piecewise hazards and two
-illness-death processes — so you can test an estimator against parameters you
-chose yourself.
+time-to-event datasets from twelve models — proportional hazards, accelerated
+failure time, competing risks, cure fractions, piecewise hazards, recurrent
+events and two illness-death processes — so you can test an estimator against
+parameters you chose yourself.
 
 It is a Python port of the R package
 [genSurv](https://cran.r-project.org/package=genSurv), extended well past the
@@ -72,7 +72,7 @@ specified.
 
 </div>
 
-## The eleven models
+## The twelve models
 
 | `model=` | Family | Returns | Page |
 |---|---|---|---|
@@ -87,6 +87,7 @@ specified.
 | `cmm` | Illness-death, counting-process intervals | two or three rows per subject | [CMM](models/cmm.md) |
 | `thmm` | Illness-death, observed state panel | two or three rows per subject | [THMM](models/thmm.md) |
 | `tdcm` | Cox with a time-dependent covariate | one row per subject | [TDCM](models/tdcm.md) |
+| `recurrent_events` | Repeated events per subject (AG, PWP) | one row per at-risk interval | [Recurrent events](models/recurrent-events.md) |
 
 Not sure which one you need? [Choosing a model](models/index.md) walks through
 the decision.

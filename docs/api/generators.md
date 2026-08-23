@@ -35,3 +35,7 @@ the columns mean.
 ## Time-dependent covariates
 
 ::: gen_surv.tdcm
+
+## Recurrent events
+
+::: gen_surv.recurrent

@@ -34,7 +34,7 @@ push, prompted by an external review of the R-derived generators:
 The highest-value work. The releases above fixed the defects that were found; the
 items here are about finding the ones that have not been.
 
-- [ ] **Distribution tests for the remaining generators.** Seven of eleven
+- [ ] **Distribution tests for the remaining generators.** Seven of twelve
       generators have no test that they produce their claimed distribution:
       `cphm`, the three AFT variants, `competing_risks_weibull`,
       `mixture_cure` and `piecewise_exponential`. Existing tests for these check
@@ -129,7 +129,12 @@ repetitive.
 
 Roughly in order of how often they are needed for realistic simulation studies:
 
-- [ ] **Recurrent events** — Andersen-Gill, and PWP in total-time and gap-time form
+- [x] **Recurrent events** — Andersen-Gill, and PWP in total-time and gap-time
+      form, over exponential, Weibull and Gompertz baselines. Returns
+      counting-process intervals with an `enum` column; distribution tests cover
+      the Poisson count under a constant intensity, the mean count against the
+      integrated baseline hazard for each family, the rate ratio against
+      `exp(beta)`, and the gap-time scaling from the stratum effects
 - [ ] **Frailty and clustered survival** — shared gamma and log-normal frailty
 - [ ] **Advanced censoring** — informative, interval, left-truncated and dependent
 - [ ] **Time-varying effects** — `beta(t)`, delayed effects, crossing hazards,

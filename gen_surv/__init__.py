@@ -25,6 +25,7 @@ from .export import export_dataset
 from .interface import generate
 from .mixture import cure_fraction_estimate, gen_mixture_cure
 from .piecewise import gen_piecewise_exponential
+from .recurrent import gen_recurrent_events
 from .sklearn_adapter import GenSurvDataGenerator
 from .tdcm import gen_tdcm
 from .thmm import gen_thmm
@@ -74,6 +75,7 @@ __all__ = [
     "gen_mixture_cure",
     "cure_fraction_estimate",
     "gen_piecewise_exponential",
+    "gen_recurrent_events",
     # Helper functions
     "sample_bivariate_distribution",
     "runifcens",
