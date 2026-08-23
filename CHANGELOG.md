@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## v2.0.1 (2026-08-23)
+
+No library changes: `gen_surv` behaves exactly as it does in v2.0.0. This release
+publishes the documentation site and relaxes dependency ranges that were pinned
+to a single major version.
+
+### Continuous Integration
+- The Sphinx documentation is now published to GitHub Pages at
+  <https://diogoribeiro7.github.io/genSurvPy/>. The site is built when a release
+  is published, from the tag that was uploaded to PyPI, so it always documents
+  the released version rather than unreleased work on `develop`.
+
+### Documentation
+- Fixed the GitHub Pages Sphinx configuration. It inherited `html_static_path`
+  from `docs/source/conf.py`, but Sphinx resolves that against the configuration
+  directory, so `_static` did not exist and `custom.css` was never copied into
+  the built site. It also pointed `html_extra_path` at a `.nojekyll` file that
+  does not exist, which `sphinx.ext.githubpages` already writes. The site base
+  URL now comes from the workflow rather than being hardcoded.
+
+### Misc
+- `pyarrow` accepts `>=21,<26` instead of `^21.0.0`, so it no longer holds
+  installations back to the 21.x series.
+- Widened the development and documentation dependency ranges for `pytest`,
+  `invoke`, `black`, `isort`, `flake8`, `scikit-survival`, `myst-parser` and
+  `sphinx-design`.
+
 ## v2.0.0 (2026-08-10)
 
 Completes the illness-death models. `gen_cmm` and `gen_thmm` previously reported
