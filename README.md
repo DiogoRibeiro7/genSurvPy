@@ -2,6 +2,7 @@
 
 [![Coverage][cov-badge]][cov-link]
 [![Docs][docs-badge]][docs-link]
+[![GitHub Pages][pages-badge]][pages-link]
 [![PyPI][pypi-badge]][pypi-link]
 [![Tests][ci-badge]][ci-link]
 [![Python][py-badge]][pypi-link]
@@ -10,6 +11,8 @@
 [cov-link]: https://app.codecov.io/gh/DiogoRibeiro7/genSurvPy
 [docs-badge]: https://readthedocs.org/projects/gensurvpy/badge/?version=latest
 [docs-link]: https://gensurvpy.readthedocs.io/en/latest/
+[pages-badge]: https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/gh-pages.yml/badge.svg
+[pages-link]: https://diogoribeiro7.github.io/genSurvPy/
 [pypi-badge]: https://img.shields.io/pypi/v/gen_surv
 [pypi-link]: https://pypi.org/project/gen-surv/
 [ci-badge]: https://github.com/DiogoRibeiro7/genSurvPy/actions/workflows/ci.yml/badge.svg
@@ -129,13 +132,20 @@ More details on each algorithm are available in the [Algorithms](https://gensurv
 
 ## Documentation
 
-Full documentation is hosted on [Read the Docs](https://gensurvpy.readthedocs.io/en/latest/). It includes installation instructions, tutorials, API references and a bibliography.
+Full documentation is hosted on [Read the Docs](https://gensurvpy.readthedocs.io/en/latest/) and mirrored on [GitHub Pages](https://diogoribeiro7.github.io/genSurvPy/). Both are built from `docs/source` and include installation instructions, tutorials, API references and a bibliography. The GitHub Pages site is rebuilt from the release tag by the [`GitHub Pages` workflow](.github/workflows/gh-pages.yml), so it documents the version currently on PyPI rather than unreleased work on `develop`.
 
 To build the docs locally:
 
 ```bash
 cd docs
 make html
+```
+
+To reproduce the GitHub Pages build (same configuration as the workflow):
+
+```bash
+poetry install --with docs
+poetry run sphinx-build -b html -c docs/gh_conf docs/source docs/build
 ```
 
 Open `build/html/index.html` in your browser to view the result.
