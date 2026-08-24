@@ -195,7 +195,7 @@ A bug fix in a sampler changes the draws a seed produces, so **pin the version
 alongside the seed** for anything that must reproduce:
 
 ```text
-gen-surv==2.0.1
+gen-surv==2.1.0
 ```
 
 See
@@ -250,7 +250,7 @@ Work happens on `develop`; `main` carries releases. See
   title   = {gen_surv: Survival Data Simulation in Python},
   author  = {Diogo Ribeiro},
   url     = {https://github.com/DiogoRibeiro7/genSurvPy},
-  version = {2.0.1}
+  version = {2.1.0}
 }
 ```
 
