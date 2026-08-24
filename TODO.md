@@ -34,15 +34,21 @@ push, prompted by an external review of the R-derived generators:
 The highest-value work. The releases above fixed the defects that were found; the
 items here are about finding the ones that have not been.
 
-- [ ] **Distribution tests for the remaining generators.** Seven of twelve
-      generators have no test that they produce their claimed distribution:
-      `cphm`, the three AFT variants, `competing_risks_weibull`,
-      `mixture_cure` and `piecewise_exponential`. Existing tests for these check
-      shape, column names and non-negativity; `mixture_cure` additionally checks
-      its cure fraction, but not its event-time distribution. The bivariate
-      defect survived many releases precisely because the tests checked shapes
-      rather than distributions, so this is the gap most likely to be hiding
-      another one.
+- [x] **Distribution tests for every generator.** All twelve now have one.
+      `tests/test_distributions.py` covers `cphm`, the three AFT variants, both
+      competing-risks models and `mixture_cure` by probability integral
+      transform: the sampled times are rearranged by the model's own cumulative
+      hazard and tested against Uniform(0, 1), which states the whole
+      distribution — shape, scale and covariate effect — rather than a moment or
+      two. The remaining five are covered in `test_piecewise_hazards.py`,
+      `test_recurrent.py`, `test_tdcm_crossover.py` and
+      `test_statistical_correctness.py`.
+
+      The gap was worth closing on the record it produced: asking
+      distributional questions found the piecewise middle-interval defect and
+      the `tdcm` sign error, neither of which any shape-based test could see.
+      The new tests fail on a 5% error in a covariate effect and a 3% error in a
+      Weibull shape, which was verified by introducing exactly those.
 - [ ] **R parity fixtures.** Frozen reference outputs from the R `genSurv`
       package for the models ported from it, so divergence is detected rather
       than argued about. Column names differ by design, so parity is on values.
@@ -53,9 +59,11 @@ items here are about finding the ones that have not been.
       applied inconsistently, so some invalid values still reach NumPy and
       surface as confusing downstream errors.
 - [ ] **Return the maturity classifier to `5 - Production/Stable`** once the
-      items above are in place. It was lowered to `4 - Beta` in 1.3.0 and the
-      multistate work that was its stated blocker has since landed, but shipping
-      distribution tests first makes the claim defensible rather than aspirational.
+      items above are in place. Distribution tests have now shipped for all
+      twelve generators, which was the stated blocker; R parity fixtures and
+      wider property-based testing remain. Worth waiting for those: the
+      distribution work found two more defects on its way in, which is not yet
+      the profile of a package claiming stability.
 
 ## Usability
 
