@@ -15,6 +15,15 @@ from gen_surv.validation import ValidationError
 app = typer.Typer(help="Generate synthetic survival datasets.")
 
 
+def _first_rate(values: List[float], default: float = 1.0) -> float:
+    """Return the single rate a scalar-rate model needs.
+
+    ``--rate`` is a list so that cmm and thmm can take a transition-rate vector;
+    the recurrent baselines want one number.
+    """
+    return values[0] if values else default
+
+
 @app.command()
 def dataset(
     model: str = typer.Argument(
@@ -76,9 +85,27 @@ def dataset(
         "exponential",
         help="Baseline hazard for recurrent events: 'exponential', 'weibull' or 'gompertz'",
     ),
-    rate: float = typer.Option(
-        1.0, help="Baseline rate (exponential and Gompertz recurrent events)"
+    rate: List[float] = typer.Option(
+        [],
+        help=(
+            "Rate parameter(s). One value for recurrent events (exponential and "
+            "Gompertz baselines); six for cmm and three for thmm, repeating the flag"
+        ),
     ),
+    dist: str = typer.Option(
+        "weibull", help="Marginal distribution for tdcm: 'weibull' or 'exponential'"
+    ),
+    corr: float = typer.Option(
+        0.5, help="Correlation between the covariate and the crossover time (tdcm)"
+    ),
+    dist_par: List[float] = typer.Option(
+        [],
+        help=(
+            "Distribution parameters for tdcm: four values for 'weibull', two for "
+            "'exponential', repeating the flag"
+        ),
+    ),
+    lam: float = typer.Option(1.0, help="Baseline hazard rate for tdcm"),
     stratum_effects: List[float] = typer.Option(
         [], help="Per-event intensity factors for the PWP recurrent processes"
     ),
@@ -121,11 +148,39 @@ def dataset(
     }
 
     # Add model-specific parameters
-    if model_str in ["cphm", "cmm", "thmm"]:
-        # These models use a single beta and covariate range
+    if model_str == "cphm":
+        # A single coefficient and a covariate range.
         beta_values = cast(List[float], _val(beta))
         kwargs["beta"] = beta_values[0] if len(beta_values) > 0 else 0.5
         kwargs["covariate_range"] = _val(covariate_range)
+
+    elif model_str in ["cmm", "thmm"]:
+        # Three coefficients, one per transition, and a rate vector: six values
+        # for cmm (an intensity and a shape per transition), three for thmm.
+        kwargs["beta"] = _val(beta)
+        kwargs["covariate_range"] = _val(covariate_range)
+        rates = cast(List[float], _val(rate))
+        if rates:
+            kwargs["rate"] = rates
+        elif model_str == "cmm":
+            kwargs["rate"] = [0.1, 1.0, 0.2, 1.0, 0.1, 1.0]
+        else:
+            kwargs["rate"] = [0.2, 0.3, 0.4]
+
+    elif model_str == "tdcm":
+        # The bivariate draw's parameters have no counterpart in the other
+        # models, so they get their own options.
+        kwargs["beta"] = _val(beta)
+        kwargs["dist"] = _val(dist)
+        kwargs["corr"] = _val(corr)
+        kwargs["lam"] = _val(lam)
+        parameters = cast(List[float], _val(dist_par))
+        if parameters:
+            kwargs["dist_par"] = parameters
+        elif _val(dist) == "weibull":
+            kwargs["dist_par"] = [1.0, 2.0, 1.0, 2.0]
+        else:
+            kwargs["dist_par"] = [1.0, 2.0]
 
     elif model_str == "aft_ln":
         # Log-normal AFT model uses beta list and sigma
@@ -181,14 +236,17 @@ def dataset(
         # Only the keys that belong to the chosen baseline: the generator
         # rejects the others rather than ignoring them.
         if baseline_str == "exponential":
-            kwargs["baseline_params"] = {"rate": _val(rate)}
+            kwargs["baseline_params"] = {"rate": _first_rate(_val(rate))}
         elif baseline_str == "weibull":
             kwargs["baseline_params"] = {
                 "shape": _val(shape),
                 "scale": _val(scale),
             }
         elif baseline_str == "gompertz":
-            kwargs["baseline_params"] = {"rate": _val(rate), "shape": _val(shape)}
+            kwargs["baseline_params"] = {
+                "rate": _first_rate(_val(rate)),
+                "shape": _val(shape),
+            }
 
         if _val(beta):
             kwargs["betas"] = _val(beta)

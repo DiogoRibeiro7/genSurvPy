@@ -280,8 +280,10 @@ def test_dataset_recurrent_events_exponential_baseline(monkeypatch):
         return pd.DataFrame({"start": [0.0], "stop": [1.0], "status": [1]})
 
     monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    # --rate is a list, since cmm and thmm need a vector of transition rates;
+    # a scalar-rate baseline takes the first entry.
     dataset(
-        model="recurrent_events", n=1, baseline="exponential", rate=0.7, output=None
+        model="recurrent_events", n=1, baseline="exponential", rate=[0.7], output=None
     )
     assert captured["baseline_params"] == {"rate": 0.7}
 

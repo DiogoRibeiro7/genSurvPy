@@ -135,8 +135,10 @@ Configurations serialise, which is what makes a scenario shareable:
 ```python
 import json
 
-json.dumps(base.to_dict())
-SimulationConfig.from_dict(json.loads(text))
+text = json.dumps(base.to_dict())
+restored = SimulationConfig.from_dict(json.loads(text))
+
+restored == base      # True
 ```
 
 ## How it works

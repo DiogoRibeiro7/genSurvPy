@@ -84,6 +84,12 @@ Column names differ by model. `tdcm` has `start`/`stop` rather than `time`, and
 `time_col` and `status_col`:
 
 ```python
+from gen_surv import describe_survival, generate
+
+tdcm_df = generate(model="tdcm", n=100, dist="weibull", corr=0.5,
+                   dist_par=[1.0, 2.0, 1.0, 2.0], model_cens="uniform",
+                   cens_par=5.0, beta=[0.5, 0.3], lam=1.0, seed=1)
+
 describe_survival(tdcm_df, time_col="stop")
 ```
 
@@ -128,6 +134,12 @@ In a script or on CI there is no display. Save instead of showing:
 ```python
 import matplotlib
 matplotlib.use("Agg")
+
+from gen_surv import generate, plot_survival_curve
+
+df = generate(model="cphm", n=200, beta=0.5, covariate_range=2.0,
+              model_cens="uniform", cens_par=1.0, seed=1)
+fig, ax = plot_survival_curve(df)
 fig.savefig("plot.png", dpi=200, bbox_inches="tight")
 ```
 

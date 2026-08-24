@@ -67,10 +67,13 @@ items here are about finding the ones that have not been.
 
 ## Usability
 
-- [ ] **CLI redesign.** The unified CLI implies every registered model is
-      callable, but its generic parameter plumbing does not match several model
-      signatures. Move to per-model subcommands, so each exposes exactly its own
-      parameters:
+- [ ] **CLI redesign.** Every registered model is now actually callable —
+      `--rate`, `--dist`, `--corr`, `--dist-par` and `--lam` were added for
+      `cmm`, `thmm` and `tdcm`, which previously failed with a TypeError about
+      missing positional arguments, and a parametrised test now covers all
+      twelve. The plumbing is still generic, though: one `--rate` means six
+      values for `cmm`, three for `thmm` and one for `recurrent_events`. Move to
+      per-model subcommands, so each exposes exactly its own parameters:
 
       ```
       gen-surv cphm ...

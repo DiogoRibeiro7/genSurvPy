@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gen_surv"
 version = "2.0.1"
-description = "A Python package for simulating survival data, inspired by the R package genSurv"
+description = "Simulate survival data with a known truth: twelve models spanning proportional hazards, accelerated failure time, competing risks, cure fractions, recurrent events and multi-state processes"
 authors = ["Diogo Ribeiro <diogo.debastos.ribeiro@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -9,7 +9,20 @@ packages = [{ include = "gen_surv" }]
 homepage = "https://github.com/DiogoRibeiro7/genSurvPy"
 repository = "https://github.com/DiogoRibeiro7/genSurvPy"
 documentation = "https://diogoribeiro7.github.io/genSurvPy/"
-keywords = ["survival-analysis", "simulation", "cox-model", "markov-model", "time-dependent", "statistics"]
+keywords = [
+    "survival-analysis",
+    "simulation",
+    "synthetic-data",
+    "cox-model",
+    "accelerated-failure-time",
+    "competing-risks",
+    "recurrent-events",
+    "multi-state-models",
+    "cure-models",
+    "markov-model",
+    "time-dependent",
+    "statistics",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",

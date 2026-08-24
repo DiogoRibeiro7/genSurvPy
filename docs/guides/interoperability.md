@@ -26,7 +26,10 @@ Pass only the columns the model should see — `CoxPHFitter` treats every
 remaining column as a covariate, so an `id` column would be fitted as one:
 
 ```python
-cph = CoxPHFitter().fit(df[["time", "status", "X0", "X1"]],
+aft = generate(model="aft_ln", n=5000, beta=[0.5, -0.3], sigma=1.0,
+               model_cens="uniform", cens_par=2.0, seed=7)
+
+cph = CoxPHFitter().fit(aft[["time", "status", "X0", "X1"]],
                         duration_col="time", event_col="status")
 ```
 
@@ -79,6 +82,10 @@ never in `y` to begin with, so rejoin them yourself if you need the full frame.
 Both functions take `time_col` and `event_col`, so non-default names are fine:
 
 ```python
+tdcm_df = generate(model="tdcm", n=100, dist="weibull", corr=0.5,
+                   dist_par=[1.0, 2.0, 1.0, 2.0], model_cens="uniform",
+                   cens_par=5.0, beta=[0.5, 0.3], lam=1.0, seed=1)
+
 y = to_sksurv(tdcm_df, time_col="stop", event_col="status")
 ```
 
