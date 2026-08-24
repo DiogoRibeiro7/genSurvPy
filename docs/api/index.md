@@ -20,6 +20,7 @@ or the [model pages](../models/index.md).
 | `gen_thmm` | illness-death, panel | [Generators](generators.md#gen_surv.thmm) |
 | `gen_tdcm` | time-dependent covariates | [Generators](generators.md#gen_surv.tdcm) |
 | `gen_recurrent_events` | recurrent events (Andersen-Gill, PWP) | [Generators](generators.md#gen_surv.recurrent) |
+| `BaselineHazard`, `ExponentialBaseline`, `WeibullBaseline`, `GompertzBaseline`, `LogLogisticBaseline`, `PiecewiseConstantBaseline` | baseline hazard families | [Baseline hazards](baselines.md) |
 | `runifcens`, `rexpocens`, `rweibcens`, `rlognormcens`, `rgammacens` | censoring samplers | [Censoring](censoring.md) |
 | `WeibullCensoring`, `LogNormalCensoring`, `GammaCensoring`, `CensoringModel` | class-based censoring | [Censoring](censoring.md) |
 | `sample_bivariate_distribution` | correlated draws | [Censoring](censoring.md#gen_surv.bivariate) |

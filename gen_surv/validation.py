@@ -549,13 +549,37 @@ _BASELINE_KEYS: dict[str, set[str]] = {
 
 
 def _validate_baseline_params(
-    baseline: str, baseline_params: dict[str, float] | None
+    baseline: object, baseline_params: dict[str, float] | None
 ) -> None:
     """Check the parameters supplied for a baseline hazard family.
 
     Unknown keys are rejected rather than ignored, so a misspelt parameter
     surfaces immediately instead of silently leaving the default in place.
+
+    ``baseline`` may also be an object implementing the ``BaselineHazard``
+    protocol, which has already validated itself on construction. Supplying
+    parameters alongside such an object is ambiguous -- they could not be
+    applied without rebuilding it -- so that combination is rejected.
     """
+    if not isinstance(baseline, str):
+        required = ("cumulative_hazard", "inverse_cumulative_hazard")
+        if not all(callable(getattr(baseline, name, None)) for name in required):
+            raise ParameterError(
+                "baseline",
+                baseline,
+                "must be a baseline name or an object implementing "
+                "BaselineHazard, with cumulative_hazard and "
+                "inverse_cumulative_hazard methods",
+            )
+        if baseline_params is not None:
+            raise ParameterError(
+                "baseline_params",
+                baseline_params,
+                "cannot be combined with a BaselineHazard object; set the "
+                "parameters on the object itself",
+            )
+        return
+
     ensure_in_choices(baseline, "baseline", _BASELINE_KEYS.keys())
 
     if baseline_params is None:
@@ -594,7 +618,7 @@ def _validate_baseline_params(
 def validate_gen_recurrent_events_inputs(
     n: int,
     process: str,
-    baseline: str,
+    baseline: object,
     baseline_params: dict[str, float] | None,
     n_covariates: int,
     stratum_effects: Sequence[float] | None,

@@ -4,6 +4,11 @@ Task-oriented pages: everything that is not "which model should I use".
 
 <div class="grid cards" markdown>
 
+-   :material-chart-bell-curve: **[Baseline hazards](baselines.md)**
+
+    The five hazard families every sampler draws from, and how to supply one of
+    your own.
+
 -   :material-scissors-cutting: **[Censoring](censoring.md)**
 
     The two built-in mechanisms, hitting a target event rate, and applying a
