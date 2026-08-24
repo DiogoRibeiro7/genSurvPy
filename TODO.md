@@ -95,10 +95,30 @@ items here are about finding the ones that have not been.
 
 Small, concrete, and each one has already cost time:
 
-- [ ] **Decide on `poetry.lock`.** It is gitignored while `ci.yml` caches on
-      `hashFiles('**/poetry.lock')`, a key that matches nothing and therefore
-      never varies. Either commit the lock and get a real cache, or drop the
-      lock-dependent cache step.
+- [x] **Committed `poetry.lock`.** It was gitignored while five cache steps
+      keyed on `hashFiles('**/poetry.lock')` — a key matching nothing, so it
+      never varied and the cache never invalidated. Committing it makes CI
+      resolve the same set every run and gives those keys meaning. It does not
+      constrain anyone installing from PyPI, which resolves against the
+      published metadata instead.
+
+      Three things depended on the lock being tracked and had therefore never
+      worked:
+
+      - `update-poetry.yml` decided whether to open a pull request with
+        `git status --porcelain poetry.lock`, which reports nothing for an
+        ignored file, so the answer was always "no changes". It also ran
+        `poetry update`, bumping every dependency rather than re-resolving
+        after a `pyproject.toml` change, and keyed its cache on a step id that
+        did not exist.
+      - `auto-upgrade-pyproject.yml` verified its work with `poetry lock
+        --check`, removed in Poetry 2, which the workflow installs as "latest".
+      - Every cache step lacked `restore-keys`, so a lock change meant starting
+        from an empty cache rather than the nearest one.
+
+      `ci.yml` now runs `poetry check --lock`, so a `pyproject.toml` edit
+      without a matching relock fails immediately instead of resolving
+      differently in silence.
 - [ ] **Fix the `develop`/`main` divergence.** Squash-merging `develop -> main`
       leaves the squash commit outside `develop`'s history, so every subsequent
       release pull request conflicts. A conflicting pull request gets **no CI run
