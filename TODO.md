@@ -105,11 +105,27 @@ Small, concrete, and each one has already cost time:
       at all** rather than a failing one, which reads as "still queued" and is
       easy to misdiagnose. Either use merge commits for release PRs, or reset
       `develop` to `main` after each release.
-- [ ] **Remove the vestigial `[tool.semantic_release]` configuration**, which no
-      workflow reads.
-- [ ] **Consider migrating `[tool.poetry]` metadata to PEP 621 `[project]`.**
-      Poetry 2.x warns about the current layout. Deferred because it changes
-      published metadata and deserves its own release.
+- [x] **Removed the vestigial `[tool.semantic_release]` configuration**, which no
+      workflow read, along with the `python-semantic-release` development
+      dependency that existed only to serve it.
+- [x] **Migrated `[tool.poetry]` metadata to PEP 621 `[project]`.** `poetry
+      check` had been reporting three deprecations: `documentation`, `scripts`
+      and the license classifier. Name, version, description, authors, keywords,
+      classifiers, `requires-python`, the runtime dependencies, `[project.urls]`
+      and `[project.scripts]` now live under `[project]`; `[tool.poetry]` keeps
+      only `packages` and the dev and docs groups, which is the layout Poetry 2
+      recommends. `poetry check` is clean.
+
+      The wheel's metadata gains `License-Expression: MIT` in place of the
+      deprecated classifier and now ships `LICENSE`; the nine runtime
+      constraints, the `gen_surv` entry point and the resolved dependency set
+      are unchanged. Verified by installing the built wheel into a clean
+      virtual environment and running the package and its console script.
+
+      Two things read the old layout and were updated with it: `publish.yml`,
+      which took the release version from `tool.poetry.version`, and
+      `scripts/pyproject_updater.py`, which chose one layout and would have
+      stopped seeing the runtime dependencies.
 
 ## Architecture
 

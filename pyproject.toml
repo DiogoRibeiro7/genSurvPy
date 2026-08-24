@@ -1,14 +1,14 @@
-[tool.poetry]
+[project]
 name = "gen_surv"
 version = "2.0.1"
 description = "Simulate survival data with a known truth: twelve models spanning proportional hazards, accelerated failure time, competing risks, cure fractions, recurrent events and multi-state processes"
-authors = ["Diogo Ribeiro <diogo.debastos.ribeiro@gmail.com>"]
-license = "MIT"
 readme = "README.md"
-packages = [{ include = "gen_surv" }]
-homepage = "https://github.com/DiogoRibeiro7/genSurvPy"
-repository = "https://github.com/DiogoRibeiro7/genSurvPy"
-documentation = "https://diogoribeiro7.github.io/genSurvPy/"
+requires-python = ">=3.11,<3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Diogo Ribeiro", email = "diogo.debastos.ribeiro@gmail.com" },
+]
 keywords = [
     "survival-analysis",
     "simulation",
@@ -33,26 +33,36 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "numpy (>=2.3.3,<3.0.0)",
+    "pandas (>=2.3.3,<3.0.0)",
+    "scipy (>=1.16.1,<2.0.0)",
+    "typer (>=0.19.2,<0.20.0)",
+    "click (>=8.3.0,<9.0.0)",
+    "matplotlib (>=3.10.7,<4.0.0)",
+    "lifelines (>=0.30.3,<0.31.0)",
+    "pyarrow (>=21,<26)",
+    "pyreadr (>=0.5.3,<0.6.0)",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.14"
-numpy = "^2.3.3"
-pandas = "^2.3.3"
-scipy = "^1.16.1"
-typer = "^0.19.2"
-click = "^8.3.0"
-matplotlib = "^3.10.7"
-lifelines = "^0.30.3"
-pyarrow = ">=21,<26"
-pyreadr = "^0.5.3"
+[project.urls]
+Homepage = "https://diogoribeiro7.github.io/genSurvPy/"
+Documentation = "https://diogoribeiro7.github.io/genSurvPy/"
+Repository = "https://github.com/DiogoRibeiro7/genSurvPy"
+Issues = "https://github.com/DiogoRibeiro7/genSurvPy/issues"
+Changelog = "https://github.com/DiogoRibeiro7/genSurvPy/blob/main/CHANGELOG.md"
+
+[project.scripts]
+gen_surv = "gen_surv.cli:app"
+
+[tool.poetry]
+packages = [{ include = "gen_surv" }]
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.4.2,<10.0.0"
 pytest-cov = "^7.0.0"
 pytest-benchmark = "^5.1.0"
-python-semantic-release = "^10.4.1"
 mypy = "^1.18.2"
 invoke = ">=2.2.1,<4.0.0"
 hypothesis = "^6.142.1"
@@ -72,18 +82,6 @@ mkdocstrings = { extras = ["python"], version = ">=0.26,<1.0" }
 markers = [
     "slow: slow performance tests",
 ]
-
-[tool.poetry.scripts]
-gen_surv = "gen_surv.cli:app"
-
-[tool.semantic_release]
-version_source = "tag"
-version_variable = ["pyproject.toml:tool.poetry.version"]
-commit_version_number = true
-changelog_file = "CHANGELOG.md"
-upload_to_repository = false
-branch = "main"
-build_command = ""
 
 [tool.black]
 line-length = 88

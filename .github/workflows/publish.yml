@@ -39,7 +39,7 @@ jobs:
       - name: Read project version
         id: project
         run: |
-          version=$(python -c "import pathlib, tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['tool']['poetry']['version'])")
+          version=$(python -c "import pathlib, tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "pyproject version: $version"
       - name: Verify the version is consistent across metadata files
@@ -71,13 +71,16 @@ jobs:
           elif zenodo["version"] != expected:
               problems.append(f".zenodo.json: {zenodo['version']}")
 
-          # The BibTeX snippet in the docs landing page.
-          index = pathlib.Path("docs/source/index.md").read_text(encoding="utf-8")
-          match = re.search(r"version = \{([^}]+)\}", index)
-          if match is None:
-              problems.append("docs/source/index.md: no BibTeX 'version = {...}' found")
-          elif match.group(1) != expected:
-              problems.append(f"docs/source/index.md: {match.group(1)}")
+          # The BibTeX snippets, which carry the version too. The docs landing
+          # page moved from docs/source/index.md to docs/index.md with the
+          # switch to MkDocs; the README gained one at the same time.
+          for name in ("docs/index.md", "README.md"):
+              text = pathlib.Path(name).read_text(encoding="utf-8")
+              match = re.search(r"version = \{([^}]+)\}", text)
+              if match is None:
+                  problems.append(f"{name}: no BibTeX 'version = {{...}}' found")
+              elif match.group(1) != expected:
+                  problems.append(f"{name}: {match.group(1)}")
 
           if problems:
               print(f"::error::pyproject.toml declares {expected}, but these disagree:")
