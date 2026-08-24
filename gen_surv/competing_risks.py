@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from ._covariates import generate_covariates, prepare_betas_matrix, set_covariate_params
+from ._truth import record
 from .censoring import rexpocens, runifcens
 from .validation import (
     ParameterError,
@@ -155,6 +156,14 @@ def gen_competing_risks(
         over_max = observed_times > max_time
         observed_times[over_max] = max_time
         status[over_max] = 0  # Censored if beyond max_time
+
+    record(
+        betas=betas,
+        covariates=X,
+        cause_times=event_times,
+        censoring_time=cens_times,
+        first_event_time=min_event_times,
+    )
 
     # Create DataFrame
     data = pd.DataFrame({"id": np.arange(n), "time": observed_times, "status": status})
@@ -311,6 +320,14 @@ def gen_competing_risks_weibull(
         over_max = observed_times > max_time
         observed_times[over_max] = max_time
         status[over_max] = 0  # Censored if beyond max_time
+
+    record(
+        betas=betas,
+        covariates=X,
+        cause_times=event_times,
+        censoring_time=cens_times,
+        first_event_time=min_event_times,
+    )
 
     # Create DataFrame
     data = pd.DataFrame({"id": np.arange(n), "time": observed_times, "status": status})

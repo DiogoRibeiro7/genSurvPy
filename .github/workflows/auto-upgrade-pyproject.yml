@@ -196,8 +196,10 @@ jobs:
         run: |
           echo "Verifying final dependency state..."
           
-          # Test that everything still resolves and installs
-          if poetry lock --check && poetry install --dry-run; then
+          # Test that everything still resolves and installs. `poetry lock
+          # --check` was removed in Poetry 2; the equivalent is `poetry check
+          # --lock`, and the workflow installs Poetry at "latest".
+          if poetry check --lock && poetry install --dry-run; then
             echo "verification_success=true" >> $GITHUB_OUTPUT
             echo "✅ Final state verification passed"
           else

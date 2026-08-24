@@ -32,6 +32,7 @@ pip install tomlkit packaging
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 import urllib.error
@@ -349,11 +350,24 @@ def upgrade(pyproject: Path, opts: Options) -> int:
     groups = opts.groups or ["main", "dev"]  # include Poetry dev by default
     only_norm = {_normalize_pkg_name(n) for n in (opts.only or [])}
 
-    # Iterate deps
-    iterator = _iter_poetry_deps if layout == "poetry" else _iter_pep621_deps
+    # Iterate deps. A project may use both layouts at once: PEP 621 for the
+    # runtime dependencies and Poetry groups for dev and docs, which is what
+    # Poetry 2 recommends. Reading only one would silently skip the other.
+    iterators = []
+    project_tbl = doc.get("project")
+    if isinstance(project_tbl, dict) and (
+        "dependencies" in project_tbl or "optional-dependencies" in project_tbl
+    ):
+        iterators.append(_iter_pep621_deps)
+    tool_tbl = doc.get("tool")
+    if isinstance(tool_tbl, dict) and "poetry" in tool_tbl:
+        iterators.append(_iter_poetry_deps)
+    if not iterators:
+        iterators = [_iter_poetry_deps if layout == "poetry" else _iter_pep621_deps]
+
     changed = 0
 
-    for dep in iterator(doc, groups):
+    for dep in itertools.chain.from_iterable(it(doc, groups) for it in iterators):
         base_norm = _normalize_pkg_name(dep.name)
         if only_norm and base_norm not in only_norm:
             continue

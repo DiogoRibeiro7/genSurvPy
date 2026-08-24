@@ -34,15 +34,21 @@ push, prompted by an external review of the R-derived generators:
 The highest-value work. The releases above fixed the defects that were found; the
 items here are about finding the ones that have not been.
 
-- [ ] **Distribution tests for the remaining generators.** Seven of eleven
-      generators have no test that they produce their claimed distribution:
-      `cphm`, the three AFT variants, `competing_risks_weibull`,
-      `mixture_cure` and `piecewise_exponential`. Existing tests for these check
-      shape, column names and non-negativity; `mixture_cure` additionally checks
-      its cure fraction, but not its event-time distribution. The bivariate
-      defect survived many releases precisely because the tests checked shapes
-      rather than distributions, so this is the gap most likely to be hiding
-      another one.
+- [x] **Distribution tests for every generator.** All twelve now have one.
+      `tests/test_distributions.py` covers `cphm`, the three AFT variants, both
+      competing-risks models and `mixture_cure` by probability integral
+      transform: the sampled times are rearranged by the model's own cumulative
+      hazard and tested against Uniform(0, 1), which states the whole
+      distribution — shape, scale and covariate effect — rather than a moment or
+      two. The remaining five are covered in `test_piecewise_hazards.py`,
+      `test_recurrent.py`, `test_tdcm_crossover.py` and
+      `test_statistical_correctness.py`.
+
+      The gap was worth closing on the record it produced: asking
+      distributional questions found the piecewise middle-interval defect and
+      the `tdcm` sign error, neither of which any shape-based test could see.
+      The new tests fail on a 5% error in a covariate effect and a 3% error in a
+      Weibull shape, which was verified by introducing exactly those.
 - [ ] **R parity fixtures.** Frozen reference outputs from the R `genSurv`
       package for the models ported from it, so divergence is detected rather
       than argued about. Column names differ by design, so parity is on values.
@@ -53,16 +59,21 @@ items here are about finding the ones that have not been.
       applied inconsistently, so some invalid values still reach NumPy and
       surface as confusing downstream errors.
 - [ ] **Return the maturity classifier to `5 - Production/Stable`** once the
-      items above are in place. It was lowered to `4 - Beta` in 1.3.0 and the
-      multistate work that was its stated blocker has since landed, but shipping
-      distribution tests first makes the claim defensible rather than aspirational.
+      items above are in place. Distribution tests have now shipped for all
+      twelve generators, which was the stated blocker; R parity fixtures and
+      wider property-based testing remain. Worth waiting for those: the
+      distribution work found two more defects on its way in, which is not yet
+      the profile of a package claiming stability.
 
 ## Usability
 
-- [ ] **CLI redesign.** The unified CLI implies every registered model is
-      callable, but its generic parameter plumbing does not match several model
-      signatures. Move to per-model subcommands, so each exposes exactly its own
-      parameters:
+- [ ] **CLI redesign.** Every registered model is now actually callable —
+      `--rate`, `--dist`, `--corr`, `--dist-par` and `--lam` were added for
+      `cmm`, `thmm` and `tdcm`, which previously failed with a TypeError about
+      missing positional arguments, and a parametrised test now covers all
+      twelve. The plumbing is still generic, though: one `--rate` means six
+      values for `cmm`, three for `thmm` and one for `recurrent_events`. Move to
+      per-model subcommands, so each exposes exactly its own parameters:
 
       ```
       gen-surv cphm ...
@@ -84,52 +95,114 @@ items here are about finding the ones that have not been.
 
 Small, concrete, and each one has already cost time:
 
-- [ ] **Decide on `poetry.lock`.** It is gitignored while `ci.yml` caches on
-      `hashFiles('**/poetry.lock')`, a key that matches nothing and therefore
-      never varies. Either commit the lock and get a real cache, or drop the
-      lock-dependent cache step.
+- [x] **Committed `poetry.lock`.** It was gitignored while five cache steps
+      keyed on `hashFiles('**/poetry.lock')` — a key matching nothing, so it
+      never varied and the cache never invalidated. Committing it makes CI
+      resolve the same set every run and gives those keys meaning. It does not
+      constrain anyone installing from PyPI, which resolves against the
+      published metadata instead.
+
+      Three things depended on the lock being tracked and had therefore never
+      worked:
+
+      - `update-poetry.yml` decided whether to open a pull request with
+        `git status --porcelain poetry.lock`, which reports nothing for an
+        ignored file, so the answer was always "no changes". It also ran
+        `poetry update`, bumping every dependency rather than re-resolving
+        after a `pyproject.toml` change, and keyed its cache on a step id that
+        did not exist.
+      - `auto-upgrade-pyproject.yml` verified its work with `poetry lock
+        --check`, removed in Poetry 2, which the workflow installs as "latest".
+      - Every cache step lacked `restore-keys`, so a lock change meant starting
+        from an empty cache rather than the nearest one.
+
+      `ci.yml` now runs `poetry check --lock`, so a `pyproject.toml` edit
+      without a matching relock fails immediately instead of resolving
+      differently in silence.
 - [ ] **Fix the `develop`/`main` divergence.** Squash-merging `develop -> main`
       leaves the squash commit outside `develop`'s history, so every subsequent
       release pull request conflicts. A conflicting pull request gets **no CI run
       at all** rather than a failing one, which reads as "still queued" and is
       easy to misdiagnose. Either use merge commits for release PRs, or reset
       `develop` to `main` after each release.
-- [ ] **Remove the vestigial `[tool.semantic_release]` configuration**, which no
-      workflow reads.
-- [ ] **Consider migrating `[tool.poetry]` metadata to PEP 621 `[project]`.**
-      Poetry 2.x warns about the current layout. Deferred because it changes
-      published metadata and deserves its own release.
+- [x] **Removed the vestigial `[tool.semantic_release]` configuration**, which no
+      workflow read, along with the `python-semantic-release` development
+      dependency that existed only to serve it.
+- [x] **Migrated `[tool.poetry]` metadata to PEP 621 `[project]`.** `poetry
+      check` had been reporting three deprecations: `documentation`, `scripts`
+      and the license classifier. Name, version, description, authors, keywords,
+      classifiers, `requires-python`, the runtime dependencies, `[project.urls]`
+      and `[project.scripts]` now live under `[project]`; `[tool.poetry]` keeps
+      only `packages` and the dev and docs groups, which is the layout Poetry 2
+      recommends. `poetry check` is clean.
+
+      The wheel's metadata gains `License-Expression: MIT` in place of the
+      deprecated classifier and now ships `LICENSE`; the nine runtime
+      constraints, the `gen_surv` entry point and the resolved dependency set
+      are unchanged. Verified by installing the built wheel into a clean
+      virtual environment and running the package and its console script.
+
+      Two things read the old layout and were updated with it: `publish.yml`,
+      which took the release version from `tool.poetry.version`, and
+      `scripts/pyproject_updater.py`, which chose one layout and would have
+      stopped seeing the runtime dependencies.
 
 ## Architecture
 
 Structural work that makes the model expansion below tractable rather than
 repetitive.
 
-- [ ] **`SimulationConfig` and `SimulationResult`.** Generators currently return a
-      DataFrame and discard everything else. Returning the configuration and the
-      ground truth alongside the data — linear predictors, baseline hazard, cure
-      status, latent cause-specific times — is what makes the package useful for
-      methodological work, where the true values are the point. The existing
-      `gen_*` functions stay as thin wrappers returning a DataFrame.
-- [ ] **Baseline hazard abstraction.** A `BaselineHazard` protocol with
-      `cumulative_hazard` and its inverse, implemented for exponential, Weibull,
-      Gompertz, log-logistic, piecewise and spline forms. A single proportional
-      hazards simulator then works with any baseline, instead of growing a
-      separate `gen_cphm_*` per shape.
+- [x] **`SimulationConfig` and `SimulationResult`.** `simulate()` returns the
+      frame, the configuration that produced it (parameters, seed and the
+      `gen_surv` version) and a `truth` mapping: coefficients actually used —
+      including those drawn at random, which were previously unknowable —
+      covariates, linear predictors, latent event and censoring times, cure
+      status, cause-specific times, transition times, and the `tdcm` crossover
+      time the frame cannot express. All twelve generators report.
+
+      Implemented with a `ContextVar` sink rather than the tuple-returning
+      wrappers first sketched here: generators keep their signatures, gain one
+      `record()` call each, and the frozen baselines are byte-identical before
+      and after. That mattered more than the shape of the internal API.
+- [x] **Baseline hazard abstraction.** `gen_surv.baseline` defines a
+      runtime-checkable `BaselineHazard` protocol -- `hazard`,
+      `cumulative_hazard` and its inverse -- with frozen, self-validating
+      implementations for exponential, Weibull, Gompertz, log-logistic and
+      piecewise-constant forms. `gen_recurrent_events` takes either a name or an
+      object, so it already samples from families it does not name. Spline
+      baselines are not implemented: they need a monotone fitting step and a
+      numerical inverse, which is its own piece of work.
+- [ ] **Spline baseline.** A `SplineBaseline` implementing the protocol, with a
+      monotone fit on the log cumulative hazard and a numerical inverse.
 - [ ] **General multistate engine.** An arbitrary transition graph with
       per-transition hazards, supporting both `clock="forward"` (Markov) and
-      `clock="reset"` (semi-Markov). CMM and THMM become predefined
-      configurations of it rather than bespoke implementations.
-- [ ] **Canonical output schemas.** Two are now established: counting-process
-      intervals for transition data and a state-per-observation panel for
-      trajectory data. Document them as contracts and apply them consistently as
-      new multistate models arrive.
+      `clock="reset"` (semi-Markov), built on the baseline hazard protocol.
+
+      **Note on the second half of this item.** Making CMM and THMM
+      configurations of the engine would change what a given seed produces:
+      both draw their covariates, censoring times and latent transition times
+      in a particular vectorised order, and a general engine walks the graph
+      per subject instead. The frozen baselines in `tests/baselines` would all
+      have to be regenerated, which is a reproducibility break for anyone who
+      pinned a seed. Ship the engine as a new generator first, show it
+      reproduces the CMM and THMM *distributions*, and fold the two in at the
+      next major version.
+- [x] **Canonical output schemas.** Documented as contracts on the output
+      schemas page, and enforced: `EXPECTED_COLUMNS` in the regression suite
+      pins every generator's column list, and a further test fails if a model is
+      registered with the dispatcher and no frozen baseline. A layout change is
+      now a failing test rather than a surprise in a release.
 
 ## Model expansion
 
 Roughly in order of how often they are needed for realistic simulation studies:
 
-- [ ] **Recurrent events** — Andersen-Gill, and PWP in total-time and gap-time form
+- [x] **Recurrent events** — Andersen-Gill, and PWP in total-time and gap-time
+      form, over exponential, Weibull and Gompertz baselines. Returns
+      counting-process intervals with an `enum` column; distribution tests cover
+      the Poisson count under a constant intensity, the mean count against the
+      integrated baseline hazard for each family, the rate ratio against
+      `exp(beta)`, and the gap-time scaling from the stratum effects
 - [ ] **Frailty and clustered survival** — shared gamma and log-normal frailty
 - [ ] **Advanced censoring** — informative, interval, left-truncated and dependent
 - [ ] **Time-varying effects** — `beta(t)`, delayed effects, crossing hazards,

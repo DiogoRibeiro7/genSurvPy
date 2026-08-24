@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from gen_surv._truth import record
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validation import validate_gen_cphm_inputs
 
@@ -49,6 +50,10 @@ def generate_cphm_data(
     rng = np.random.default_rng(seed)
 
     data: NDArray[np.float64] = np.zeros((n, 3), dtype=float)
+    # Kept so the latent times can be reported as ground truth; they do not
+    # affect any draw.
+    event_times: NDArray[np.float64] = np.zeros(n, dtype=float)
+    censoring_times: NDArray[np.float64] = np.zeros(n, dtype=float)
 
     for k in range(n):
         z = rng.uniform(0, covariate_range)
@@ -59,7 +64,16 @@ def generate_cphm_data(
         status = int(x <= c)
 
         data[k, :] = [time, status, z]
+        event_times[k] = x
+        censoring_times[k] = c
 
+    record(
+        beta=beta,
+        covariates=data[:, 2].copy(),
+        linear_predictor=beta * data[:, 2],
+        event_time=event_times,
+        censoring_time=censoring_times,
+    )
     return data
 
 

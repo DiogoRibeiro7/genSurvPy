@@ -17,6 +17,7 @@ from gen_surv.competing_risks import gen_competing_risks, gen_competing_risks_we
 from gen_surv.cphm import gen_cphm
 from gen_surv.mixture import gen_mixture_cure
 from gen_surv.piecewise import gen_piecewise_exponential
+from gen_surv.recurrent import gen_recurrent_events
 from gen_surv.tdcm import gen_tdcm
 from gen_surv.thmm import gen_thmm
 
@@ -35,6 +36,7 @@ ModelType = Literal[
     "competing_risks_weibull",
     "mixture_cure",
     "piecewise_exponential",
+    "recurrent_events",
 ]
 
 
@@ -55,6 +57,7 @@ _model_map: Dict[ModelType, DataGenerator] = {
     "competing_risks_weibull": gen_competing_risks_weibull,
     "mixture_cure": gen_mixture_cure,
     "piecewise_exponential": gen_piecewise_exponential,
+    "recurrent_events": gen_recurrent_events,
 }
 
 
@@ -67,7 +70,7 @@ def generate(model: ModelType, **kwargs: object) -> pd.DataFrame:
         Name of the generator to run. Must be one of ``cphm``, ``cmm``,
         ``tdcm``, ``thmm``, ``aft_ln``, ``aft_weibull``, ``aft_log_logistic``,
         ``competing_risks``, ``competing_risks_weibull``, ``mixture_cure``,
-        or ``piecewise_exponential``.
+        ``piecewise_exponential`` or ``recurrent_events``.
     **kwargs
         Arguments forwarded to the chosen generator. These vary by model.
 
@@ -83,6 +86,8 @@ def generate(model: ModelType, **kwargs: object) -> pd.DataFrame:
         - mixture_cure: n, cure_fraction, baseline_hazard, betas_survival,
           betas_cure, etc.
         - piecewise_exponential: n, breakpoints, hazard_rates, betas, etc.
+        - recurrent_events: n, process, baseline, baseline_params, betas,
+          stratum_effects, followup_time, etc.
 
     Returns
     -------

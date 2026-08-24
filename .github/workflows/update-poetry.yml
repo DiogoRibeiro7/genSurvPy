@@ -20,9 +20,10 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Python
+      id: setup-python
       uses: actions/setup-python@v6
       with:
-        python-version: '3.11'  # Adjust to your preferred Python version
+        python-version: '3.11'
 
     - name: Install Poetry
       uses: snok/install-poetry@v1
@@ -36,9 +37,15 @@ jobs:
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-
 
-    - name: Update Poetry lock file
-      run: poetry update
+    # `poetry lock` re-resolves against the new pyproject. `poetry update`,
+    # which this used to run, would also bump every unrelated dependency to its
+    # newest allowed version, which is a different change and not the one the
+    # trigger describes.
+    - name: Relock against the new pyproject
+      run: poetry lock
 
     - name: Check for changes in poetry.lock
       id: verify-changed-files

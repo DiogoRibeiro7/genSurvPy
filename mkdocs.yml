@@ -1,0 +1,165 @@
+site_name: gen_surv
+site_description: Simulate survival data in Python — Cox, AFT, competing risks, cure, piecewise and multi-state models
+# The Pages workflow passes SITE_URL from actions/configure-pages, so the
+# canonical links follow the deployment rather than a hardcoded address.
+site_url: !ENV [SITE_URL, "https://diogoribeiro7.github.io/genSurvPy/"]
+site_author: Diogo Ribeiro
+copyright: Copyright &copy; Diogo Ribeiro — MIT licensed
+
+repo_url: https://github.com/DiogoRibeiro7/genSurvPy
+repo_name: DiogoRibeiro7/genSurvPy
+edit_uri: edit/develop/docs/
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Follow system theme
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: numpy
+            docstring_section_style: table
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            merge_init_into_class: true
+            members_order: source
+            filters: ["!^_"]
+            heading_level: 3
+            show_source: true
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - Output schemas: getting-started/schemas.md
+      - Reproducibility: getting-started/reproducibility.md
+  - Models:
+      - models/index.md
+      - Cox proportional hazards: models/cphm.md
+      - Accelerated failure time: models/aft.md
+      - Piecewise exponential: models/piecewise-exponential.md
+      - Competing risks: models/competing-risks.md
+      - Mixture cure: models/mixture-cure.md
+      - Illness-death, intervals (CMM): models/cmm.md
+      - Illness-death, panel (THMM): models/thmm.md
+      - Time-dependent covariates: models/tdcm.md
+      - Recurrent events: models/recurrent-events.md
+  - Guides:
+      - guides/index.md
+      - Configuration and ground truth: guides/simulation-results.md
+      - Baseline hazards: guides/baselines.md
+      - Censoring: guides/censoring.md
+      - Covariates: guides/covariates.md
+      - Summarising a dataset: guides/summaries.md
+      - Plotting: guides/plotting.md
+      - Exporting data: guides/export.md
+      - Fitting models to the data: guides/interoperability.md
+      - Command line: guides/cli.md
+  - Theory:
+      - theory/index.md
+      - Bibliography: theory/bibliography.md
+  - API:
+      - api/index.md
+      - generate: api/generate.md
+      - Simulation results: api/results.md
+      - Generators: api/generators.md
+      - Baseline hazards: api/baselines.md
+      - Censoring: api/censoring.md
+      - Analysis: api/analysis.md
+      - Interoperability: api/interoperability.md
+      - Validation: api/validation.md
+      - Command line: api/cli.md
+  - Project:
+      - project/index.md
+      - Changelog: project/changelog.md
+      - Contributing: project/contributing.md
+      - Troubleshooting: project/troubleshooting.md

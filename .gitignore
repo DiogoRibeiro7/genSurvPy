@@ -6,7 +6,9 @@ __pycache__/
 # Poetry virtualenvs
 .env
 .venv
-poetry.lock
+# poetry.lock is committed: it makes CI reproducible and gives the dependency
+# cache a key that actually varies. It does not constrain anyone installing
+# gen-surv from PyPI, which resolves against the metadata instead.
 
 # Installer logs
 pip-log.txt
@@ -51,3 +53,9 @@ dist/
 *.log
 *.tmp
 .hypothesis/
+
+# MkDocs build output
+site/
+
+# Type checker cache
+.mypy_cache/

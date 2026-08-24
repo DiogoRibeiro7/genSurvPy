@@ -6,6 +6,14 @@ This module exposes the main functions and provides access to the package versio
 from importlib.metadata import PackageNotFoundError, version
 
 from .aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
+from .baseline import (
+    BaselineHazard,
+    ExponentialBaseline,
+    GompertzBaseline,
+    LogLogisticBaseline,
+    PiecewiseConstantBaseline,
+    WeibullBaseline,
+)
 from .bivariate import sample_bivariate_distribution
 from .censoring import (
     CensoringModel,
@@ -25,6 +33,8 @@ from .export import export_dataset
 from .interface import generate
 from .mixture import cure_fraction_estimate, gen_mixture_cure
 from .piecewise import gen_piecewise_exponential
+from .recurrent import gen_recurrent_events
+from .results import SimulationConfig, SimulationResult, simulate
 from .sklearn_adapter import GenSurvDataGenerator
 from .tdcm import gen_tdcm
 from .thmm import gen_thmm
@@ -60,6 +70,9 @@ except ImportError:
 __all__ = [
     # Main interface
     "generate",
+    "simulate",
+    "SimulationConfig",
+    "SimulationResult",
     "__version__",
     # Individual generators
     "gen_cphm",
@@ -74,6 +87,7 @@ __all__ = [
     "gen_mixture_cure",
     "cure_fraction_estimate",
     "gen_piecewise_exponential",
+    "gen_recurrent_events",
     # Helper functions
     "sample_bivariate_distribution",
     "runifcens",
@@ -87,6 +101,13 @@ __all__ = [
     "CensoringModel",
     "export_dataset",
     "GenSurvDataGenerator",
+    # Baseline hazards
+    "BaselineHazard",
+    "ExponentialBaseline",
+    "WeibullBaseline",
+    "GompertzBaseline",
+    "LogLogisticBaseline",
+    "PiecewiseConstantBaseline",
 ]
 
 # Add optional exports if available

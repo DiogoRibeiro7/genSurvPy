@@ -15,12 +15,21 @@ from gen_surv.validation import ValidationError
 app = typer.Typer(help="Generate synthetic survival datasets.")
 
 
+def _first_rate(values: List[float], default: float = 1.0) -> float:
+    """Return the single rate a scalar-rate model needs.
+
+    ``--rate`` is a list so that cmm and thmm can take a transition-rate vector;
+    the recurrent baselines want one number.
+    """
+    return values[0] if values else default
+
+
 @app.command()
 def dataset(
     model: str = typer.Argument(
         ...,
         help=(
-            "Model to simulate [cphm, cmm, tdcm, thmm, aft_ln, aft_weibull, aft_log_logistic, competing_risks, competing_risks_weibull, mixture_cure, piecewise_exponential]"
+            "Model to simulate [cphm, cmm, tdcm, thmm, aft_ln, aft_weibull, aft_log_logistic, competing_risks, competing_risks_weibull, mixture_cure, piecewise_exponential, recurrent_events]"
         ),
     ),
     n: int = typer.Option(100, help="Number of samples"),
@@ -65,6 +74,47 @@ def dataset(
     hazard_rates: List[float] = typer.Option(
         [], help="Hazard rates for piecewise exponential model"
     ),
+    process: str = typer.Option(
+        "ag",
+        help=(
+            "Recurrent event process: 'ag' (Andersen-Gill), 'pwp_tt' or "
+            "'pwp_gt' (Prentice-Williams-Peterson in total or gap time)"
+        ),
+    ),
+    baseline: str = typer.Option(
+        "exponential",
+        help="Baseline hazard for recurrent events: 'exponential', 'weibull' or 'gompertz'",
+    ),
+    rate: List[float] = typer.Option(
+        [],
+        help=(
+            "Rate parameter(s). One value for recurrent events (exponential and "
+            "Gompertz baselines); six for cmm and three for thmm, repeating the flag"
+        ),
+    ),
+    dist: str = typer.Option(
+        "weibull", help="Marginal distribution for tdcm: 'weibull' or 'exponential'"
+    ),
+    corr: float = typer.Option(
+        0.5, help="Correlation between the covariate and the crossover time (tdcm)"
+    ),
+    dist_par: List[float] = typer.Option(
+        [],
+        help=(
+            "Distribution parameters for tdcm: four values for 'weibull', two for "
+            "'exponential', repeating the flag"
+        ),
+    ),
+    lam: float = typer.Option(1.0, help="Baseline hazard rate for tdcm"),
+    stratum_effects: List[float] = typer.Option(
+        [], help="Per-event intensity factors for the PWP recurrent processes"
+    ),
+    max_events: int | None = typer.Option(
+        None, help="Stop following a subject after this many recurrent events"
+    ),
+    followup_time: float = typer.Option(
+        10.0, help="Administrative end of follow-up for recurrent events"
+    ),
     seed: int | None = typer.Option(None, help="Random seed for reproducibility"),
     output: str | None = typer.Option(
         None, "-o", help="Output CSV file. Prints to stdout if omitted."
@@ -98,11 +148,39 @@ def dataset(
     }
 
     # Add model-specific parameters
-    if model_str in ["cphm", "cmm", "thmm"]:
-        # These models use a single beta and covariate range
+    if model_str == "cphm":
+        # A single coefficient and a covariate range.
         beta_values = cast(List[float], _val(beta))
         kwargs["beta"] = beta_values[0] if len(beta_values) > 0 else 0.5
         kwargs["covariate_range"] = _val(covariate_range)
+
+    elif model_str in ["cmm", "thmm"]:
+        # Three coefficients, one per transition, and a rate vector: six values
+        # for cmm (an intensity and a shape per transition), three for thmm.
+        kwargs["beta"] = _val(beta)
+        kwargs["covariate_range"] = _val(covariate_range)
+        rates = cast(List[float], _val(rate))
+        if rates:
+            kwargs["rate"] = rates
+        elif model_str == "cmm":
+            kwargs["rate"] = [0.1, 1.0, 0.2, 1.0, 0.1, 1.0]
+        else:
+            kwargs["rate"] = [0.2, 0.3, 0.4]
+
+    elif model_str == "tdcm":
+        # The bivariate draw's parameters have no counterpart in the other
+        # models, so they get their own options.
+        kwargs["beta"] = _val(beta)
+        kwargs["dist"] = _val(dist)
+        kwargs["corr"] = _val(corr)
+        kwargs["lam"] = _val(lam)
+        parameters = cast(List[float], _val(dist_par))
+        if parameters:
+            kwargs["dist_par"] = parameters
+        elif _val(dist) == "weibull":
+            kwargs["dist_par"] = [1.0, 2.0, 1.0, 2.0]
+        else:
+            kwargs["dist_par"] = [1.0, 2.0]
 
     elif model_str == "aft_ln":
         # Log-normal AFT model uses beta list and sigma
@@ -148,6 +226,34 @@ def dataset(
         kwargs["breakpoints"] = _val(breakpoints)
         kwargs["hazard_rates"] = _val(hazard_rates)
         kwargs["betas"] = _val(beta)
+
+    elif model_str == "recurrent_events":
+        baseline_str: str = _val(baseline)
+        kwargs["process"] = _val(process)
+        kwargs["baseline"] = baseline_str
+        kwargs["followup_time"] = _val(followup_time)
+
+        # Only the keys that belong to the chosen baseline: the generator
+        # rejects the others rather than ignoring them.
+        if baseline_str == "exponential":
+            kwargs["baseline_params"] = {"rate": _first_rate(_val(rate))}
+        elif baseline_str == "weibull":
+            kwargs["baseline_params"] = {
+                "shape": _val(shape),
+                "scale": _val(scale),
+            }
+        elif baseline_str == "gompertz":
+            kwargs["baseline_params"] = {
+                "rate": _first_rate(_val(rate)),
+                "shape": _val(shape),
+            }
+
+        if _val(beta):
+            kwargs["betas"] = _val(beta)
+        if _val(stratum_effects):
+            kwargs["stratum_effects"] = _val(stratum_effects)
+        if _val(max_events) is not None:
+            kwargs["max_events"] = _val(max_events)
 
     # Generate the data
     try:

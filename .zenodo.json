@@ -1,9 +1,9 @@
 {
   "title": "gen_surv: Survival Data Simulation in Python",
   "upload_type": "software",
-  "version": "2.0.1",
-  "publication_date": "2026-08-23",
-  "description": "<p><strong>gen_surv</strong> is a Python library for simulating survival data and producing visualizations under a wide range of statistical models. Inspired by the R package <a href=\"https://cran.r-project.org/package=genSurv\">genSurv</a>, it provides a unified interface for generating synthetic survival datasets for research, teaching, benchmarking, and statistical software validation.</p>",
+  "version": "2.1.0",
+  "publication_date": "2026-08-24",
+  "description": "<p><strong>gen_surv</strong> generates synthetic time-to-event datasets from twelve models &mdash; proportional hazards, accelerated failure time, competing risks, cure fractions, piecewise hazards, recurrent events and two illness-death processes &mdash; so that an estimator can be tested against parameters the user chose. Alongside the data it can return the ground truth a real dataset could never contain: the coefficients actually used, latent event and censoring times, cure status and transition times. Inspired by the R package <a href=\"https://cran.r-project.org/package=genSurv\">genSurv</a> and extended well past it.</p>",
   "creators": [
     {
       "name": "Ribeiro, Diogo",
@@ -16,13 +16,17 @@
   "keywords": [
     "survival-analysis",
     "simulation",
+    "synthetic data",
     "cox-model",
+    "accelerated failure time",
+    "competing risks",
+    "recurrent events",
+    "multi-state models",
+    "cure models",
     "markov-model",
     "time-dependent",
     "statistics",
     "Python",
-    "synthetic data",
-    "survival analysis",
     "statistical simulation"
   ],
   "related_identifiers": [
@@ -39,11 +43,11 @@
       "resource_type": "software"
     },
     {
-      "identifier": "https://gensurvpy.readthedocs.io/en/latest/",
+      "identifier": "https://diogoribeiro7.github.io/genSurvPy/",
       "relation": "isDocumentedBy",
       "scheme": "url",
       "resource_type": "publication-softwaredocumentation"
     }
   ],
-  "notes": "Source repository: https://github.com/DiogoRibeiro7/genSurvPy. Documentation: https://gensurvpy.readthedocs.io/en/latest/."
+  "notes": "Source repository: https://github.com/DiogoRibeiro7/genSurvPy. Documentation: https://diogoribeiro7.github.io/genSurvPy/."
 }

@@ -7,6 +7,7 @@ from typing import List, Literal
 import numpy as np
 import pandas as pd
 
+from ._truth import record
 from .censoring import rexpocens, runifcens
 from .validation import (
     validate_gen_aft_log_logistic_inputs,
@@ -41,23 +42,23 @@ def gen_aft_log_normal(
     seed : int, optional
         Random seed for reproducibility
 
-      Returns
-      -------
-      pd.DataFrame
-          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
 
-      Examples
-      --------
-      >>> from gen_surv.aft import gen_aft_log_normal
-      >>> df = gen_aft_log_normal(
-      ...     n=100,
-      ...     beta=[0.5, -0.3],
-      ...     sigma=1.0,
-      ...     model_cens="uniform",
-      ...     cens_par=2.0,
-      ...     seed=42,
-      ... )
-      >>> df.head()
+    Examples
+    --------
+    >>> from gen_surv.aft import gen_aft_log_normal
+    >>> df = gen_aft_log_normal(
+    ...     n=100,
+    ...     beta=[0.5, -0.3],
+    ...     sigma=1.0,
+    ...     model_cens="uniform",
+    ...     cens_par=2.0,
+    ...     seed=42,
+    ... )
+    >>> df.head()
     """
     rng = np.random.default_rng(seed)
     validate_gen_aft_log_normal_inputs(n, beta, sigma, model_cens, cens_par)
@@ -73,6 +74,14 @@ def gen_aft_log_normal(
 
     observed_time = np.minimum(T, C)
     status = (T <= C).astype(int)
+
+    record(
+        betas=np.asarray(beta, dtype=float),
+        covariates=X,
+        linear_predictor=X @ np.asarray(beta, dtype=float),
+        event_time=T,
+        censoring_time=C,
+    )
 
     data = pd.DataFrame({"id": np.arange(n), "time": observed_time, "status": status})
 
@@ -114,24 +123,24 @@ def gen_aft_weibull(
     seed : int, optional
         Random seed for reproducibility
 
-      Returns
-      -------
-      pd.DataFrame
-          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
 
-      Examples
-      --------
-      >>> from gen_surv.aft import gen_aft_weibull
-      >>> df = gen_aft_weibull(
-      ...     n=100,
-      ...     beta=[0.5, -0.3],
-      ...     shape=1.2,
-      ...     scale=2.0,
-      ...     model_cens="uniform",
-      ...     cens_par=2.0,
-      ...     seed=42,
-      ... )
-      >>> df.head()
+    Examples
+    --------
+    >>> from gen_surv.aft import gen_aft_weibull
+    >>> df = gen_aft_weibull(
+    ...     n=100,
+    ...     beta=[0.5, -0.3],
+    ...     shape=1.2,
+    ...     scale=2.0,
+    ...     model_cens="uniform",
+    ...     cens_par=2.0,
+    ...     seed=42,
+    ... )
+    >>> df.head()
     """
     rng = np.random.default_rng(seed)
     validate_gen_aft_weibull_inputs(n, beta, shape, scale, model_cens, cens_par)
@@ -153,6 +162,14 @@ def gen_aft_weibull(
     # Observed time is the minimum of event time and censoring time
     observed_time = np.minimum(T, C)
     status = (T <= C).astype(int)
+
+    record(
+        betas=np.asarray(beta, dtype=float),
+        covariates=X,
+        linear_predictor=X @ np.asarray(beta, dtype=float),
+        event_time=T,
+        censoring_time=C,
+    )
 
     data = pd.DataFrame({"id": np.arange(n), "time": observed_time, "status": status})
 
@@ -196,24 +213,24 @@ def gen_aft_log_logistic(
     seed : int, optional
         Random seed for reproducibility
 
-      Returns
-      -------
-      pd.DataFrame
-          DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ['id', 'time', 'status', 'X0', ..., 'Xp']
 
-      Examples
-      --------
-      >>> from gen_surv.aft import gen_aft_log_logistic
-      >>> df = gen_aft_log_logistic(
-      ...     n=100,
-      ...     beta=[0.5, -0.3],
-      ...     shape=1.2,
-      ...     scale=2.0,
-      ...     model_cens="uniform",
-      ...     cens_par=2.0,
-      ...     seed=42,
-      ... )
-      >>> df.head()
+    Examples
+    --------
+    >>> from gen_surv.aft import gen_aft_log_logistic
+    >>> df = gen_aft_log_logistic(
+    ...     n=100,
+    ...     beta=[0.5, -0.3],
+    ...     shape=1.2,
+    ...     scale=2.0,
+    ...     model_cens="uniform",
+    ...     cens_par=2.0,
+    ...     seed=42,
+    ... )
+    >>> df.head()
     """
     rng = np.random.default_rng(seed)
     validate_gen_aft_log_logistic_inputs(n, beta, shape, scale, model_cens, cens_par)
@@ -244,6 +261,14 @@ def gen_aft_log_logistic(
     # Observed time is the minimum of event time and censoring time
     observed_time = np.minimum(T, C)
     status = (T <= C).astype(int)
+
+    record(
+        betas=np.asarray(beta, dtype=float),
+        covariates=X,
+        linear_predictor=X @ np.asarray(beta, dtype=float),
+        event_time=T,
+        censoring_time=C,
+    )
 
     data = pd.DataFrame({"id": np.arange(n), "time": observed_time, "status": status})
 

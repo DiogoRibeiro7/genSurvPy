@@ -5,6 +5,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from gen_surv._rng import RandomStateLike, resolve_rng
+from gen_surv._truth import record
 from gen_surv.bivariate import sample_bivariate_distribution
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validation import validate_gen_tdcm_inputs
@@ -58,14 +59,43 @@ def generate_censored_observations(
     threshold = 1 - np.exp(-x)
     exp_b0_z1 = np.exp(beta[0] * z1)
     log_term = -np.log(1 - u)
+
+    # Before the crossover the hazard is lam * exp(beta[0] * z1); after it, that
+    # times exp(beta[1]). Inverting the cumulative hazard on each side:
+    #
+    #   before:  t = L / A
+    #   after:   t = tau + (L - x) / (A * exp(beta[1]))
+    #
+    # with A = lam * exp(beta[0] * z1), tau = x / A the crossover time, x the
+    # cumulative hazard accrued by then, and L = -log(1 - u). Expanding the
+    # second gives the closed form below. Releases up to 2.0.2 had the sign of
+    # the x term reversed, which placed "after the crossover" draws *before* it
+    # and, for large beta[1], produced negative survival times.
     t1 = log_term / (lam * exp_b0_z1)
-    t2 = (log_term + x * (1 - np.exp(beta[1]))) / (lam * np.exp(beta[0] * z1 + beta[1]))
+    t2 = (log_term + x * (np.exp(beta[1]) - 1)) / (lam * np.exp(beta[0] * z1 + beta[1]))
     mask = u < threshold
     t = np.where(mask, t1, t2)
-    z2 = (~mask).astype(float)
+
+    # The covariate's value over the interval actually observed: a subject
+    # censored before its crossover never switched, whatever its latent event
+    # time would have done.
+    crossover = b[:, 0]
+    z2 = (crossover <= np.minimum(t, c)).astype(float)
 
     time = np.minimum(t, c)
     status = (t <= c).astype(float)
+
+    # The crossover time is what the returned frame cannot express: it records
+    # only the covariate's value at exit, so a caller cannot split the risk
+    # interval without this.
+    record(
+        beta=np.asarray(beta, dtype=float),
+        covariates=z1,
+        crossover_time=b[:, 0],
+        event_time=t,
+        censoring_time=c,
+        switched_before_exit=z2,
+    )
 
     ids = np.arange(1, n + 1, dtype=float)
     zeros = np.zeros(n, dtype=float)

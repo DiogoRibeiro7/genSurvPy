@@ -41,8 +41,13 @@ def load_baseline() -> Callable[[str], pd.DataFrame]:
     def _load(name: str) -> pd.DataFrame:
         path = BASELINE_DIR / f"{name}.parquet"
         if not path.exists():
-            pytest.skip(
-                f"Missing baseline {path}; run with --update-baselines to refresh."
+            # A missing baseline used to skip, which meant the regression suite
+            # protected nothing while still reporting success. Fail instead, so
+            # an absent or unregistered baseline is visible.
+            raise AssertionError(
+                f"Missing baseline {path}. Regenerate it with "
+                "`pytest --update-baselines` and commit the file; a baseline "
+                "that is absent cannot detect a regression."
             )
         return pd.read_parquet(path)
 
@@ -53,9 +58,17 @@ def assert_frame_numeric_equal(
     got: pd.DataFrame,
     expected: pd.DataFrame,
     *,
-    rtol: float = 1e-6,
-    atol: float = 1e-8,
+    rtol: float = 1e-12,
+    atol: float = 1e-12,
 ) -> None:
+    """Compare two frames column by column, numerically where possible.
+
+    The tolerance is deliberately near machine precision. These comparisons
+    back a reproducibility guarantee -- the same seed and version giving the
+    same numbers -- so anything a sampler actually changes should fail, and only
+    last-bit differences from a library update should pass. At the previous
+    ``rtol=1e-6`` a one-part-per-million change to a hazard went undetected.
+    """
     assert list(got.columns) == list(expected.columns), "Column order/name changed."
     assert got.shape == expected.shape, "Shape changed."
     for col in got.columns:
