@@ -11,6 +11,7 @@ or the [model pages](../models/index.md).
 | Name | Kind | Page |
 |---|---|---|
 | `generate` | dispatcher over all twelve models | [generate](generate.md) |
+| `simulate`, `SimulationConfig`, `SimulationResult` | data with its configuration and ground truth | [Simulation results](results.md) |
 | `gen_cphm` | Cox proportional hazards | [Generators](generators.md#gen_surv.cphm) |
 | `gen_aft_log_normal`, `gen_aft_weibull`, `gen_aft_log_logistic` | AFT models | [Generators](generators.md#gen_surv.aft) |
 | `gen_piecewise_exponential` | piecewise constant hazard | [Generators](generators.md#gen_surv.piecewise) |

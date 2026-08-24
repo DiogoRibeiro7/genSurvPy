@@ -4,6 +4,11 @@ Task-oriented pages: everything that is not "which model should I use".
 
 <div class="grid cards" markdown>
 
+-   :material-clipboard-check: **[Configuration and ground truth](simulation-results.md)**
+
+    `simulate()` returns the coefficients, latent times and cure status the
+    frame cannot show — what a simulation study is actually about.
+
 -   :material-chart-bell-curve: **[Baseline hazards](baselines.md)**
 
     The five hazard families every sampler draws from, and how to supply one of

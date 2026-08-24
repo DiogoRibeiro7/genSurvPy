@@ -5,6 +5,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from gen_surv._rng import RandomStateLike, resolve_rng
+from gen_surv._truth import record
 from gen_surv.bivariate import sample_bivariate_distribution
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validation import validate_gen_tdcm_inputs
@@ -66,6 +67,18 @@ def generate_censored_observations(
 
     time = np.minimum(t, c)
     status = (t <= c).astype(float)
+
+    # The crossover time is what the returned frame cannot express: it records
+    # only the covariate's value at exit, so a caller cannot split the risk
+    # interval without this.
+    record(
+        beta=np.asarray(beta, dtype=float),
+        covariates=z1,
+        crossover_time=b[:, 0],
+        event_time=t,
+        censoring_time=c,
+        switched_before_exit=z2,
+    )
 
     ids = np.arange(1, n + 1, dtype=float)
     zeros = np.zeros(n, dtype=float)

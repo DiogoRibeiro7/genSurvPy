@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from gen_surv._rng import RandomStateLike, resolve_rng
+from gen_surv._truth import record
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validation import validate_gen_thmm_inputs
 
@@ -117,11 +118,18 @@ def gen_thmm(
     rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
     rng = resolve_rng(seed)
     records = []
+    # Collected for the ground-truth report; they do not affect any draw.
+    latent = {key: np.empty(n, dtype=float) for key in ("t12", "t13", "t23", "c")}
+    covariates = np.empty(n, dtype=float)
 
     for k in range(n):
         z1 = rng.uniform(0, covariate_range)
         trans = calculate_transitions(z1, cens_par, beta, rate, rfunc, rng)
         t12, t13, t23, c = trans["t12"], trans["t13"], trans["t23"], trans["c"]
+
+        covariates[k] = z1
+        for key, value in (("t12", t12), ("t13", t13), ("t23", t23), ("c", c)):
+            latent[key][k] = value
 
         # Every trajectory is observed in state 1 at entry.
         records.append([k + 1, 0.0, 1, z1])
@@ -142,5 +150,13 @@ def gen_thmm(
                 records.append([k + 1, c, 2, z1])
             else:
                 records.append([k + 1, t12 + t23, 3, z1])
+
+    record(
+        beta=np.asarray(beta, dtype=float),
+        rate=np.asarray(rate, dtype=float),
+        covariates=covariates,
+        censoring_time=latent["c"],
+        transition_times={key: latent[key] for key in ("t12", "t13", "t23")},
+    )
 
     return pd.DataFrame(records, columns=["id", "time", "state", "X0"])

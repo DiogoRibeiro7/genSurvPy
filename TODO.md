@@ -105,12 +105,18 @@ Small, concrete, and each one has already cost time:
 Structural work that makes the model expansion below tractable rather than
 repetitive.
 
-- [ ] **`SimulationConfig` and `SimulationResult`.** (next) Generators currently return a
-      DataFrame and discard everything else. Returning the configuration and the
-      ground truth alongside the data — linear predictors, baseline hazard, cure
-      status, latent cause-specific times — is what makes the package useful for
-      methodological work, where the true values are the point. The existing
-      `gen_*` functions stay as thin wrappers returning a DataFrame.
+- [x] **`SimulationConfig` and `SimulationResult`.** `simulate()` returns the
+      frame, the configuration that produced it (parameters, seed and the
+      `gen_surv` version) and a `truth` mapping: coefficients actually used —
+      including those drawn at random, which were previously unknowable —
+      covariates, linear predictors, latent event and censoring times, cure
+      status, cause-specific times, transition times, and the `tdcm` crossover
+      time the frame cannot express. All twelve generators report.
+
+      Implemented with a `ContextVar` sink rather than the tuple-returning
+      wrappers first sketched here: generators keep their signatures, gain one
+      `record()` call each, and the frozen baselines are byte-identical before
+      and after. That mattered more than the shape of the internal API.
 - [x] **Baseline hazard abstraction.** `gen_surv.baseline` defines a
       runtime-checkable `BaselineHazard` protocol -- `hazard`,
       `cumulative_hazard` and its inverse -- with frozen, self-validating

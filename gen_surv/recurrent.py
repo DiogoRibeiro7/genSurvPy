@@ -30,6 +30,7 @@ from numpy.typing import NDArray
 
 from ._covariates import generate_covariates, prepare_betas, set_covariate_params
 from ._rng import RandomStateLike, resolve_rng
+from ._truth import record
 from .baseline import (
     BaselineHazard,
     ExponentialBaseline,
@@ -278,6 +279,15 @@ def gen_recurrent_events(
                 rng=rng,
             )
         )
+
+    record(
+        betas=coefficients,
+        covariates=covariates,
+        linear_predictor=eta,
+        baseline=resolved_baseline,
+        followup_end=ends,
+        dropout_time=dropout,
+    )
 
     data = pd.DataFrame(records, columns=_COLUMNS)
     data = data.astype(
