@@ -136,7 +136,9 @@ def test_competing_risks_invalid_covariate_params():
 def test_competing_risks_invalid_beta_values():
     with pytest.raises(NumericSequenceError):
         gen_competing_risks(n=5, n_risks=2, betas=[[0.1, "x"], [0.2, 0.3]], seed=0)
-    with pytest.raises(NumericSequenceError):
+    # NaN is numeric, so NumericSequenceError named the wrong problem. It is
+    # now reported as a non-finite value, with the offending index.
+    with pytest.raises(ParameterError, match="finite"):
         gen_competing_risks_weibull(
             n=5, n_risks=2, betas=[[0.1, np.nan], [0.2, 0.3]], seed=0
         )
