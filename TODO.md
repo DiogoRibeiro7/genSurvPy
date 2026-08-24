@@ -102,8 +102,14 @@ items here are about finding the ones that have not been.
       `pyreadr` are mandatory today, so simulating a Weibull dataset pulls in a
       plotting stack and two file-format libraries. Move them behind `viz`, `io`
       and `sklearn` extras with `all` as a convenience.
-- [ ] **Add `py.typed`** so downstream users get the annotations that are already
-      written and checked.
+- [x] **Added `py.typed`.** The annotations were written and mypy checked them
+      on every commit, but PEP 561 tells a type checker to ignore an installed
+      package's inline types without the marker, so none of it reached anyone.
+      A downstream `mypy` reported `Cannot find implementation or library stub
+      for module named "gen_surv"` and silently accepted
+      `gen_cphm(n="not an integer", ...)`; it now reports the argument type.
+      Measured by installing the built wheel into a clean environment and
+      running mypy over a downstream file, before and after.
 
 ## Repository hygiene
 
