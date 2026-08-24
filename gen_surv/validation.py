@@ -6,6 +6,7 @@ checks used by the data generators.
 
 from __future__ import annotations
 
+import math
 import warnings
 from collections.abc import Sequence
 from numbers import Integral, Real
@@ -115,19 +116,39 @@ def ensure_positive_int(value: int, name: str) -> None:
         raise PositiveIntegerError(name, value)
 
 
+def ensure_finite(value: float | int, name: str) -> None:
+    """Ensure ``value`` is a real number that is neither NaN nor infinite.
+
+    Every comparison with NaN is false, so a check written as ``value <= 0``
+    silently admits it, and ``inf > 0`` is true. Both then reach NumPy, where
+    they either surface as an unrelated error -- ``OverflowError: high - low
+    range exceeds valid bounds`` from a uniform draw -- or produce a frame
+    quietly full of NaN. Rejecting them here is what makes the message name the
+    argument the caller got wrong.
+    """
+    if not isinstance(value, Real) or isinstance(value, bool):
+        raise ParameterError(name, value, "must be a number")
+    if not math.isfinite(float(value)):
+        raise ParameterError(name, value, "must be a finite number")
+
+
 def ensure_positive(value: float | int, name: str) -> None:
-    """Ensure ``value`` is a positive number."""
-    if not isinstance(value, Real) or isinstance(value, bool) or value <= 0:
+    """Ensure ``value`` is a finite positive number."""
+    if not isinstance(value, Real) or isinstance(value, bool):
+        raise PositiveValueError(name, value)
+    if not math.isfinite(float(value)):
+        # A separate message: NaN and infinity are numbers, and saying so is
+        # more use than "must be greater than 0" for a value no comparison
+        # would have caught.
+        raise ParameterError(name, value, "must be a finite number")
+    if value <= 0:
         raise PositiveValueError(name, value)
 
 
 def ensure_probability(value: float | int, name: str) -> None:
     """Ensure ``value`` lies in the closed interval [0, 1]."""
-    if (
-        not isinstance(value, Real)
-        or isinstance(value, bool)
-        or not (0 <= float(value) <= 1)
-    ):
+    ensure_finite(value, name)
+    if not (0 <= float(value) <= 1):
         raise ParameterError(name, value, "must be between 0 and 1")
 
 
@@ -205,7 +226,11 @@ def ensure_numeric_sequence(seq: Sequence[Any], name: str) -> None:
     NumericSequenceError
         If any element cannot be interpreted as a numeric value.
     """
-    _to_float_array(seq, name)
+    arr = _to_float_array(seq, name)
+    bad = np.where(~np.isfinite(arr))[0]
+    if bad.size:
+        idx = int(bad[0])
+        raise ParameterError(f"{name}[{idx}]", seq[idx], "must be a finite number")
 
 
 def ensure_positive_sequence(seq: Sequence[float], name: str) -> None:
@@ -337,11 +362,22 @@ def _validate_covariate_inputs(
 
 
 def validate_gen_cphm_inputs(
-    n: int, model_cens: str, cens_par: float, covariate_range: float
+    n: int,
+    model_cens: str,
+    cens_par: float,
+    covariate_range: float,
+    beta: float | None = None,
 ) -> None:
-    """Validate input parameters for CPHM data generation."""
+    """Validate input parameters for CPHM data generation.
+
+    ``beta`` is a log hazard ratio and may be any sign, so no positivity check
+    reaches it. It still has to be a finite number: NaN propagates into every
+    drawn time, and the frame comes back the right shape and entirely NaN.
+    """
     _validate_base(n, model_cens, cens_par)
     ensure_positive(covariate_range, "covariate_range")
+    if beta is not None:
+        ensure_finite(beta, "beta")
 
 
 def validate_gen_cmm_inputs(
@@ -357,6 +393,10 @@ def validate_gen_cmm_inputs(
     _validate_beta(beta)
     ensure_positive(covariate_range, "covariate_range")
     ensure_sequence_length(rate, _CMM_RATE_LEN, "rate")
+    # Only the length was checked. A negative entry reached NumPy and surfaced
+    # as "ValueError: scale < 0" from inside the generator; NaN passed straight
+    # through into every drawn time.
+    ensure_positive_sequence(rate, "rate")
 
 
 def validate_gen_tdcm_inputs(
@@ -404,6 +444,7 @@ def validate_gen_thmm_inputs(
     _validate_beta(beta)
     ensure_positive(covariate_range, "covariate_range")
     ensure_sequence_length(rate, _THMM_RATE_LEN, "rate")
+    ensure_positive_sequence(rate, "rate")
 
 
 def validate_dg_biv_inputs(
