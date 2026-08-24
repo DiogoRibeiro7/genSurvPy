@@ -69,17 +69,18 @@ print(df.head(6))
 ```
 
 ```text
-   id     time  state        X0
-0   1  0.00000      1  0.773956
-1   1  0.79890      3  0.773956
-2   2  0.00000      1  0.975622
-3   2  0.21746      3  0.975622
-4   3  0.00000      1  0.370798
-5   3  1.19747      3  0.370798
+   id      time  state        X0
+0   1  0.000000      1  0.773956
+1   1  1.104706      3  0.773956
+2   2  0.000000      1  0.438878
+3   2  0.469504      3  0.438878
+4   3  0.000000      1  0.858598
+5   3  0.158588      1  0.858598
 ```
 
 Every subject opens with an entry observation in state 1 at time 0. Subject `1`
-is then observed in state 3 at `t = 0.799` — dead, without ever being ill.
+is then observed in state 3 at `t = 1.105` — dead, without ever being ill.
+Subject `3`'s second row is still state 1, so it was censored while healthy.
 
 !!! warning "There is no `status` column"
 
@@ -115,8 +116,8 @@ print(f"1->3  declared={rate[1]}  mle={int((second['state'] == 3).sum()) / expos
 ```
 
 ```text
-1->2  declared=0.2  mle=0.200
-1->3  declared=0.3  mle=0.299
+1->2  declared=0.2  mle=0.203
+1->3  declared=0.3  mle=0.300
 ```
 
 The `2 → 3` intensity needs the sojourn in state 2 — the gap between the second

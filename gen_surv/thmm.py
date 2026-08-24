@@ -1,11 +1,13 @@
-from typing import Sequence, TypedDict
+from typing import Literal, Sequence, TypedDict, cast
 
 import numpy as np
 import pandas as pd
 
 from gen_surv._rng import RandomStateLike, resolve_rng
-from gen_surv._truth import record
-from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
+from gen_surv._truth import current, record
+from gen_surv.baseline import ExponentialBaseline
+from gen_surv.censoring import CensoringFunc
+from gen_surv.multistate import Transition, gen_multistate
 from gen_surv.validation import validate_gen_thmm_inputs
 
 
@@ -115,48 +117,63 @@ def gen_thmm(
     ... )
     """
     validate_gen_thmm_inputs(n, model_cens, cens_par, beta, covariate_range, rate)
-    rfunc: CensoringFunc = runifcens if model_cens == "uniform" else rexpocens
-    rng = resolve_rng(seed)
-    records = []
-    # Collected for the ground-truth report; they do not affect any draw.
-    latent = {key: np.empty(n, dtype=float) for key in ("t12", "t13", "t23", "c")}
-    covariates = np.empty(n, dtype=float)
 
-    for k in range(n):
-        z1 = rng.uniform(0, covariate_range)
-        trans = calculate_transitions(z1, cens_par, beta, rate, rfunc, rng)
-        t12, t13, t23, c = trans["t12"], trans["t13"], trans["t23"], trans["c"]
+    # Every intensity is constant in time, which is what "time-homogeneous"
+    # means, so the baseline is exponential and the clock makes no difference:
+    # a constant hazard is memoryless.
+    transitions = [
+        Transition(
+            origin,
+            destination,
+            ExponentialBaseline(rate=float(intensity)),
+            [float(coefficient)],
+        )
+        for (origin, destination), intensity, coefficient in (
+            ((1, 2), rate[0], beta[0]),
+            ((1, 3), rate[1], beta[1]),
+            ((2, 3), rate[2], beta[2]),
+        )
+    ]
 
-        covariates[k] = z1
-        for key, value in (("t12", t12), ("t13", t13), ("t23", t23), ("c", c)):
-            latent[key][k] = value
+    data = gen_multistate(
+        n=n,
+        transitions=transitions,
+        clock="forward",
+        initial_state=1,
+        covariate_dist="uniform",
+        covariate_params={"low": 0.0, "high": float(covariate_range)},
+        # Validated above against the same two choices the engine
+        # accepts; the cast tells the type checker what that check
+        # already guarantees.
+        model_cens=cast(Literal["uniform", "exponential"], model_cens),
+        cens_par=cens_par,
+        layout="panel",
+        seed=seed,
+    )
 
-        # Every trajectory is observed in state 1 at entry.
-        records.append([k + 1, 0.0, 1, z1])
+    # This model has numbered its subjects from 1 since it was ported.
+    data["id"] = data["id"] + 1
+    _record_transition_times(beta, rate)
+    return data[["id", "time", "state", "X0"]]
 
-        # Ties go to the event, matching the R implementation.
-        if c < min(t12, t13):
-            # Still healthy when censoring occurs.
-            records.append([k + 1, c, 1, z1])
-        elif t13 < t12:
-            # Died without passing through the illness state.
-            records.append([k + 1, t13, 3, z1])
-        else:
-            # Fell ill, then either died or was censored while ill. Releases up
-            # to 1.3.0 stopped here and discarded t23, so the 2 -> 3 transition
-            # never appeared and rate[2]/beta[2] had no effect on the output.
-            records.append([k + 1, t12, 2, z1])
-            if c < t12 + t23:
-                records.append([k + 1, c, 2, z1])
-            else:
-                records.append([k + 1, t12 + t23, 3, z1])
 
+def _record_transition_times(beta: Sequence[float], rate: Sequence[float]) -> None:
+    """Translate the engine's latent times into this model's vocabulary."""
+    sink = current()
+    if sink is None:
+        return
+
+    latent = sink.get("latent_times", {})
+    if not latent:
+        return
+
+    entry_to_2 = np.asarray(latent[(1, 2)], dtype=float)
     record(
         beta=np.asarray(beta, dtype=float),
         rate=np.asarray(rate, dtype=float),
-        covariates=covariates,
-        censoring_time=latent["c"],
-        transition_times={key: latent[key] for key in ("t12", "t13", "t23")},
+        transition_times={
+            "t12": entry_to_2,
+            "t13": np.asarray(latent[(1, 3)], dtype=float),
+            "t23": np.asarray(latent[(2, 3)], dtype=float) - entry_to_2,
+        },
     )
-
-    return pd.DataFrame(records, columns=["id", "time", "state", "X0"])

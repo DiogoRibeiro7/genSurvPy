@@ -133,6 +133,7 @@ nav:
       - Illness-death, panel (THMM): models/thmm.md
       - Time-dependent covariates: models/tdcm.md
       - Recurrent events: models/recurrent-events.md
+      - The multistate engine: models/multistate.md
   - Guides:
       - guides/index.md
       - Configuration and ground truth: guides/simulation-results.md
