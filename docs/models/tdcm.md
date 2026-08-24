@@ -70,7 +70,7 @@ print(df)
 ```text
  id  start     stop  status  covariate  tdcov
 1.0    0.0 0.806478     1.0   0.494017    0.0
-2.0    0.0 0.784498     1.0   0.748251    1.0
+2.0    0.0 0.978989     1.0   0.748251    1.0
 3.0    0.0 0.294102     1.0   1.378558    0.0
 4.0    0.0 0.180955     1.0   0.707759    0.0
 5.0    0.0 0.585859     1.0   0.644816    0.0
@@ -83,19 +83,18 @@ print(df)
 | `start`, `stop` | the observation interval; `start` is always 0 |
 | `status` | `1.0` event at `stop`, `0.0` censored |
 | `covariate` | the baseline covariate $Z_1$ — note it is not called `X0` |
-| `tdcov` | `1.0` if the time-dependent covariate had switched on by `stop`, else `0.0` |
+| `tdcov` | `1.0` if the crossover happened at or before `stop`, else `0.0` |
 
-## What the output does and does not give you
+## Analysing it naively goes wrong
 
 `start` is always 0 and each subject has one row, so **the frame does not split
-the risk interval at the crossover** — and the crossover time itself is not
-reported. `tdcov` records only the value in force when the subject left.
+the risk interval at the crossover**. `tdcov` records only whether the switch
+had happened by the time the subject left.
 
-That has a consequence worth being explicit about: **fitting a Cox model to
-this frame with `tdcov` as an ordinary covariate is biased**, in the classic
-time-dependent-covariate way. Subjects can only be observed with `tdcov = 1` if
-they survived long enough to switch, so the switched group looks artificially
-healthy. With `beta = [0.5, 0.3]` and `n = 40000`:
+Fitting a Cox model to that frame with `tdcov` as an ordinary covariate is
+biased, in the classic time-dependent-covariate way: a subject can only be
+observed with `tdcov = 1` if it survived long enough to switch, so the switched
+group looks artificially healthy. With `beta = [0.5, 0.3]` and `n = 40000`:
 
 ```python
 from lifelines import CoxPHFitter
@@ -106,20 +105,69 @@ CoxPHFitter().fit(d[["time", "status", "covariate", "tdcov"]],
 ```
 
 ```text
-covariate    0.409
-tdcov       -0.421
+covariate    0.406
+tdcov       -0.755
 ```
 
-The baseline effect is pulled down from 0.5, and `tdcov` comes out at −0.42
-against a true **+0.3** — the sign is reversed. This is the bias the model is
-there to demonstrate, not an estimate to trust.
+`tdcov` comes out at −0.76 against a true **+0.3** — the sign reversed and the
+magnitude inflated. That is the bias this model exists to demonstrate, not an
+estimate to trust.
 
-To fit it properly you would need the crossover time so you could split each
-subject into `(0, switch]` with `tdcov = 0` and `(switch, stop]` with
-`tdcov = 1`. The generator does not currently expose that time, so use this
-model to **produce** time-dependent-covariate data and to demonstrate what goes
-wrong when it is analysed naively, rather than as a benchmark for recovering
-`beta[1]`.
+## Analysing it properly
+
+The fix is to split each subject at the crossover, which needs the crossover
+time. It is not in the frame, but [`simulate()`](../guides/simulation-results.md)
+reports it:
+
+```python
+import numpy as np
+import pandas as pd
+from gen_surv import simulate
+from lifelines import CoxTimeVaryingFitter
+
+result = simulate("tdcm", n=30000, dist="weibull", corr=0.5,
+                  dist_par=[1.0, 2.0, 1.0, 2.0], model_cens="uniform",
+                  cens_par=5.0, beta=[0.5, 0.3], lam=1.0, seed=7)
+
+d = result.data
+tau = np.asarray(result.truth["crossover_time"])
+stop = d["stop"].to_numpy()
+status = d["status"].to_numpy().astype(int)
+switched = tau < stop
+
+before = pd.DataFrame({
+    "id": d["id"], "start": 0.0, "stop": np.where(switched, tau, stop),
+    "status": np.where(switched, 0, status),
+    "covariate": d["covariate"], "tdcov": 0.0,
+})
+after = pd.DataFrame({
+    "id": d["id"][switched], "start": tau[switched], "stop": stop[switched],
+    "status": status[switched],
+    "covariate": d["covariate"][switched], "tdcov": 1.0,
+})
+
+fit = CoxTimeVaryingFitter().fit(pd.concat([before, after], ignore_index=True),
+                                 id_col="id", start_col="start",
+                                 stop_col="stop", event_col="status")
+fit.params_
+```
+
+```text
+covariate    0.513
+tdcov        0.288
+```
+
+Both coefficients come back where they were set. Across three specifications:
+
+| True `beta` | Fitted `covariate` | Fitted `tdcov` |
+|---|---|---|
+| `[0.5, 0.3]` | +0.513 | +0.288 |
+| `[0.5, 1.0]` | +0.513 | +0.996 |
+| `[0.0, -0.5]` | +0.011 | −0.496 |
+
+So the model is usable both ways: as a benchmark for recovering `beta[1]` when
+the data is split correctly, and as a demonstration of what happens when it is
+not.
 
 ## Correlation between covariate and crossover
 
