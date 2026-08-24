@@ -1,5 +1,107 @@
 # CHANGELOG
 
+## v2.1.0 (2026-08-24)
+
+A twelfth model, the configuration and ground truth behind every dataset, a
+baseline hazard abstraction, and two sampler corrections. The documentation is
+rebuilt from scratch on MkDocs; the API reference on the published site had
+been empty since it was written.
+
+**Two generators produce different data for the same seed** than they did in
+2.0.1: `piecewise_exponential` with two or more breakpoints, and `tdcm`. Both
+were producing wrong data, described below. Pin the version alongside the seed
+if you need to reproduce earlier results.
+
+### Features
+- **`gen_recurrent_events`**, a twelfth model, for events that repeat within a
+  subject. Three processes matching the models the data is analysed with:
+  `ag` (Andersen-Gill), and `pwp_tt` and `pwp_gt` (Prentice-Williams-Peterson
+  in total and gap time, the latter resetting the clock at each event).
+  Exponential, Weibull and Gompertz baselines. Returns counting-process
+  intervals with an `enum` column.
+- **`simulate()`**, returning a `SimulationResult`: the frame, the
+  `SimulationConfig` that produced it — parameters, seed and the `gen_surv`
+  version — and a `truth` mapping of what a real dataset could never contain.
+  Coefficients actually used, covariates, linear predictors, latent event and
+  censoring times, cure status, cause-specific and transition times, and the
+  `tdcm` crossover time the frame cannot express. All twelve generators report.
+
+  Most useful where several generators **draw their coefficients when the
+  caller omits them**: there was previously no way to learn what they were,
+  which quietly made those datasets useless for validating an estimator.
+- **`gen_surv.baseline`**, a `BaselineHazard` protocol with `hazard`,
+  `cumulative_hazard` and its inverse, implemented for exponential, Weibull,
+  Gompertz, log-logistic and piecewise-constant hazards. A generator written
+  against it accepts any shape: `gen_recurrent_events` takes a name or an
+  object, so it already samples from families it does not name.
+- The CLI can reach every registered model. `cmm`, `thmm` and `tdcm` had no way
+  to pass their parameters and failed with a `TypeError`, while being
+  advertised as valid values of `MODEL`. Adds `--rate`, `--dist`, `--corr`,
+  `--dist-par` and `--lam`.
+
+### Bug Fixes
+- **`gen_piecewise_exponential` drew middle-interval events at the wrong
+  hazard.** The inversion assigned the event time and broke out of the loop,
+  but the trailing "no event yet" branch ran anyway and overwrote it using the
+  *last* rate. With breakpoints `[1, 3]` and rates `[0.5, 2.0, 0.2]`, the
+  hazard measured on `[1, 3)` was 0.201 against a declared 2.0. Only
+  specifications with two or more breakpoints were affected.
+- **`gen_tdcm` had a sign error in its post-crossover inversion**, placing
+  events drawn after the covariate switch *before* it and, for a large enough
+  `beta[1]`, at negative times: 6886 of 50000 subjects at `beta[1] = 1.0`. The
+  hazard ratio across the switch measured 4.58 where `exp(beta[1])` was 2.0.
+- **`tdcov` described the wrong interval.** It was set from the branch the
+  event time was drawn on, so a subject censored before its crossover was
+  recorded as having switched though its covariate never did while observed. It
+  is now whether the crossover was reached by the observed exit.
+- **`summarize_survival_dataset` crashed on Windows.** Its verbose report, the
+  default, printed check and cross marks that a console on a legacy code page
+  cannot encode, raising `UnicodeEncodeError` before printing anything.
+- **`GenSurvDataGenerator` was not scikit-learn compatible.** `get_params`
+  reported only `model` and `return_type`, so `set_params` raised on any model
+  argument and `clone` — used internally by pipelines, `GridSearchCV` and
+  `cross_val_score` — silently dropped every parameter, producing an estimator
+  that failed on first use.
+
+### Documentation
+- Rebuilt on **MkDocs** with Material and mkdocstrings, replacing Sphinx.
+  `docs/source/api/index.md` had been written in mkdocstrings syntax, which
+  Sphinx rendered as literal YAML, so **the published API reference contained
+  no signatures and no docstrings at all**. Read the Docs is retired; the
+  GitHub Pages site, built from the release tag, is the single home.
+- Rewritten rather than ported: per-model pages with parameters, mathematics, a
+  worked example and a check that the parameters can be recovered; guides for
+  baselines, ground truth, censoring, covariates, summaries, plotting, export,
+  interoperability and the CLI; a full API reference over every public module.
+- Three docstrings in `gen_surv/aft.py` indented their `Returns` and `Examples`
+  sections six spaces instead of four, so numpydoc never parsed them and
+  neither rendered.
+- The example scripts and Binder notebooks are repaired. Two passed a `qmat`
+  argument removed long ago, one of them describing the Gaussian-emission
+  hidden Markov model that was never implemented; two passed a deprecated third
+  coefficient to `gen_tdcm`; and all three notebooks called `np.random.seed`,
+  which no generator reads, so they were not reproducible.
+
+### Testing
+- The frozen-output regression suite **had been inert**: `tests/baselines` was
+  empty, so every case hit a `pytest.skip` and the run reported success while
+  comparing against nothing, and it covered four of twelve generators.
+  Baselines are committed for all twelve, a missing one now fails, and the
+  tolerance is tightened from `1e-6` to `1e-12`.
+- **Distribution tests for every generator**, by probability integral
+  transform, closing the roadmap's highest-priority gap.
+- The documentation's examples are executed and their pasted output compared
+  against what they print, and the example scripts and notebooks are run.
+
+### Packaging
+- Metadata migrated to PEP 621 `[project]`, clearing three Poetry deprecations.
+  The wheel gains `License-Expression: MIT` and ships `LICENSE`.
+- `poetry.lock` is committed, which makes CI reproducible and gives five cache
+  keys that had never varied something to hash. Three workflows depended on it
+  being tracked and had therefore never done anything.
+- Removes the `[tool.semantic_release]` configuration no workflow read, and the
+  `python-semantic-release` dependency that served it.
+
 ## v2.0.1 (2026-08-23)
 
 No library changes: `gen_surv` behaves exactly as it does in v2.0.0. This release
