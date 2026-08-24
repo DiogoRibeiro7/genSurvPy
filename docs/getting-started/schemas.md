@@ -5,6 +5,27 @@ interchangeable**. Column names, dtypes, whether there is an `id` at all, and
 how many rows a subject contributes all vary by model family. This page is the
 reference for that.
 
+## The two canonical layouts
+
+Two shapes are contracts rather than conventions. New generators adopt one of
+them; the [regression suite](https://github.com/DiogoRibeiro7/genSurvPy/blob/develop/tests/test_generate_regression.py)
+pins the exact column list of every model, so a change to any of them fails a
+test rather than reaching a release.
+
+**One row per subject.** `time`, `status`, then covariates. The subject leaves
+the study when the event occurs. Used by `cphm`, the three AFT models,
+`piecewise_exponential`, both competing-risks models and `mixture_cure`.
+
+**Counting-process intervals.** `id`, `start`, `stop`, `status`, then whatever
+identifies the interval, then covariates. One row per interval a subject was at
+risk over, with `status` marking whether the event closing it occurred. Used by
+`cmm` (identified by `from_state` and `to_state`), `recurrent_events`
+(identified by `enum`) and `tdcm`. Intervals within a subject are contiguous.
+
+`thmm` is the documented exception: a panel of observed states, which is how
+the R package returns it and how multi-state estimators expect it. See
+[the note below](#why-cmm-and-thmm-differ).
+
 ## At a glance
 
 | `model=` | Rows per subject | Columns |
@@ -178,7 +199,9 @@ There is **no `status` column**. Whether a subject was censored is read off its
 last state: an absorbing final state of 3 is a death, anything else is
 censoring.
 
-!!! note "Why CMM and THMM differ"
+### Why CMM and THMM differ
+
+!!! note ""
 
     The two layouts are deliberate, matching the R package's split between
     `genCMM` (transition intervals) and `genTHMM` (states observed at times).

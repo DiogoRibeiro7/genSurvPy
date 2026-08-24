@@ -135,6 +135,7 @@ nav:
       - Recurrent events: models/recurrent-events.md
   - Guides:
       - guides/index.md
+      - Baseline hazards: guides/baselines.md
       - Censoring: guides/censoring.md
       - Covariates: guides/covariates.md
       - Summarising a dataset: guides/summaries.md
@@ -149,6 +150,7 @@ nav:
       - api/index.md
       - generate: api/generate.md
       - Generators: api/generators.md
+      - Baseline hazards: api/baselines.md
       - Censoring: api/censoring.md
       - Analysis: api/analysis.md
       - Interoperability: api/interoperability.md

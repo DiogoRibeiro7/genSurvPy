@@ -105,25 +105,40 @@ Small, concrete, and each one has already cost time:
 Structural work that makes the model expansion below tractable rather than
 repetitive.
 
-- [ ] **`SimulationConfig` and `SimulationResult`.** Generators currently return a
+- [ ] **`SimulationConfig` and `SimulationResult`.** (next) Generators currently return a
       DataFrame and discard everything else. Returning the configuration and the
       ground truth alongside the data — linear predictors, baseline hazard, cure
       status, latent cause-specific times — is what makes the package useful for
       methodological work, where the true values are the point. The existing
       `gen_*` functions stay as thin wrappers returning a DataFrame.
-- [ ] **Baseline hazard abstraction.** A `BaselineHazard` protocol with
-      `cumulative_hazard` and its inverse, implemented for exponential, Weibull,
-      Gompertz, log-logistic, piecewise and spline forms. A single proportional
-      hazards simulator then works with any baseline, instead of growing a
-      separate `gen_cphm_*` per shape.
+- [x] **Baseline hazard abstraction.** `gen_surv.baseline` defines a
+      runtime-checkable `BaselineHazard` protocol -- `hazard`,
+      `cumulative_hazard` and its inverse -- with frozen, self-validating
+      implementations for exponential, Weibull, Gompertz, log-logistic and
+      piecewise-constant forms. `gen_recurrent_events` takes either a name or an
+      object, so it already samples from families it does not name. Spline
+      baselines are not implemented: they need a monotone fitting step and a
+      numerical inverse, which is its own piece of work.
+- [ ] **Spline baseline.** A `SplineBaseline` implementing the protocol, with a
+      monotone fit on the log cumulative hazard and a numerical inverse.
 - [ ] **General multistate engine.** An arbitrary transition graph with
       per-transition hazards, supporting both `clock="forward"` (Markov) and
-      `clock="reset"` (semi-Markov). CMM and THMM become predefined
-      configurations of it rather than bespoke implementations.
-- [ ] **Canonical output schemas.** Two are now established: counting-process
-      intervals for transition data and a state-per-observation panel for
-      trajectory data. Document them as contracts and apply them consistently as
-      new multistate models arrive.
+      `clock="reset"` (semi-Markov), built on the baseline hazard protocol.
+
+      **Note on the second half of this item.** Making CMM and THMM
+      configurations of the engine would change what a given seed produces:
+      both draw their covariates, censoring times and latent transition times
+      in a particular vectorised order, and a general engine walks the graph
+      per subject instead. The frozen baselines in `tests/baselines` would all
+      have to be regenerated, which is a reproducibility break for anyone who
+      pinned a seed. Ship the engine as a new generator first, show it
+      reproduces the CMM and THMM *distributions*, and fold the two in at the
+      next major version.
+- [x] **Canonical output schemas.** Documented as contracts on the output
+      schemas page, and enforced: `EXPECTED_COLUMNS` in the regression suite
+      pins every generator's column list, and a further test fails if a model is
+      registered with the dispatcher and no frozen baseline. A layout change is
+      now a failing test rather than a surprise in a release.
 
 ## Model expansion
 

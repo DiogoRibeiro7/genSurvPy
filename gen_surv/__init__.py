@@ -6,6 +6,14 @@ This module exposes the main functions and provides access to the package versio
 from importlib.metadata import PackageNotFoundError, version
 
 from .aft import gen_aft_log_logistic, gen_aft_log_normal, gen_aft_weibull
+from .baseline import (
+    BaselineHazard,
+    ExponentialBaseline,
+    GompertzBaseline,
+    LogLogisticBaseline,
+    PiecewiseConstantBaseline,
+    WeibullBaseline,
+)
 from .bivariate import sample_bivariate_distribution
 from .censoring import (
     CensoringModel,
@@ -89,6 +97,13 @@ __all__ = [
     "CensoringModel",
     "export_dataset",
     "GenSurvDataGenerator",
+    # Baseline hazards
+    "BaselineHazard",
+    "ExponentialBaseline",
+    "WeibullBaseline",
+    "GompertzBaseline",
+    "LogLogisticBaseline",
+    "PiecewiseConstantBaseline",
 ]
 
 # Add optional exports if available

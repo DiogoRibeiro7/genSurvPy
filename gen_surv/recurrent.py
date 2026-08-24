@@ -21,7 +21,7 @@ All three return counting-process intervals, the canonical layout for
 transition data in this package.
 """
 
-from typing import Literal, Sequence
+from typing import Literal, Sequence, cast
 
 import numpy as np
 import pandas as pd
@@ -30,6 +30,12 @@ from numpy.typing import NDArray
 
 from ._covariates import generate_covariates, prepare_betas, set_covariate_params
 from ._rng import RandomStateLike, resolve_rng
+from .baseline import (
+    BaselineHazard,
+    ExponentialBaseline,
+    GompertzBaseline,
+    WeibullBaseline,
+)
 from .censoring import CensoringFunc, rexpocens, runifcens
 from .validation import validate_gen_recurrent_events_inputs
 
@@ -45,63 +51,29 @@ _BASELINE_DEFAULTS: dict[str, dict[str, float]] = {
     "gompertz": {"rate": 0.5, "shape": 0.2},
 }
 
+_BASELINE_CLASSES: dict[str, type] = {
+    "exponential": ExponentialBaseline,
+    "weibull": WeibullBaseline,
+    "gompertz": GompertzBaseline,
+}
 
-def _cumulative_hazard(t: float, baseline: Baseline, params: dict[str, float]) -> float:
-    """Baseline cumulative hazard ``H0(t)``.
 
-    Parameters
-    ----------
-    t : float
-        Time at which to evaluate, non-negative.
-    baseline : {"exponential", "weibull", "gompertz"}
-        Baseline hazard family.
-    params : dict[str, float]
-        Parameters of that family, already completed with defaults.
+def _resolve_baseline(
+    baseline: Baseline | BaselineHazard,
+    baseline_params: dict[str, float] | None,
+) -> BaselineHazard:
+    """Turn the ``baseline`` argument into a :class:`BaselineHazard`.
 
-    Returns
-    -------
-    float
-        The integrated baseline hazard from 0 to ``t``.
+    A name is looked up and constructed with its defaults filled in; an object
+    implementing the protocol is used as it stands, which is how a caller
+    supplies a family this module does not name.
     """
-    if baseline == "exponential":
-        return params["rate"] * t
-    if baseline == "weibull":
-        return float((t / params["scale"]) ** params["shape"])
-    # Gompertz: h0(t) = rate * exp(shape * t)
-    return float(params["rate"] / params["shape"] * (np.expm1(params["shape"] * t)))
+    if not isinstance(baseline, str):
+        return baseline
 
-
-def _inverse_cumulative_hazard(
-    value: float, baseline: Baseline, params: dict[str, float]
-) -> float:
-    """Invert :func:`_cumulative_hazard`, returning ``t`` such that ``H0(t) == value``.
-
-    Parameters
-    ----------
-    value : float
-        A value of the cumulative hazard, non-negative.
-    baseline : {"exponential", "weibull", "gompertz"}
-        Baseline hazard family.
-    params : dict[str, float]
-        Parameters of that family, already completed with defaults.
-
-    Returns
-    -------
-    float
-        The time at which the cumulative hazard reaches ``value``. ``inf`` when
-        a Gompertz hazard with a negative shape never reaches it, which is a
-        real property of that family rather than an error.
-    """
-    if baseline == "exponential":
-        return value / params["rate"]
-    if baseline == "weibull":
-        return float(params["scale"] * value ** (1.0 / params["shape"]))
-    # Gompertz with shape < 0 has a finite total hazard, so large values are
-    # never reached and the subject simply has no further events.
-    inner = 1.0 + params["shape"] * value / params["rate"]
-    if inner <= 0.0:
-        return float("inf")
-    return float(np.log(inner) / params["shape"])
+    params = dict(_BASELINE_DEFAULTS[baseline])
+    params.update(baseline_params or {})
+    return cast(BaselineHazard, _BASELINE_CLASSES[baseline](**params))
 
 
 def _stratum_factor(stratum_effects: Sequence[float] | None, enum: int) -> float:
@@ -121,8 +93,7 @@ def _subject_rows(
     eta: float,
     end: float,
     process: Process,
-    baseline: Baseline,
-    params: dict[str, float],
+    baseline: BaselineHazard,
     stratum_effects: Sequence[float] | None,
     max_events: int | None,
     rng: Generator,
@@ -145,11 +116,11 @@ def _subject_rows(
         consumed = draw / factor
 
         if process == "pwp_gt":
-            gap = _inverse_cumulative_hazard(consumed, baseline, params)
+            gap = float(baseline.inverse_cumulative_hazard(consumed))
             candidate = current + gap
         else:
-            target = _cumulative_hazard(current, baseline, params) + consumed
-            candidate = _inverse_cumulative_hazard(target, baseline, params)
+            target = float(baseline.cumulative_hazard(current)) + consumed
+            candidate = float(baseline.inverse_cumulative_hazard(target))
 
         if not np.isfinite(candidate) or candidate >= end:
             break
@@ -172,7 +143,7 @@ def _subject_rows(
 def gen_recurrent_events(
     n: int,
     process: Process = "ag",
-    baseline: Baseline = "exponential",
+    baseline: Baseline | BaselineHazard = "exponential",
     baseline_params: dict[str, float] | None = None,
     betas: Sequence[float] | None = None,
     n_covariates: int = 2,
@@ -278,8 +249,7 @@ def gen_recurrent_events(
 
     rng = resolve_rng(seed)
 
-    params = dict(_BASELINE_DEFAULTS[baseline])
-    params.update(baseline_params or {})
+    resolved_baseline = _resolve_baseline(baseline, baseline_params)
 
     covariate_params = set_covariate_params(covariate_dist, covariate_params)
     coefficients, n_covariates = prepare_betas(betas, n_covariates, rng, name="betas")
@@ -302,8 +272,7 @@ def gen_recurrent_events(
                 eta=float(eta[subject]),
                 end=float(ends[subject]),
                 process=process,
-                baseline=baseline,
-                params=params,
+                baseline=resolved_baseline,
                 stratum_effects=stratum_effects,
                 max_events=max_events,
                 rng=rng,

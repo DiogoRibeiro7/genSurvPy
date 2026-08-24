@@ -379,6 +379,90 @@ def test_generator_is_registered_with_the_dispatcher() -> None:
 
 
 # --------------------------------------------------------------------------
+# Baseline hazards supplied as objects
+# --------------------------------------------------------------------------
+
+
+def test_accepts_a_baseline_the_generator_does_not_name() -> None:
+    """Any object implementing the protocol works, not only the three names.
+
+    The mean event count is the integrated baseline hazard, so this checks the
+    supplied object is actually driving the sampler rather than being ignored.
+    """
+    from gen_surv.baseline import LogLogisticBaseline
+
+    baseline = LogLogisticBaseline(shape=2.0, scale=1.5)
+    frame = gen_recurrent_events(
+        n=_N,
+        baseline=baseline,
+        betas=[0.0, 0.0],
+        followup_time=6.0,
+        cens_par=_NO_DROPOUT,
+        seed=_SEED,
+    )
+
+    expected = float(baseline.cumulative_hazard(6.0))
+    np.testing.assert_allclose(_event_counts(frame).mean(), expected, rtol=0.05)
+
+
+def test_accepts_a_piecewise_baseline_object() -> None:
+    from gen_surv.baseline import PiecewiseConstantBaseline
+
+    baseline = PiecewiseConstantBaseline([1.0, 3.0], [0.5, 2.0, 0.2])
+    frame = gen_recurrent_events(
+        n=_N,
+        baseline=baseline,
+        betas=[0.0, 0.0],
+        followup_time=5.0,
+        cens_par=_NO_DROPOUT,
+        seed=_SEED,
+    )
+
+    np.testing.assert_allclose(
+        _event_counts(frame).mean(), float(baseline.cumulative_hazard(5.0)), rtol=0.05
+    )
+
+
+def test_named_baseline_and_object_agree() -> None:
+    """The string form is a shortcut for constructing the object."""
+    from gen_surv.baseline import WeibullBaseline
+
+    common = dict(
+        n=200, betas=[0.2, -0.1], followup_time=5.0, cens_par=_NO_DROPOUT, seed=_SEED
+    )
+
+    by_name = gen_recurrent_events(
+        baseline="weibull", baseline_params={"shape": 1.3, "scale": 2.0}, **common
+    )
+    by_object = gen_recurrent_events(
+        baseline=WeibullBaseline(shape=1.3, scale=2.0), **common
+    )
+
+    pd.testing.assert_frame_equal(by_name, by_object)
+
+
+def test_baseline_object_cannot_be_combined_with_parameters() -> None:
+    from gen_surv.baseline import ExponentialBaseline
+
+    with pytest.raises(ValidationError, match="cannot be combined"):
+        gen_recurrent_events(
+            n=10,
+            baseline=ExponentialBaseline(rate=1.0),
+            baseline_params={"rate": 2.0},
+            betas=[0.0, 0.0],
+            followup_time=2.0,
+            seed=_SEED,
+        )
+
+
+def test_an_object_that_is_not_a_baseline_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="implementing"):
+        gen_recurrent_events(
+            n=10, baseline=object(), betas=[0.0, 0.0], followup_time=2.0, seed=_SEED
+        )
+
+
+# --------------------------------------------------------------------------
 # Validation
 # --------------------------------------------------------------------------
 
