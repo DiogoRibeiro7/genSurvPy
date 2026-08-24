@@ -132,6 +132,7 @@ nav:
       - Illness-death, intervals (CMM): models/cmm.md
       - Illness-death, panel (THMM): models/thmm.md
       - Time-dependent covariates: models/tdcm.md
+      - Recurrent events: models/recurrent-events.md
   - Guides:
       - guides/index.md
       - Censoring: guides/censoring.md

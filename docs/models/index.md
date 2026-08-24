@@ -1,6 +1,6 @@
 # Choosing a model
 
-Eleven generators, grouped by the question they answer.
+Twelve generators, grouped by the question they answer.
 
 ## Decide by what you are testing
 
@@ -14,6 +14,7 @@ Eleven generators, grouped by the question they answer.
 | An illness-death process, as risk intervals | [`cmm`](cmm.md) | Counting-process rows, one per transition at risk |
 | An illness-death process, as observed states | [`thmm`](thmm.md) | Panel of state observations at times |
 | An exposure that changes during follow-up | [`tdcm`](tdcm.md) | Cox model with a covariate that switches value mid-follow-up |
+| The same event happening more than once | [`recurrent_events`](recurrent-events.md) | Andersen-Gill and Prentice-Williams-Peterson processes |
 
 ## Decide by hazard shape
 
@@ -32,6 +33,7 @@ flowchart TD
     D --> D2["aft_log_logistic<br/>unimodal hazard"]
     E --> E1["cmm / thmm<br/>illness-death"]
     E --> E2["tdcm<br/>covariate changes, not the state"]
+    E --> E3["recurrent_events<br/>the same event, repeatedly"]
 ```
 
 ## The parameter each model is "about"
@@ -48,6 +50,7 @@ the short version of what to feed an estimator:
 | `mixture_cure` | `cure_fraction` | `cure_fraction_estimate`, or the plateau of the KM curve |
 | `cmm` / `thmm` | `rate` per transition | Transitions divided by time at risk in the origin state |
 | `tdcm` | `beta` — baseline and time-dependent effects | Cox model on the `(start, stop]` frame |
+| `recurrent_events` | `betas`, and `stratum_effects` for PWP | Time-varying Cox on the `(start, stop]` frame |
 
 ## They all share these arguments
 
@@ -96,8 +99,8 @@ generate(model="weibull")
 ```text
 ChoiceError: Argument 'model' must be one of 'aft_ln', 'aft_log_logistic',
 'aft_weibull', 'cmm', 'competing_risks', 'competing_risks_weibull', 'cphm',
-'mixture_cure', 'piecewise_exponential', 'tdcm', 'thmm'; got 'weibull' of
-type str. Choose a valid option.
+'mixture_cure', 'piecewise_exponential', 'recurrent_events', 'tdcm', 'thmm';
+got 'weibull' of type str. Choose a valid option.
 ```
 
 Model-specific validation says which model it was checking, which matters when

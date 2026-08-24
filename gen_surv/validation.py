@@ -538,3 +538,99 @@ def validate_gen_mixture_inputs(
             cure_fraction,
             "must be between 0 and 1 (exclusive). Try a value like 0.5",
         )
+
+
+_RECURRENT_PROCESSES = {"ag", "pwp_tt", "pwp_gt"}
+_BASELINE_KEYS: dict[str, set[str]] = {
+    "exponential": {"rate"},
+    "weibull": {"shape", "scale"},
+    "gompertz": {"rate", "shape"},
+}
+
+
+def _validate_baseline_params(
+    baseline: str, baseline_params: dict[str, float] | None
+) -> None:
+    """Check the parameters supplied for a baseline hazard family.
+
+    Unknown keys are rejected rather than ignored, so a misspelt parameter
+    surfaces immediately instead of silently leaving the default in place.
+    """
+    ensure_in_choices(baseline, "baseline", _BASELINE_KEYS.keys())
+
+    if baseline_params is None:
+        return
+
+    if not isinstance(baseline_params, dict):
+        raise ParameterError(
+            "baseline_params", baseline_params, "must be a dict or None"
+        )
+
+    allowed = _BASELINE_KEYS[baseline]
+    unknown = set(baseline_params) - allowed
+    if unknown:
+        raise ParameterError(
+            "baseline_params",
+            baseline_params,
+            f"has no key(s) {sorted(unknown)} for baseline '{baseline}'; "
+            f"allowed keys are {sorted(allowed)}",
+        )
+
+    for key, value in baseline_params.items():
+        # A Gompertz shape may be negative, which is what makes the hazard
+        # decline; every other parameter must be strictly positive.
+        if baseline == "gompertz" and key == "shape":
+            if not isinstance(value, Real) or isinstance(value, bool) or value == 0:
+                raise ParameterError(
+                    f"baseline_params['{key}']",
+                    value,
+                    "must be a non-zero number; a negative value gives a "
+                    "declining hazard",
+                )
+            continue
+        ensure_positive(value, f"baseline_params['{key}']")
+
+
+def validate_gen_recurrent_events_inputs(
+    n: int,
+    process: str,
+    baseline: str,
+    baseline_params: dict[str, float] | None,
+    n_covariates: int,
+    stratum_effects: Sequence[float] | None,
+    max_events: int | None,
+    followup_time: float,
+    model_cens: str,
+    cens_par: float,
+) -> None:
+    """Validate parameters for :func:`gen_surv.recurrent.gen_recurrent_events`."""
+    ensure_positive_int(n, "n")
+    ensure_positive_int(n_covariates, "n_covariates")
+    ensure_censoring_model(model_cens)
+    ensure_positive(cens_par, "cens_par")
+    ensure_positive(followup_time, "followup_time")
+    ensure_in_choices(process, "process", _RECURRENT_PROCESSES)
+    _validate_baseline_params(baseline, baseline_params)
+
+    if stratum_effects is not None:
+        # Andersen-Gill is defined by an intensity that does not depend on the
+        # event history, so per-event effects contradict the process. Silently
+        # applying them would mislabel PWP data as AG, and silently dropping
+        # them would discard an argument the caller clearly meant.
+        if process == "ag":
+            raise ParameterError(
+                "stratum_effects",
+                stratum_effects,
+                "is not applicable to process='ag', whose intensity cannot "
+                "depend on the event number; use process='pwp_tt' or "
+                "process='pwp_gt'",
+            )
+        ensure_numeric_sequence(stratum_effects, "stratum_effects")
+        ensure_positive_sequence(stratum_effects, "stratum_effects")
+        if len(stratum_effects) == 0:
+            raise ParameterError(
+                "stratum_effects", stratum_effects, "must not be empty"
+            )
+
+    if max_events is not None:
+        ensure_positive_int(max_events, "max_events")

@@ -241,6 +241,51 @@ def test_dataset_piecewise(monkeypatch):
     assert captured["betas"] == [0.4]
 
 
+def test_dataset_recurrent_events(monkeypatch):
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"start": [0.0], "stop": [1.0], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(
+        model="recurrent_events",
+        n=1,
+        process="pwp_gt",
+        baseline="weibull",
+        shape=1.2,
+        scale=2.0,
+        stratum_effects=[1.0, 2.0],
+        max_events=4,
+        followup_time=8.0,
+        beta=[0.3, -0.1],
+        output=None,
+    )
+    assert captured["process"] == "pwp_gt"
+    assert captured["baseline"] == "weibull"
+    # Only the keys the chosen baseline accepts are forwarded.
+    assert captured["baseline_params"] == {"shape": 1.2, "scale": 2.0}
+    assert captured["stratum_effects"] == [1.0, 2.0]
+    assert captured["max_events"] == 4
+    assert captured["followup_time"] == 8.0
+    assert captured["betas"] == [0.3, -0.1]
+
+
+def test_dataset_recurrent_events_exponential_baseline(monkeypatch):
+    captured = {}
+
+    def fake_generate(**kwargs):
+        captured.update(kwargs)
+        return pd.DataFrame({"start": [0.0], "stop": [1.0], "status": [1]})
+
+    monkeypatch.setattr("gen_surv.cli.generate", fake_generate)
+    dataset(
+        model="recurrent_events", n=1, baseline="exponential", rate=0.7, output=None
+    )
+    assert captured["baseline_params"] == {"rate": 0.7}
+
+
 def test_dataset_validation_error(monkeypatch, capsys):
     def bad_generate(**kwargs: Any):
         raise ValidationError("invalid n")

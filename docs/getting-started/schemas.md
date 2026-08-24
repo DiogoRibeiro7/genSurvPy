@@ -17,6 +17,7 @@ reference for that.
 | `cmm` | 2 or 3 | `id`, `start`, `stop`, `from_state`, `to_state`, `status`, `X0` |
 | `thmm` | 2 or 3 | `id`, `time`, `state`, `X0` |
 | `tdcm` | 1 | `id`, `start`, `stop`, `status`, `covariate`, `tdcov` |
+| `recurrent_events` | 1 per at-risk interval | `id`, `start`, `stop`, `status`, `enum`, `X0`, `X1`, … |
 
 !!! danger "Four traps"
 
@@ -203,6 +204,35 @@ censoring.
 
 This is the only model that names its covariate `covariate` rather than `X0`.
 
+### `recurrent_events`
+
+```text
+ id  start   stop  status  enum      X0      X1
+  0 0.0000 1.5050       1     1  0.3047 -1.0400
+  0 1.5050 1.6063       1     2  0.3047 -1.0400
+  0 1.6063 3.1723       1     3  0.3047 -1.0400
+  0 3.1723 5.0000       0     4  0.3047 -1.0400
+  2 0.0000 1.3893       1     1 -1.9510 -1.3022
+  2 1.3893 5.0000       0     2 -1.9510 -1.3022
+```
+
+One row per **at-risk interval**: the subject stays in the study after each
+event, so a subject with three events contributes four rows — three ending in an
+event, then the remainder of follow-up.
+
+| Column | dtype | Meaning |
+|---|---|---|
+| `id` | `int64` | subject, from 0 |
+| `start`, `stop` | `float64` | the interval over which the subject was at risk of its `enum`-th event |
+| `status` | `int64` | `1` if that event occurred at `stop`, `0` if follow-up ended first |
+| `enum` | `int64` | which event this interval is about, from 1 |
+| `X0`, `X1`, … | `float64` | covariates, constant within a subject |
+
+The intervals tile each subject's follow-up: `start` is 0 on the first row and
+equal to the previous `stop` afterwards, and the final row is censored — unless
+`max_events` ended follow-up at a capped event. Row counts are unbounded, so
+this is the model most likely to break code that assumes one row per subject.
+
 ## Writing code that survives a model change
 
 ```python
@@ -216,6 +246,7 @@ def subject_count(df):
     return df["id"].nunique() if "id" in df else len(df)
 ```
 
-If you need one function across all eleven, branch on the columns present
+If you need one function across all twelve, branch on the columns present
 rather than on the model name — `cmm` is the frame with `from_state`, `thmm` the
-one with `state` and no `status`, `mixture_cure` the one with `cured`.
+one with `state` and no `status`, `mixture_cure` the one with `cured`, and
+`recurrent_events` the one with `enum`.

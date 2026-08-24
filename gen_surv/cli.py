@@ -20,7 +20,7 @@ def dataset(
     model: str = typer.Argument(
         ...,
         help=(
-            "Model to simulate [cphm, cmm, tdcm, thmm, aft_ln, aft_weibull, aft_log_logistic, competing_risks, competing_risks_weibull, mixture_cure, piecewise_exponential]"
+            "Model to simulate [cphm, cmm, tdcm, thmm, aft_ln, aft_weibull, aft_log_logistic, competing_risks, competing_risks_weibull, mixture_cure, piecewise_exponential, recurrent_events]"
         ),
     ),
     n: int = typer.Option(100, help="Number of samples"),
@@ -64,6 +64,29 @@ def dataset(
     ),
     hazard_rates: List[float] = typer.Option(
         [], help="Hazard rates for piecewise exponential model"
+    ),
+    process: str = typer.Option(
+        "ag",
+        help=(
+            "Recurrent event process: 'ag' (Andersen-Gill), 'pwp_tt' or "
+            "'pwp_gt' (Prentice-Williams-Peterson in total or gap time)"
+        ),
+    ),
+    baseline: str = typer.Option(
+        "exponential",
+        help="Baseline hazard for recurrent events: 'exponential', 'weibull' or 'gompertz'",
+    ),
+    rate: float = typer.Option(
+        1.0, help="Baseline rate (exponential and Gompertz recurrent events)"
+    ),
+    stratum_effects: List[float] = typer.Option(
+        [], help="Per-event intensity factors for the PWP recurrent processes"
+    ),
+    max_events: int | None = typer.Option(
+        None, help="Stop following a subject after this many recurrent events"
+    ),
+    followup_time: float = typer.Option(
+        10.0, help="Administrative end of follow-up for recurrent events"
     ),
     seed: int | None = typer.Option(None, help="Random seed for reproducibility"),
     output: str | None = typer.Option(
@@ -148,6 +171,31 @@ def dataset(
         kwargs["breakpoints"] = _val(breakpoints)
         kwargs["hazard_rates"] = _val(hazard_rates)
         kwargs["betas"] = _val(beta)
+
+    elif model_str == "recurrent_events":
+        baseline_str: str = _val(baseline)
+        kwargs["process"] = _val(process)
+        kwargs["baseline"] = baseline_str
+        kwargs["followup_time"] = _val(followup_time)
+
+        # Only the keys that belong to the chosen baseline: the generator
+        # rejects the others rather than ignoring them.
+        if baseline_str == "exponential":
+            kwargs["baseline_params"] = {"rate": _val(rate)}
+        elif baseline_str == "weibull":
+            kwargs["baseline_params"] = {
+                "shape": _val(shape),
+                "scale": _val(scale),
+            }
+        elif baseline_str == "gompertz":
+            kwargs["baseline_params"] = {"rate": _val(rate), "shape": _val(shape)}
+
+        if _val(beta):
+            kwargs["betas"] = _val(beta)
+        if _val(stratum_effects):
+            kwargs["stratum_effects"] = _val(stratum_effects)
+        if _val(max_events) is not None:
+            kwargs["max_events"] = _val(max_events)
 
     # Generate the data
     try:
