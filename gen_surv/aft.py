@@ -7,6 +7,7 @@ from typing import List, Literal
 import numpy as np
 import pandas as pd
 
+from ._truth import record
 from .censoring import rexpocens, runifcens
 from .validation import (
     validate_gen_aft_log_logistic_inputs,
@@ -73,6 +74,14 @@ def gen_aft_log_normal(
 
     observed_time = np.minimum(T, C)
     status = (T <= C).astype(int)
+
+    record(
+        betas=np.asarray(beta, dtype=float),
+        covariates=X,
+        linear_predictor=X @ np.asarray(beta, dtype=float),
+        event_time=T,
+        censoring_time=C,
+    )
 
     data = pd.DataFrame({"id": np.arange(n), "time": observed_time, "status": status})
 
@@ -153,6 +162,14 @@ def gen_aft_weibull(
     # Observed time is the minimum of event time and censoring time
     observed_time = np.minimum(T, C)
     status = (T <= C).astype(int)
+
+    record(
+        betas=np.asarray(beta, dtype=float),
+        covariates=X,
+        linear_predictor=X @ np.asarray(beta, dtype=float),
+        event_time=T,
+        censoring_time=C,
+    )
 
     data = pd.DataFrame({"id": np.arange(n), "time": observed_time, "status": status})
 
@@ -244,6 +261,14 @@ def gen_aft_log_logistic(
     # Observed time is the minimum of event time and censoring time
     observed_time = np.minimum(T, C)
     status = (T <= C).astype(int)
+
+    record(
+        betas=np.asarray(beta, dtype=float),
+        covariates=X,
+        linear_predictor=X @ np.asarray(beta, dtype=float),
+        event_time=T,
+        censoring_time=C,
+    )
 
     data = pd.DataFrame({"id": np.arange(n), "time": observed_time, "status": status})
 

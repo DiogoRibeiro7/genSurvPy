@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from gen_surv._rng import RandomStateLike, resolve_rng
+from gen_surv._truth import record
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
 from gen_surv.validation import validate_gen_cmm_inputs
 
@@ -189,6 +190,14 @@ def gen_cmm(
             "status": (~censored_in_2).astype(int),
             "X0": z1[reached_2],
         }
+    )
+
+    record(
+        beta=np.asarray(beta, dtype=float),
+        rate=np.asarray(rate, dtype=float),
+        covariates=z1,
+        censoring_time=c,
+        transition_times={"t12": t12, "t13": t13, "t23": t23},
     )
 
     data = pd.concat([to_2, to_3, from_2], ignore_index=True)

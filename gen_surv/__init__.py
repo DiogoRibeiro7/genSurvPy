@@ -34,6 +34,7 @@ from .interface import generate
 from .mixture import cure_fraction_estimate, gen_mixture_cure
 from .piecewise import gen_piecewise_exponential
 from .recurrent import gen_recurrent_events
+from .results import SimulationConfig, SimulationResult, simulate
 from .sklearn_adapter import GenSurvDataGenerator
 from .tdcm import gen_tdcm
 from .thmm import gen_thmm
@@ -69,6 +70,9 @@ except ImportError:
 __all__ = [
     # Main interface
     "generate",
+    "simulate",
+    "SimulationConfig",
+    "SimulationResult",
     "__version__",
     # Individual generators
     "gen_cphm",

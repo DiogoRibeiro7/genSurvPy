@@ -12,6 +12,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from ._covariates import generate_covariates, prepare_betas, set_covariate_params
+from ._truth import record
 from .censoring import rexpocens, runifcens
 from .validation import validate_gen_piecewise_inputs, validate_piecewise_params
 
@@ -166,6 +167,16 @@ def gen_piecewise_exponential(
     # Determine observed time and status
     observed_times = np.minimum(survival_times, cens_times)
     status = (survival_times <= cens_times).astype(int)
+
+    record(
+        betas=betas,
+        covariates=X,
+        linear_predictor=linear_predictor,
+        event_time=survival_times,
+        censoring_time=cens_times,
+        breakpoints=np.asarray(breakpoints, dtype=float),
+        hazard_rates=np.asarray(hazard_rates, dtype=float),
+    )
 
     # Create DataFrame
     data = pd.DataFrame({"id": np.arange(n), "time": observed_times, "status": status})

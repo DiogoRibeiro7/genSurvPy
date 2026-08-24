@@ -135,6 +135,7 @@ nav:
       - Recurrent events: models/recurrent-events.md
   - Guides:
       - guides/index.md
+      - Configuration and ground truth: guides/simulation-results.md
       - Baseline hazards: guides/baselines.md
       - Censoring: guides/censoring.md
       - Covariates: guides/covariates.md
@@ -149,6 +150,7 @@ nav:
   - API:
       - api/index.md
       - generate: api/generate.md
+      - Simulation results: api/results.md
       - Generators: api/generators.md
       - Baseline hazards: api/baselines.md
       - Censoring: api/censoring.md

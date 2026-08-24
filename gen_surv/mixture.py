@@ -16,6 +16,7 @@ _TAIL_FRACTION: float = 0.1
 _SMOOTH_MIN_TAIL: int = 3
 
 from ._covariates import generate_covariates, prepare_betas, set_covariate_params
+from ._truth import record
 from .censoring import rexpocens, runifcens
 from .validation import ParameterError, ensure_positive, validate_gen_mixture_inputs
 
@@ -168,6 +169,16 @@ def gen_mixture_cure(
     survival_times = _survival_times(cured, lp_survival, baseline_hazard, max_time, rng)
     observed_times, status = _apply_censoring(
         survival_times, model_cens, cens_par, max_time, rng
+    )
+
+    record(
+        betas_survival=betas_survival_arr,
+        betas_cure=betas_cure_arr,
+        covariates=X,
+        linear_predictor=lp_survival,
+        cure_linear_predictor=lp_cure,
+        cured=cured,
+        event_time=survival_times,
     )
 
     data = pd.DataFrame(
