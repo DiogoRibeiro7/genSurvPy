@@ -100,8 +100,32 @@ the decision.
     [Output schemas](getting-started/schemas.md) before you write code that
     consumes a generated frame.
 
+## The ground truth, not just the data
+
+A generated frame looks like a real one, which means it hides the same things.
+[`simulate()`](guides/simulation-results.md) hands back what a real dataset
+never could — the coefficients actually used, the event time before censoring
+intervened, which subjects are cured, when a covariate crossed over:
+
+```python
+from gen_surv import simulate
+
+result = simulate("cphm", n=1000, beta=0.5, covariate_range=2.0,
+                  model_cens="uniform", cens_par=1.0, seed=42)
+
+result.truth["event_time"]       # when each subject would have failed
+result.truth["censoring_time"]   # what censoring hid
+```
+
+Several models draw their coefficients for you when you omit them, and
+`result.truth["betas"]` is the only way to learn what they were.
+
 ## Beyond generating
 
+- [Ground truth](guides/simulation-results.md) — configurations, latent times,
+  and the coefficients a model chose for itself.
+- [Baseline hazards](guides/baselines.md) — five families, and the protocol for
+  writing your own.
 - [Censoring](guides/censoring.md) — the two mechanisms wired into every
   generator, and the standalone samplers for everything else.
 - [Summarising a dataset](guides/summaries.md) — event counts, follow-up,

@@ -120,6 +120,10 @@ length of `betas`.
 To analyse one cause, build your own indicator:
 
 ```python
+from gen_surv import generate
+
+df = generate(model="competing_risks", n=100, n_risks=2, seed=1)
+
 cause1 = df.assign(event=(df["status"] == 1).astype(int))
 ```
 
@@ -171,6 +175,12 @@ So a subject contributes **two rows** if it never leaves state 1, and **three**
 if it reaches state 2. Never assume one row per subject:
 
 ```python
+from gen_surv import generate
+
+df = generate(model="cmm", n=100, model_cens="uniform", cens_par=2.0,
+              beta=[0.1, 0.2, 0.3], covariate_range=1.0,
+              rate=[0.1, 1.0, 0.2, 1.0, 0.1, 1.0], seed=1)
+
 n_subjects = df["id"].nunique()      # not len(df)
 ```
 

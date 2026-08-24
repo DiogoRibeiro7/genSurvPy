@@ -32,11 +32,19 @@ jobs:
         with:
           path: ~/.cache/pypoetry
           key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-${{ matrix.python-version }}-
 
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      # A pyproject change without a matching `poetry lock` makes the committed
+      # lock a lie and the cache key meaningless. Fail here rather than three
+      # steps later on a confusing resolution error.
+      - name: Verify the lock file matches pyproject.toml
+        run: poetry check --lock
 
       - name: Install dependencies
         run: poetry install --with dev --no-interaction
@@ -79,6 +87,8 @@ jobs:
         with:
           path: ~/.cache/pypoetry
           key: ${{ runner.os }}-poetry-3.11-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-3.11-
 
       - name: Install Poetry
         run: |

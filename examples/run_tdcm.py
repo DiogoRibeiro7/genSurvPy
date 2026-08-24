@@ -13,7 +13,9 @@ df = generate(
     dist_par=[1, 2, 1, 2],
     model_cens="uniform",
     cens_par=1.0,
-    beta=[0.1, 0.2, 0.3],
+    # Two coefficients: the baseline covariate, and the effect of the
+    # time-dependent one switching on. Passing three is deprecated.
+    beta=[0.1, 0.2],
     lam=1.0,
     seed=42,
 )

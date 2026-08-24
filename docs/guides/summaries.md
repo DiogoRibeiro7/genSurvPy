@@ -86,6 +86,12 @@ All three functions take `time_col` and `status_col`, which matters for the
 models that do not use those names:
 
 ```python
+from gen_surv import generate
+
+tdcm_df = generate(model="tdcm", n=200, dist="weibull", corr=0.5,
+                   dist_par=[1.0, 2.0, 1.0, 2.0], model_cens="uniform",
+                   cens_par=5.0, beta=[0.5, 0.3], lam=1.0, seed=1)
+
 # tdcm calls its time column `stop`
 summarize_survival_dataset(tdcm_df, time_col="stop", verbose=False)
 ```
@@ -126,8 +132,13 @@ Freshly generated data is clean by construction, so this is mostly for data you
 have modified — after custom censoring, a merge, or a round trip through CSV:
 
 ```python
+from gen_surv import generate
+
+reloaded = generate(model="aft_ln", n=500, beta=[0.5], sigma=1.0,
+                    model_cens="uniform", cens_par=2.0, seed=1)
+
 clean, report = check_survival_data_quality(
-    merged, id_col="id", max_time=10.0, status_values=[0, 1], fix_issues=True
+    reloaded, id_col="id", max_time=10.0, status_values=[0, 1], fix_issues=True
 )
 print(report["modifications"])
 ```

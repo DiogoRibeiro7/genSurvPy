@@ -1,10 +1,15 @@
+# Hook versions are pinned to the same releases the dev dependency group
+# installs, so `pre-commit run` and `poetry run black|isort|flake8|mypy` cannot
+# disagree. The lint job in CI runs the hooks, which previously meant it
+# checked the code with black 24 and mypy 1.15 while contributors used black 25
+# and mypy 1.20.
 repos:
   - repo: https://github.com/psf/black
-    rev: 24.1.0
+    rev: 25.12.0
     hooks:
       - id: black
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 7.0.0
     hooks:
       - id: isort
   - repo: https://github.com/pycqa/flake8
@@ -13,7 +18,7 @@ repos:
       - id: flake8
         additional_dependencies: [flake8-pyproject]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+    rev: v1.20.2
     hooks:
       - id: mypy
         pass_filenames: false

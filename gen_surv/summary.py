@@ -363,10 +363,13 @@ def _print_summary(
         + summary["data_quality"]["invalid_status"]
     )
 
+    # ASCII markers: a Windows console on a legacy code page cannot encode
+    # check and cross marks, and printing them raised UnicodeEncodeError from
+    # the default verbose path.
     if quality_issues == 0:
-        print("  ✓ No issues detected")
+        print("  [ok] No issues detected")
     else:
-        print("  ✗ Issues detected:")
+        print("  [!!] Issues detected:")
         if summary["data_quality"]["missing_time"] > 0:
             print(
                 f"    - Missing time values: {summary['data_quality']['missing_time']}"

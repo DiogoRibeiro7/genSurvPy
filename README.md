@@ -117,6 +117,44 @@ generates — start at
 > See [Output schemas](https://diogoribeiro7.github.io/genSurvPy/getting-started/schemas/)
 > before writing code that consumes a generated frame.
 
+## The ground truth, not just the data
+
+A generated frame looks like a real one — which means it hides the same things.
+`simulate()` hands back what a real dataset never could:
+
+```python
+from gen_surv import simulate
+
+result = simulate("cphm", n=1000, beta=0.5, covariate_range=2.0,
+                  model_cens="uniform", cens_par=1.0, seed=42)
+
+result.data                      # the frame generate() would return
+result.config                    # model, parameters, seed, gen_surv version
+result.truth["event_time"]       # when each subject would have failed
+result.truth["censoring_time"]   # what censoring hid
+```
+
+Several models **draw their coefficients for you** when you leave them out.
+`result.truth["betas"]` is the only way to learn what they were — without it
+those datasets cannot validate anything.
+
+## Any hazard shape
+
+Every generator that draws a time inverts a cumulative hazard, so the shape is
+a parameter rather than a fork in the code:
+
+```python
+from gen_surv import generate, LogLogisticBaseline
+
+recurrent = generate(model="recurrent_events", n=500,
+                     baseline=LogLogisticBaseline(shape=2.0, scale=1.5),
+                     betas=[0.4, -0.2], followup_time=6.0, seed=1)
+```
+
+Exponential, Weibull, Gompertz, log-logistic and piecewise-constant are
+built in, and anything implementing `hazard`, `cumulative_hazard` and its
+inverse works too.
+
 ## Beyond generating
 
 ```python
@@ -128,6 +166,8 @@ export_dataset(df, "data.rds")     # csv, json, feather or rds
 to_sksurv(df)                      # structured array for scikit-survival
 ```
 
+- **[Ground truth](https://diogoribeiro7.github.io/genSurvPy/guides/simulation-results/)** — configurations, latent times, the coefficients actually used
+- **[Baseline hazards](https://diogoribeiro7.github.io/genSurvPy/guides/baselines/)** — the five families, and writing your own
 - **[Censoring](https://diogoribeiro7.github.io/genSurvPy/guides/censoring/)** — the built-in mechanisms, hitting a target event rate, applying your own distribution
 - **[Covariates](https://diogoribeiro7.github.io/genSurvPy/guides/covariates/)** — the three schemes across model families
 - **[Summaries](https://diogoribeiro7.github.io/genSurvPy/guides/summaries/)** — event counts, quality checks, dataset comparison
@@ -141,8 +181,8 @@ gen_surv dataset cphm --n 1000 --beta 0.5 --seed 42 -o survival.csv
 gen_surv visualize survival.csv --group-col X0 --output km.png
 ```
 
-Repeat a flag for list arguments — `--beta 0.5 --beta -0.3`. Full option
-reference in the
+Repeat a flag for list arguments — `--beta 0.5 --beta -0.3`. Every one of the
+twelve models is reachable from the command line. Full option reference in the
 [CLI guide](https://diogoribeiro7.github.io/genSurvPy/guides/cli/).
 
 ## Reproducibility
