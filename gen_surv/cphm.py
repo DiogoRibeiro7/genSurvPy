@@ -121,7 +121,7 @@ def gen_cphm(
     1  0.78     0.0       0.89
     ...
     """
-    validate_gen_cphm_inputs(n, model_cens, cens_par, covariate_range)
+    validate_gen_cphm_inputs(n, model_cens, cens_par, covariate_range, beta)
 
     rfunc = {"uniform": runifcens, "exponential": rexpocens}[model_cens]
 

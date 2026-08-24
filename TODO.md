@@ -55,9 +55,23 @@ items here are about finding the ones that have not been.
 - [ ] **Wider property-based testing.** Hypothesis is already used in a few
       places; extend it to parameter validation and invariants across all
       generators. Complements the statistical tests rather than replacing them.
-- [ ] **Centralised parameter validation.** Finite and positive checks are
-      applied inconsistently, so some invalid values still reach NumPy and
-      surface as confusing downstream errors.
+- [x] **Centralised parameter validation.** Finiteness is now checked where
+      positivity is. The inconsistency had a single cause: every comparison
+      with NaN is false, so `value <= 0` admitted it, and `inf > 0` is true.
+      `ensure_positive_sequence` had guarded against both; the scalar
+      `ensure_positive` had not.
+
+      Probing all twelve generators with NaN and infinity in every numeric
+      argument found **39 that were accepted**. They came back as a frame of
+      the right shape quietly full of NaN, as `OverflowError: high - low range
+      exceeds valid bounds` from a uniform draw, or — for
+      `gen_recurrent_events(followup_time=nan)` — as a call that never
+      returned, the sampling loop comparing candidates against a bound nothing
+      can exceed. `cmm` and `thmm` also checked only the *length* of `rate`, so
+      a negative entry surfaced as `ValueError: scale < 0` from inside NumPy.
+
+      All rejected now, with `tests/test_input_hardening.py` walking every
+      numeric argument of every model to keep it that way.
 - [ ] **Return the maturity classifier to `5 - Production/Stable`** once the
       items above are in place. Distribution tests have now shipped for all
       twelve generators, which was the stated blocker; R parity fixtures and
