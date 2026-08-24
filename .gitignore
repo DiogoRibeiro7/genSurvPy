@@ -54,3 +54,6 @@ dist/
 
 # MkDocs build output
 site/
+
+# Type checker cache
+.mypy_cache/

@@ -110,8 +110,9 @@ Work through these in order:
    **draw the coefficients for you**, so there is no fixed truth to recover.
    Always pass them explicitly when validating.
 5. **The layout suits the estimator.** A naive Cox fit on `tdcm` output is
-   biased, and can even flip the sign, because the risk interval is not split
-   at the crossover. See [TDCM](../models/tdcm.md#what-the-output-does-and-does-not-give-you).
+   biased, and flips the sign, because the risk interval is not split at the
+   crossover. Split it using the crossover time from `simulate()` — see
+   [TDCM](../models/tdcm.md#analysing-it-properly).
 
 ## Results changed after upgrading
 

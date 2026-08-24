@@ -214,7 +214,7 @@ censoring.
 ```text
  id  start     stop  status  covariate  tdcov
 1.0    0.0 0.806478     1.0   0.494017    0.0
-2.0    0.0 0.784498     1.0   0.748251    1.0
+2.0    0.0 0.978989     1.0   0.748251    1.0
 ```
 
 | Column | dtype | Meaning |
