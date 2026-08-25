@@ -151,10 +151,10 @@ can check whether a cure-model estimator identifies the right people.
 
 ```text
  id  start     stop  from_state  to_state  status       X0
-  0    0.0 1.657059           1         2       0 0.773956
-  0    0.0 1.657059           1         3       1 0.773956
-  1    0.0 0.704256           1         2       0 0.438878
-  1    0.0 0.704256           1         3       1 0.438878
+  0    0.0 2.819921           1         2       0 0.773956
+  0    0.0 2.819921           1         3       0 0.773956
+  1    0.0 1.891403           1         2       0 0.438878
+  1    0.0 1.891403           1         3       1 0.438878
 ```
 
 One row per **transition the subject was at risk of**, not per transition that
@@ -189,9 +189,9 @@ n_subjects = df["id"].nunique()      # not len(df)
 ```text
  id     time  state       X0
   1 0.000000      1 0.773956
-  1 1.104706      3 0.773956
+  1 2.573206      3 0.773956
   2 0.000000      1 0.438878
-  2 0.469504      3 0.438878
+  2 1.260936      3 0.438878
 ```
 
 One row per **observation of the subject's state**: an entry observation in

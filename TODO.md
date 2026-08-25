@@ -211,13 +211,17 @@ repetitive.
       regenerated; the other ten are untouched, which is the evidence the change
       is confined.
 
-- [ ] **Vectorise the multistate engine.** Folding the two models into it cost
-      throughput, because the engine walks each subject in Python while `gen_cmm`
-      had been fully vectorised over NumPy arrays. Measured at n=1000:
-      `cmm` 1.8 ms to 12.6 ms, `thmm` 8.7 ms to 14.4 ms, with `cphm` unchanged
-      as a control. Roughly 12 microseconds per subject, so it matters at a
-      million rows and not at a thousand. The first occupancy is vectorisable
-      even when later ones are not, which is where to start.
+- [x] **Vectorised the multistate engine.** It advances the whole cohort a wave
+      at a time: subjects sharing a state are drawn for together, so the sampling
+      and the inversions are array operations and the number of Python
+      iterations is the longest path any subject takes rather than the number of
+      subjects. The frame is assembled from concatenated arrays, which turned
+      out to cost more than the sampling once the loop was gone.
+
+      Measured as the minimum of fifteen runs, at n=10000: `cmm` 135.7 ms to
+      9.8 ms, `thmm` 165.0 ms to 9.9 ms. Against 2.1.0, before the engine
+      existed, `cmm` is 1.7x slower (5.9 ms) and `thmm` 8.8x faster (87.3 ms),
+      the latter because it had always looped per subject.
 
 - [x] **Canonical output schemas.** Documented as contracts on the output
       schemas page, and enforced: `EXPECTED_COLUMNS` in the regression suite
