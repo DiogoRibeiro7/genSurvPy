@@ -281,6 +281,38 @@ def test_a_transition_to_itself_is_rejected() -> None:
         Transition(1, 1, ExponentialBaseline(0.5), [0.0])
 
 
+@pytest.mark.parametrize("label", [1.5, "healthy", None, True])
+def test_a_non_integer_state_label_is_rejected(label: object) -> None:
+    """States are integers; a float or a name would compare unpredictably."""
+    with pytest.raises(ValidationError, match="integer state label"):
+        Transition(label, 2, ExponentialBaseline(0.5), [0.0])  # type: ignore[arg-type]
+
+
+def test_a_runaway_cycle_is_reported_rather_than_hanging(monkeypatch) -> None:
+    """A cycle with a high enough intensity must stop with an error.
+
+    The cap exists so a graph that generates transitions faster than follow-up
+    elapses cannot run forever. It is lowered here rather than building a
+    graph that really would take ten thousand steps.
+    """
+    from gen_surv import multistate
+
+    monkeypatch.setattr(multistate, "_MAX_TRANSITIONS", 3)
+    transitions = [
+        Transition(1, 2, ExponentialBaseline(50.0), [0.0]),
+        Transition(2, 1, ExponentialBaseline(50.0), [0.0]),
+    ]
+
+    with pytest.raises(ValidationError, match="more than 3 transitions"):
+        gen_multistate(
+            n=50,
+            transitions=transitions,
+            cens_par=_NO_CENSORING,
+            max_time=10.0,
+            seed=_SEED,
+        )
+
+
 def test_a_non_baseline_is_rejected() -> None:
     with pytest.raises(ValidationError, match="BaselineHazard"):
         Transition(1, 2, object(), [0.0])  # type: ignore[arg-type]

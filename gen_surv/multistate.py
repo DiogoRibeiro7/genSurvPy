@@ -198,12 +198,10 @@ def _walk_cohort(
     state = np.full(n, initial_state, dtype=np.int64)
     entered = np.zeros(n, dtype=float)
     now = np.zeros(n, dtype=float)
+    # Every subject starts in `initial_state`, which _validate_graph has already
+    # refused to accept without an outgoing transition, so all of them are
+    # active to begin with.
     active = np.ones(n, dtype=bool)
-
-    # Absorbing states end follow-up immediately.
-    for label in np.unique(state):
-        if int(label) not in outgoing:
-            active &= state != label
 
     latent = np.full((n, n_transitions), np.nan)
     occupancies: list[
