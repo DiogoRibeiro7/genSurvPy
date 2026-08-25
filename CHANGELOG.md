@@ -1,5 +1,75 @@
 # CHANGELOG
 
+## v3.0.0 (2026-08-25)
+
+A general multistate engine, with the two illness-death models rebuilt on top of
+it. The engine is the reason for the major version: **`gen_cmm` and `gen_thmm`
+produce different data for a given seed** than they did in 2.1.0.
+
+### Breaking Changes
+- **`gen_cmm` and `gen_thmm` no longer reproduce their 2.1.0 output for a given
+  seed.** Both are now configurations of `gen_multistate`, which draws one
+  candidate per outgoing edge per visit where the old implementations drew all
+  three latent times up front. Their columns, dtypes and id bases are unchanged
+  — `thmm` still numbers subjects from 1 — and every distribution test passes
+  untouched, so analysis code keeps working. Only the numbers move. Pin the
+  version alongside the seed if you need to reproduce earlier results.
+- **NaN and infinity are rejected wherever a number is expected.** Calls that
+  previously returned a frame quietly full of NaN, raised an unrelated
+  `OverflowError` from NumPy, or — for
+  `gen_recurrent_events(followup_time=nan)` — never returned at all, now raise
+  a `ValidationError` naming the argument. Thirty-nine arguments across the
+  twelve generators were affected. A NaN among `betas` was previously reported
+  as `NumericSequenceError` and is now a `ParameterError`, since NaN is
+  numeric and that error named the wrong problem.
+
+### Features
+- **`gen_multistate`**, an engine over an arbitrary transition graph. Each edge
+  is a `Transition` carrying its own `BaselineHazard` and coefficients, so the
+  intensity of the `i -> j` transition is `h0_ij(t) * exp(X'beta_ij)`. Both
+  clocks are supported: `clock="forward"` measures the hazard from entry to the
+  study, making the process Markov, and `clock="reset"` restarts it at each
+  state, making it semi-Markov. Either canonical layout can be returned. A
+  state with no outgoing edge is absorbing, and cycles are allowed, so recovery
+  is a transition like any other.
+
+  It is not reachable through `generate()`: a graph is a list of objects rather
+  than a set of scalars, so there is no string form and no command-line
+  equivalent.
+- **`py.typed`.** Every public function was annotated and mypy checked them on
+  every commit, but PEP 561 tells a type checker to ignore an installed
+  package's inline types without the marker, so none of it reached anyone. A
+  downstream `mypy` reported `Cannot find implementation or library stub for
+  module named "gen_surv"` and accepted `gen_cphm(n="not an integer", ...)`
+  without comment.
+- `ensure_finite`, for arguments with no sign constraint. `cphm`'s `beta` is a
+  log hazard ratio, so no positivity check reached it and nothing had been
+  validating it at all.
+
+### Bug Fixes
+- `cmm` and `thmm` checked only the *length* of `rate`, never its contents, so
+  a negative entry surfaced as `ValueError: scale < 0` from inside NumPy.
+
+### Performance
+- The engine advances the whole cohort a wave at a time: subjects sharing a
+  state are drawn for together, so the sampling and the hazard inversions are
+  array operations. At ten thousand subjects, `thmm` is **8.8x faster** than in
+  2.1.0 — it had always looped per subject — while `cmm`, which had been
+  vectorised, is 1.7x slower, the price of generality.
+
+### Testing
+- Distribution tests for the engine: each edge's intensity recovered by
+  occurrence over exposure, the sojourn in a state exponential in the summed
+  intensity, the destination share following the competing intensities, the two
+  clocks identical for a constant hazard and sharply different for a rising one,
+  cyclic graphs and absorbing states.
+- `tests/test_input_hardening.py` walks every numeric argument of every model,
+  scalar and sequence, and requires a `ValidationError`.
+- `tests/test_packaging.py` checks the `py.typed` marker on the imported
+  package, and that every public parameter and return value really is
+  annotated: a marker promising types that were not there would be worse than
+  no marker.
+
 ## v2.1.0 (2026-08-24)
 
 A twelfth model, the configuration and ground truth behind every dataset, a
