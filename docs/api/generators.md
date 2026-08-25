@@ -39,3 +39,7 @@ the columns mean.
 ## Recurrent events
 
 ::: gen_surv.recurrent
+
+## The multistate engine
+
+::: gen_surv.multistate

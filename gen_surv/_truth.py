@@ -44,6 +44,15 @@ def record(**values: Any) -> None:
         sink.update(values)
 
 
+def current() -> dict[str, Any] | None:
+    """Return the active sink, or ``None`` when nothing is capturing.
+
+    A generator that delegates to another one uses this to translate what the
+    inner call recorded into its own vocabulary.
+    """
+    return _sink.get()
+
+
 @contextmanager
 def capture() -> Iterator[dict[str, Any]]:
     """Collect everything :func:`record` reports inside this block.

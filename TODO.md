@@ -194,19 +194,31 @@ repetitive.
       numerical inverse, which is its own piece of work.
 - [ ] **Spline baseline.** A `SplineBaseline` implementing the protocol, with a
       monotone fit on the log cumulative hazard and a numerical inverse.
-- [ ] **General multistate engine.** An arbitrary transition graph with
-      per-transition hazards, supporting both `clock="forward"` (Markov) and
-      `clock="reset"` (semi-Markov), built on the baseline hazard protocol.
+- [x] **General multistate engine.** `gen_multistate` walks an arbitrary
+      transition graph. Each edge is a `Transition` carrying its own
+      `BaselineHazard` and coefficients, both clocks are supported --
+      `clock="forward"` for a Markov process, `clock="reset"` for a semi-Markov
+      one -- and either canonical layout can be returned. Cycles are allowed, so
+      recovery is a transition like any other, and a state with no outgoing
+      edge is absorbing.
 
-      **Note on the second half of this item.** Making CMM and THMM
-      configurations of the engine would change what a given seed produces:
-      both draw their covariates, censoring times and latent transition times
-      in a particular vectorised order, and a general engine walks the graph
-      per subject instead. The frozen baselines in `tests/baselines` would all
-      have to be regenerated, which is a reproducibility break for anyone who
-      pinned a seed. Ship the engine as a new generator first, show it
-      reproduces the CMM and THMM *distributions*, and fold the two in at the
-      next major version.
+      **CMM and THMM are now configurations of it.** `gen_cmm` builds the
+      illness-death graph with Weibull edges on a reset clock; `gen_thmm` builds
+      it with exponential edges and asks for the panel layout. Their columns,
+      dtypes and id bases are unchanged, and every distribution test still
+      passes, but **a given seed produces different data**, which is why this
+      landed as 3.0.0. The frozen baselines for those two models were
+      regenerated; the other ten are untouched, which is the evidence the change
+      is confined.
+
+- [ ] **Vectorise the multistate engine.** Folding the two models into it cost
+      throughput, because the engine walks each subject in Python while `gen_cmm`
+      had been fully vectorised over NumPy arrays. Measured at n=1000:
+      `cmm` 1.8 ms to 12.6 ms, `thmm` 8.7 ms to 14.4 ms, with `cphm` unchanged
+      as a control. Roughly 12 microseconds per subject, so it matters at a
+      million rows and not at a thousand. The first occupancy is vectorisable
+      even when later ones are not, which is where to start.
+
 - [x] **Canonical output schemas.** Documented as contracts on the output
       schemas page, and enforced: `EXPECTED_COLUMNS` in the regression suite
       pins every generator's column list, and a further test fails if a model is
