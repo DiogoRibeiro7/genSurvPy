@@ -113,7 +113,7 @@ change the data a given seed produces. That has already happened: the 1.3.0 and
 **If a result must be reproducible for a paper, pin the version:**
 
 ```
-gen-surv==2.1.0
+gen-surv==3.0.0
 ```
 
 and record it alongside the seed. Record both in the artefact itself where you

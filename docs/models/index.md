@@ -15,6 +15,7 @@ Twelve generators, grouped by the question they answer.
 | An illness-death process, as observed states | [`thmm`](thmm.md) | Panel of state observations at times |
 | An exposure that changes during follow-up | [`tdcm`](tdcm.md) | Cox model with a covariate that switches value mid-follow-up |
 | The same event happening more than once | [`recurrent_events`](recurrent-events.md) | Andersen-Gill and Prentice-Williams-Peterson processes |
+| A state structure the twelve models do not cover | [`gen_multistate`](multistate.md) | Any transition graph, either clock, either layout |
 
 ## Decide by hazard shape
 

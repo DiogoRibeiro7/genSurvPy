@@ -32,6 +32,7 @@ from .cphm import gen_cphm
 from .export import export_dataset
 from .interface import generate
 from .mixture import cure_fraction_estimate, gen_mixture_cure
+from .multistate import Transition, gen_multistate
 from .piecewise import gen_piecewise_exponential
 from .recurrent import gen_recurrent_events
 from .results import SimulationConfig, SimulationResult, simulate
@@ -88,6 +89,9 @@ __all__ = [
     "cure_fraction_estimate",
     "gen_piecewise_exponential",
     "gen_recurrent_events",
+    # The engine the two illness-death models are configurations of
+    "gen_multistate",
+    "Transition",
     # Helper functions
     "sample_bivariate_distribution",
     "runifcens",
