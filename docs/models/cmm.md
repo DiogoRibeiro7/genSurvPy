@@ -89,18 +89,18 @@ print(df.head(6))
 
 ```text
    id  start      stop  from_state  to_state  status        X0
-0   0    0.0  1.657059           1         2       0  0.773956
-1   0    0.0  1.657059           1         3       1  0.773956
-2   1    0.0  0.704256           1         2       0  0.438878
-3   1    0.0  0.704256           1         3       1  0.438878
+0   0    0.0  2.819921           1         2       0  0.773956
+1   0    0.0  2.819921           1         3       0  0.773956
+2   1    0.0  1.891403           1         2       0  0.438878
+3   1    0.0  1.891403           1         3       1  0.438878
 4   2    0.0  0.158588           1         2       0  0.858598
 5   2    0.0  0.158588           1         3       0  0.858598
 ```
 
 Read subject `1`: it was at risk of both `1 → 2` and `1 → 3` over
-`[0, 0.704)`, and the `1 → 3` row carries `status = 1`, so it died without ever
-falling ill. Subject `2` has `status = 0` on both of its rows — censored while
-still healthy, contributing time at risk and no event.
+`[0, 1.891)`, and the `1 → 3` row carries `status = 1`, so it died without ever
+falling ill. Subjects `0` and `2` have `status = 0` on both of their rows —
+censored while still healthy, contributing time at risk and no event.
 
 Six subjects, twelve rows. **Never use `len(df)` as a sample size:**
 
@@ -130,9 +130,9 @@ for (fs, ts), true_l in zip([(1, 2), (1, 3), (2, 3)], [rate[0], rate[2], rate[4]
 ```
 
 ```text
-1->2  declared=0.3  mle=0.302
-1->3  declared=0.2  mle=0.201
-2->3  declared=0.5  mle=0.500
+1->2  declared=0.3  mle=0.299
+1->3  declared=0.2  mle=0.198
+2->3  declared=0.5  mle=0.503
 ```
 
 ## Fitting a transition-specific model

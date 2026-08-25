@@ -61,8 +61,8 @@ Weibull they diverge sharply. Measured over 8,000 subjects with
 
 | Clock | Mean `2 → 3` sojourn |
 |---|---|
-| `forward` | 1.34 |
-| `reset` | 2.68 |
+| `forward` | 1.33 |
+| `reset` | 2.66 |
 
 On a forward clock a subject entering state 2 finds the hazard already part-way
 up its curve; on a reset clock it starts at the bottom again.
@@ -102,11 +102,11 @@ covariate, and an origin-destination pair may appear only once.
 
     ```text
      id  start   stop  from_state  to_state  status      X0
-      0    0.0 1.9345           1         2       0  0.3047
-      0    0.0 1.9345           1         3       1  0.3047
-      2    0.0 0.3053           1         2       1  0.7505
-      2    0.0 0.3053           1         3       0  0.7505
-      2 0.3053 2.5583           2         3       1  0.7505
+      0 0.0000 4.5060           1         2       0  0.3047
+      0 0.0000 4.5060           1         3       1  0.3047
+      1 0.0000 1.2896           1         2       1 -1.0400
+      1 0.0000 1.2896           1         3       0 -1.0400
+      1 1.2896 2.6012           2         3       1 -1.0400
     ```
 
 === "`panel`"
@@ -118,9 +118,9 @@ covariate, and an origin-destination pair may appear only once.
      id   time  state      X0
       0 0.0000      1  0.3047
       0 0.2643      2  0.3047
-      0 0.4404      3  0.3047
-      2 0.0000      1  0.7505
-      2 0.7689      3  0.7505
+      0 0.4475      3  0.3047
+      1 0.0000      1 -1.0400
+      1 1.9345      3 -1.0400
     ```
 
 These are the two contracts described in
@@ -149,15 +149,15 @@ for (origin, destination), declared in rates.items():
 ```
 
 ```text
-1->2  declared=0.3  mle=0.301
-1->3  declared=0.2  mle=0.200
-2->3  declared=0.5  mle=0.500
+1->2  declared=0.3  mle=0.299
+1->3  declared=0.2  mle=0.198
+2->3  declared=0.5  mle=0.501
 ```
 
 Two further properties worth knowing, both of which follow from competing
 exponentials: the sojourn in state 1 is exponential with the **summed**
 intensity, and the probability of leaving to state 2 rather than 3 is
-$\lambda_{12} / (\lambda_{12} + \lambda_{13})$ — measured at 0.6009 against a
+$\lambda_{12} / (\lambda_{12} + \lambda_{13})$ — measured at 0.5953 against a
 theoretical 0.6.
 
 ## Not reachable through `generate()`

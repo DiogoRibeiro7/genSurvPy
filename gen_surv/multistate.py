@@ -162,67 +162,122 @@ def _validate_graph(transitions: Sequence[Transition], initial_state: int) -> in
     return widths.pop()
 
 
-def _subject_path(
+def _walk_cohort(
     eta: NDArray[np.float64],
-    end: float,
+    ends: NDArray[np.float64],
     outgoing: dict[int, list[tuple[int, Transition]]],
     initial_state: int,
     clock: Clock,
     rng: Generator,
-    latent: dict[int, float],
-) -> list[tuple[int, float, float, int | None]]:
-    """Walk one subject through the graph.
+    n_transitions: int,
+) -> tuple[
+    list[
+        tuple[
+            NDArray[np.int64],
+            int,
+            NDArray[np.float64],
+            NDArray[np.float64],
+            NDArray[np.int64],
+        ]
+    ],
+    NDArray[np.float64],
+]:
+    """Advance every subject through the graph, a wave at a time.
 
-    Returns one entry per state occupancy: ``(state, entry, exit, destination)``
-    where ``destination`` is ``None`` when follow-up ended in that state.
+    Subjects occupying the same state are advanced together, so the draws and
+    the inversions are array operations rather than one call per subject. The
+    number of waves is the longest path any subject takes, which is small even
+    for a cyclic graph, where a per-subject loop costs one Python iteration per
+    subject per step.
 
-    ``latent`` collects the first candidate time drawn for each transition,
-    including the ones that lost the race. Those are exactly the quantities a
-    real dataset could not contain, so they are worth keeping for
-    :func:`gen_surv.simulate`.
+    Returns the occupancies -- ``(subjects, state, entry, exit, destination)``
+    per wave, with ``-1`` marking follow-up that ended in that state -- and the
+    first candidate time drawn for each subject and transition.
     """
-    occupancies: list[tuple[int, float, float, int | None]] = []
-    state = initial_state
-    now = 0.0
-    entered = 0.0
+    n = len(ends)
+    state = np.full(n, initial_state, dtype=np.int64)
+    entered = np.zeros(n, dtype=float)
+    now = np.zeros(n, dtype=float)
+    active = np.ones(n, dtype=bool)
+
+    # Absorbing states end follow-up immediately.
+    for label in np.unique(state):
+        if int(label) not in outgoing:
+            active &= state != label
+
+    latent = np.full((n, n_transitions), np.nan)
+    occupancies: list[
+        tuple[
+            NDArray[np.int64],
+            int,
+            NDArray[np.float64],
+            NDArray[np.float64],
+            NDArray[np.int64],
+        ]
+    ] = []
 
     for _ in range(_MAX_TRANSITIONS):
-        edges = outgoing.get(state)
-        if not edges:  # absorbing
-            return occupancies
+        if not active.any():
+            return occupancies, latent
 
-        best_time = float("inf")
-        best_destination: int | None = None
-        for index, transition in edges:
-            # The cumulative intensity between transitions is Exponential(1).
-            consumed = float(rng.exponential()) / float(np.exp(eta[index]))
-            if clock == "reset":
-                gap = float(transition.baseline.inverse_cumulative_hazard(consumed))
-                candidate = entered + gap
-            else:
-                target = float(transition.baseline.cumulative_hazard(now)) + consumed
-                candidate = float(transition.baseline.inverse_cumulative_hazard(target))
-            latent.setdefault(index, candidate)
-            if candidate < best_time:
-                best_time = candidate
-                best_destination = transition.destination
+        for label in np.unique(state[active]):
+            here = np.flatnonzero(active & (state == label))
+            edges = outgoing.get(int(label))
+            if not edges:  # pragma: no cover - filtered above
+                continue
 
-        # A tie between the transition and the end of follow-up goes to the
-        # transition, matching the R implementation's `c < min(...)`.
-        if not np.isfinite(best_time) or best_time > end:
-            occupancies.append((state, entered, end, None))
-            return occupancies
+            candidates = np.empty((len(edges), len(here)))
+            for row, (index, transition) in enumerate(edges):
+                # The cumulative intensity between transitions is Exponential(1).
+                consumed = rng.exponential(size=len(here)) / np.exp(eta[here, index])
+                if clock == "reset":
+                    gaps = np.asarray(
+                        transition.baseline.inverse_cumulative_hazard(consumed)
+                    )
+                    candidates[row] = entered[here] + gaps
+                else:
+                    target = (
+                        np.asarray(transition.baseline.cumulative_hazard(now[here]))
+                        + consumed
+                    )
+                    candidates[row] = np.asarray(
+                        transition.baseline.inverse_cumulative_hazard(target)
+                    )
+                # Only the first time a subject faces this edge.
+                unseen = np.isnan(latent[here, index])
+                latent[here[unseen], index] = candidates[row][unseen]
 
-        occupancies.append((state, entered, best_time, best_destination))
-        assert best_destination is not None
-        state = best_destination
-        now = best_time
-        entered = best_time
+            winner = np.argmin(candidates, axis=0)
+            best = candidates[winner, np.arange(len(here))]
+
+            # A tie between the transition and the end of follow-up goes to the
+            # transition, matching the R implementation's `c < min(...)`.
+            stops = ~np.isfinite(best) | (best > ends[here])
+            destinations = np.array(
+                [edges[w][1].destination for w in winner], dtype=np.int64
+            )
+            destinations[stops] = -1
+            exits = np.where(stops, ends[here], best)
+
+            occupancies.append(
+                (here, int(label), entered[here].copy(), exits, destinations)
+            )
+
+            moved = here[~stops]
+            active[here[stops]] = False
+            if moved.size:
+                state[moved] = destinations[~stops]
+                now[moved] = exits[~stops]
+                entered[moved] = exits[~stops]
+                # Reaching a state with no way out ends follow-up.
+                for label_out in np.unique(state[moved]):
+                    if int(label_out) not in outgoing:
+                        active[moved[state[moved] == label_out]] = False
 
     raise ParameterError(
         "transitions",
-        len(occupancies),
-        f"produced more than {_MAX_TRANSITIONS} transitions for one subject; "
+        _MAX_TRANSITIONS,
+        f"produced more than {_MAX_TRANSITIONS} transitions for a subject; "
         "check for a cycle with a very high intensity",
     )
 
@@ -319,70 +374,53 @@ def gen_multistate(
     for index, transition in enumerate(transitions):
         outgoing.setdefault(transition.origin, []).append((index, transition))
 
-    interval_rows: list[tuple[Any, ...]] = []
-    panel_rows: list[tuple[Any, ...]] = []
-    # First candidate time per transition per subject; NaN where a subject was
-    # never at risk of that transition.
-    latent_times = np.full((n, len(transitions)), np.nan)
+    occupancies, latent_times = _walk_cohort(
+        eta=eta,
+        ends=ends,
+        outgoing=outgoing,
+        initial_state=initial_state,
+        clock=clock,
+        rng=rng,
+        n_transitions=len(transitions),
+    )
 
-    for subject in range(n):
-        latent: dict[int, float] = {}
-        occupancies = _subject_path(
-            eta=eta[subject],
-            end=float(ends[subject]),
-            outgoing=outgoing,
-            initial_state=initial_state,
-            clock=clock,
-            rng=rng,
-            latent=latent,
+    # Columns are accumulated as arrays and concatenated once. Building the
+    # frame from Python tuples costs more than the sampling does.
+    chunks: dict[str, list[NDArray[Any]]] = {}
+
+    def add(**columns: NDArray[Any]) -> None:
+        for key, values in columns.items():
+            chunks.setdefault(key, []).append(values)
+
+    if layout == "intervals":
+        for subjects, state, entry, exit_time, destination in occupancies:
+            width = len(subjects)
+            for _, transition in outgoing[state]:
+                add(
+                    id=subjects,
+                    start=entry,
+                    stop=exit_time,
+                    from_state=np.full(width, state, dtype=np.int64),
+                    to_state=np.full(width, transition.destination, dtype=np.int64),
+                    status=(destination == transition.destination).astype(np.int64),
+                )
+    else:
+        add(
+            id=np.arange(n, dtype=np.int64),
+            time=np.zeros(n),
+            state=np.full(n, initial_state, dtype=np.int64),
         )
-        for index, value in latent.items():
-            latent_times[subject, index] = value
-
-        if layout == "intervals":
-            for state, entry, exit_time, destination in occupancies:
-                for _, transition in outgoing[state]:
-                    interval_rows.append(
-                        (
-                            subject,
-                            entry,
-                            exit_time,
-                            state,
-                            transition.destination,
-                            int(transition.destination == destination),
-                        )
-                    )
-        else:
-            panel_rows.append((subject, 0.0, initial_state))
-            for state, _entry, exit_time, destination in occupancies:
+        for subjects, state, _entry, exit_time, destination in occupancies:
+            add(
+                id=subjects,
+                time=exit_time,
                 # A transition is observed in its destination; the end of
                 # follow-up is observed in the state still occupied.
-                panel_rows.append(
-                    (
-                        subject,
-                        exit_time,
-                        destination if destination is not None else state,
-                    )
-                )
+                state=np.where(destination == -1, state, destination).astype(np.int64),
+            )
 
-    rows = interval_rows if layout == "intervals" else panel_rows
     columns = INTERVAL_COLUMNS if layout == "intervals" else PANEL_COLUMNS
-    data = pd.DataFrame(rows, columns=columns)
-
-    dtypes: dict[str, str] = {"id": "int64"}
-    if layout == "intervals":
-        dtypes.update(
-            {
-                "start": "float64",
-                "stop": "float64",
-                "from_state": "int64",
-                "to_state": "int64",
-                "status": "int64",
-            }
-        )
-    else:
-        dtypes.update({"time": "float64", "state": "int64"})
-    data = data.astype(dtypes)
+    data = pd.DataFrame({name: np.concatenate(chunks[name]) for name in columns})
 
     for j in range(n_covariates):
         data[f"X{j}"] = covariates[data["id"].to_numpy(), j]
@@ -400,4 +438,11 @@ def gen_multistate(
         },
     )
 
-    return data.reset_index(drop=True)
+    # Waves put every subject's first occupancy before anyone's second, so the
+    # frame is sorted back into per-subject order.
+    order = ["id", "start"] if layout == "intervals" else ["id", "time"]
+    if layout == "intervals":
+        order.append("to_state")
+    data = data.sort_values(order, kind="stable").reset_index(drop=True)
+
+    return data
