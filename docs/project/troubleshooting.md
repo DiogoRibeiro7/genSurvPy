@@ -123,8 +123,10 @@ Work through these in order:
 ## Results changed after upgrading
 
 A bug fix in a sampler changes the numbers a given seed produces; 1.3.0 and
-2.0.0 both did this deliberately. Pin the version alongside the seed for
-anything that must reproduce. See
+2.0.0 both did this deliberately. 3.0.0 did it for `cmm` and `thmm`
+specifically, by rebuilding both on the
+[multistate engine](../models/multistate.md). Pin the version alongside the
+seed for anything that must reproduce. See
 [Reproducibility](../getting-started/reproducibility.md#what-stability-you-can-rely-on).
 
 ## Plots do not appear
