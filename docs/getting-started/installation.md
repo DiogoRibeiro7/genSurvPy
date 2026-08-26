@@ -79,6 +79,27 @@ gen_surv --help
 gen_surv dataset cphm --n 5
 ```
 
+## Type checking
+
+The package ships a `py.typed` marker, so a type checker reads the annotations
+on every public function instead of treating the package as untyped:
+
+```python
+from gen_surv import gen_cphm
+
+gen_cphm(n="not an integer", beta=0.5, covariate_range=2.0,
+         model_cens="uniform", cens_par=1.0)
+```
+
+```text
+snippet.py:3: error: Argument "n" to "gen_cphm" has incompatible type "str"; expected "int"  [arg-type]
+Found 1 error in 1 file (checked 1 source file)
+```
+
+Before 3.0.0 the marker was missing, so a type checker reported
+`Cannot find implementation or library stub for module named "gen_surv"` and
+accepted the call above without comment.
+
 ## Building the documentation
 
 This site is built with [MkDocs](https://www.mkdocs.org) and

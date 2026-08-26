@@ -63,6 +63,10 @@ NOT_EXECUTED: dict[str, list[str]] = {
     ],
     # Errors shown on purpose.
     "docs/models/index.md": ['generate(model="weibull")'],
+    # A deliberate type error, shown with the mypy output it produces rather
+    # than the ValidationError it would raise. Verified by hand against the
+    # published wheel.
+    "docs/getting-started/installation.md": ['gen_cphm(n="not an integer"'],
     "docs/guides/baselines.md": ["WeibullBaseline(shape=0.0"],
     # Uses `...` deliberately, to keep the point about generators short.
     "docs/getting-started/reproducibility.md": ["first  = generate(..., seed=rng)"],

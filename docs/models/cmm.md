@@ -7,6 +7,15 @@ Three states: **1 healthy**, **2 ill**, **3 dead**. A subject starts healthy and
 either falls ill first (`1 → 2`, then possibly `2 → 3`) or dies directly
 (`1 → 3`).
 
+!!! info "Built on the multistate engine"
+
+    Since 3.0.0 this is a configuration of [`gen_multistate`](multistate.md) -
+    the illness-death graph with Weibull edges and a reset clock - rather than a
+    separate implementation. Its columns, dtypes and parameters are unchanged,
+    but **a given seed no longer reproduces its 2.1.0 output**. Reach for the
+    engine directly when you need a state structure this page does not
+    describe.
+
 ```mermaid
 stateDiagram-v2
     direction LR
@@ -153,6 +162,7 @@ For `2 → 3`, remember the clock resets: use `stop - start` as the duration, no
 
 ## Related
 
+- [The multistate engine](multistate.md) — what this model is a configuration of
 - [Illness-death, panel (THMM)](thmm.md) — the same process, observed states
 - [Output schemas](../getting-started/schemas.md#cmm-counting-process-intervals) — every column
 - [Competing risks](competing-risks.md) — `1 → 2` versus `1 → 3` is itself a competing-risks problem
