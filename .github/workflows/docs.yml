@@ -2,9 +2,17 @@ name: Documentation Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+
+# Adding `develop` doubles the trigger surface, so supersede rather than pile
+# up: a second push to a pull request cancels the first run. Only pull
+# requests are cancelled -- a run on `main`, `develop` or a tag is a record of
+# whether that commit was good and always finishes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   docs:
