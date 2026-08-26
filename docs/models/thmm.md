@@ -7,6 +7,14 @@ subject's state is recorded.
 "Time-homogeneous" means every transition intensity is constant in time. The
 states are observed, so despite the name this is **not** a hidden Markov model.
 
+!!! info "Built on the multistate engine"
+
+    Since 3.0.0 this is a configuration of [`gen_multistate`](multistate.md) -
+    the illness-death graph with exponential edges and a panel layout - rather
+    than a separate implementation. Its columns, dtypes and id base are
+    unchanged (subjects are still numbered from 1), but **a given seed no longer
+    reproduces its 2.1.0 output**.
+
 ```mermaid
 stateDiagram-v2
     direction LR
@@ -146,6 +154,7 @@ state process. The split mirrors `genCMM` and `genTHMM` in the R package.
 
 ## Related
 
+- [The multistate engine](multistate.md) — what this model is a configuration of
 - [Illness-death, intervals (CMM)](cmm.md)
 - [Output schemas](../getting-started/schemas.md#thmm-observed-state-panel)
 - API: [`gen_thmm`](../api/generators.md#gen_surv.thmm.gen_thmm)
