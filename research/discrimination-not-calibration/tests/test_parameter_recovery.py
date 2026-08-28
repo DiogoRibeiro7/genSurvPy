@@ -129,7 +129,26 @@ def test_parameter_recovery_reports_bias_where_the_estimand_matches() -> None:
 
     assert outcome["parameter_recovery_applicable"]
     assert outcome["beta_bias_scalar"] == pytest.approx(0.12)
+    assert outcome["beta_bias_mean"] == pytest.approx(0.12)
+    assert outcome["beta_abs_bias_mean"] == pytest.approx(0.12)
+    assert outcome["beta_rmse"] == pytest.approx(0.12)
     assert outcome["beta_true_scalar"] == pytest.approx(0.5)
+
+
+def test_parameter_recovery_reports_vector_bias_summaries() -> None:
+    outcome = parameter_recovery(
+        "piecewise_exponential",
+        "cox_ph",
+        "cox_ph",
+        {"X0": 0.7, "X1": -0.1},
+        {"betas": [0.5, -0.3]},
+    )
+
+    assert outcome["parameter_recovery_applicable"]
+    assert outcome["beta_bias"] == pytest.approx([0.2, 0.2])
+    assert outcome["beta_bias_mean"] == pytest.approx(0.2)
+    assert outcome["beta_abs_bias_mean"] == pytest.approx(0.2)
+    assert outcome["beta_rmse"] == pytest.approx(0.2)
 
 
 def test_the_correspondence_table_only_lists_proportional_hazards_cases() -> None:

@@ -1,6 +1,6 @@
-# Discrimination Is Not Calibration
+# The Distance Behind the C-index
 
-A controlled simulation study of survival-model misspecification.
+A truth-based simulation study of survival distribution predictions.
 
 > Can a survival model maintain apparently good discrimination while producing
 > materially incorrect individual survival probabilities under model

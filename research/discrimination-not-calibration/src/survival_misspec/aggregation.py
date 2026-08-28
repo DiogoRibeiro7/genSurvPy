@@ -10,9 +10,10 @@ independent replications,
     \\qquad
     \\mathrm{MCSE}(\\widehat\\mu) = \\frac{s_Y}{\\sqrt{R}},
 
-so every aggregated column here comes with its MCSE. Two differences whose
-MCSEs overlap are not distinguishable at the replication count used, and the
-paper must not describe them as if they were.
+so every aggregated column here comes with its MCSE. Differences between
+estimators are estimated within replication, because the simulation uses a
+paired design: estimators in the same scenario and replication see the same
+training and evaluation samples.
 
 Failures are aggregated too, not dropped. ``P(fit failure | scenario,
 estimator)`` is reported alongside the metrics, because an estimator that fails
@@ -23,6 +24,7 @@ one that fits every time.
 from __future__ import annotations
 
 import math
+import uuid
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -33,8 +35,10 @@ __all__ = [
     "mcse",
     "replications_for_precision",
     "aggregate",
+    "paired_differences",
     "failure_rates",
     "adequacy_region",
+    "adequacy_region_from_pairs",
     "write_raw",
     "read_raw",
     "completed_cells",
@@ -59,9 +63,13 @@ METRIC_COLUMNS = (
     "integrated_brier_score",
     "brier_at_tau",
     "auc_mean",
+    "auc_at_tau",
     "calibration_error",
     "calibration_error_max",
     "fit_runtime_seconds",
+    "beta_bias_mean",
+    "beta_abs_bias_mean",
+    "beta_rmse",
     "beta_bias_scalar",
 )
 
@@ -148,6 +156,77 @@ def aggregate(
                 record[column] = block[column].iloc[0]
 
         records.append(record)
+
+    return pd.DataFrame.from_records(records)
+
+
+def paired_differences(
+    raw: pd.DataFrame,
+    reference_estimator: str,
+    metrics: Sequence[str] | None = None,
+    by: Sequence[str] = ("scenario_id",),
+) -> pd.DataFrame:
+    """Within-replication metric differences against a reference estimator.
+
+    For each metric and candidate estimator this computes
+    ``candidate - reference`` among replications where both values are present.
+    That preserves the paired Monte Carlo design and gives the MCSE of the
+    contrast directly, rather than comparing two separately aggregated means.
+    """
+    group_keys = list(by)
+    metric_columns = _present(raw, metrics or METRIC_COLUMNS)
+    scored = raw[raw.get("scored", pd.Series(False, index=raw.index)).fillna(False)]
+    records: list[dict[str, object]] = []
+
+    design_columns = (
+        "dgp",
+        "n",
+        "target_censoring",
+        "effect_size",
+        "misspecification",
+        "tau",
+    )
+
+    for keys, block in scored.groupby(group_keys, dropna=False):
+        key_values = keys if isinstance(keys, tuple) else (keys,)
+        base_record = dict(zip(group_keys, key_values))
+        reference = block[block["estimator_id"] == reference_estimator]
+        if reference.empty:
+            continue
+
+        for estimator_id, candidate in block.groupby("estimator_id", dropna=False):
+            record: dict[str, object] = {
+                **base_record,
+                "estimator_id": estimator_id,
+                "reference_estimator_id": reference_estimator,
+            }
+
+            for column in design_columns:
+                if column in block.columns and block[column].nunique(dropna=False) == 1:
+                    record[column] = block[column].iloc[0]
+
+            for metric in metric_columns:
+                candidate_values = candidate[["replication_id", metric]].rename(
+                    columns={metric: "candidate"}
+                )
+                reference_values = reference[["replication_id", metric]].rename(
+                    columns={metric: "reference"}
+                )
+                paired = candidate_values.merge(
+                    reference_values, on="replication_id", how="inner"
+                )
+                difference = (
+                    pd.to_numeric(paired["candidate"], errors="coerce")
+                    - pd.to_numeric(paired["reference"], errors="coerce")
+                ).to_numpy()
+                finite = difference[np.isfinite(difference)]
+                record[f"{metric}_difference_mean"] = (
+                    float(np.mean(finite)) if finite.size else float("nan")
+                )
+                record[f"{metric}_difference_mcse"] = mcse(finite)
+                record[f"{metric}_difference_n"] = int(finite.size)
+
+            records.append(record)
 
     return pd.DataFrame.from_records(records)
 
@@ -239,20 +318,37 @@ def adequacy_region(
     return merged
 
 
+def adequacy_region_from_pairs(
+    paired: pd.DataFrame,
+    loss: str = "mise",
+    epsilon: float = 0.01,
+) -> pd.DataFrame:
+    """Adequacy region using paired loss contrasts and their MCSEs."""
+    difference = f"{loss}_difference_mean"
+    difference_mcse = f"{loss}_difference_mcse"
+    if difference not in paired.columns:
+        raise ValueError(f"paired differences do not contain {difference!r}")
+
+    out = paired.copy()
+    out["loss_excess"] = out[difference]
+    out["loss_excess_mcse"] = (
+        out[difference_mcse] if difference_mcse in out.columns else float("nan")
+    )
+    out["within_epsilon"] = out["loss_excess"] <= epsilon
+    out["within_epsilon_conservative"] = (
+        out["loss_excess"] + 1.96 * out["loss_excess_mcse"] <= epsilon
+    )
+    out["epsilon"] = epsilon
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Storage and resumption
 # ---------------------------------------------------------------------------
 
 
-def write_raw(rows: list[dict[str, object]], path: Path | str) -> Path:
-    """Append replicate rows to a Parquet file, creating it if absent."""
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
+def _normalise_raw_frame(rows: list[dict[str, object]]) -> pd.DataFrame:
     frame = pd.DataFrame(rows)
-
-    if target.exists():
-        existing = pd.read_parquet(target)
-        frame = pd.concat([existing, frame], ignore_index=True)
 
     # Object columns holding lists (beta vectors) survive Parquet only as
     # strings; keeping them readable matters more than round-tripping the type.
@@ -261,16 +357,53 @@ def write_raw(rows: list[dict[str, object]], path: Path | str) -> Path:
             frame[column] = frame[column].map(
                 lambda v: ",".join(map(str, v)) if isinstance(v, (list, tuple)) else v
             )
+    return frame
 
-    frame.to_parquet(target, index=False)
+
+def _parts_directory(target: Path) -> Path:
+    return target if target.is_dir() else target.with_suffix(target.suffix + ".parts")
+
+
+def write_raw(rows: list[dict[str, object]], path: Path | str) -> Path:
+    """Append replicate rows as a Parquet shard, creating a dataset if absent."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    frame = _normalise_raw_frame(rows)
+
+    if target.exists() and target.is_file():
+        directory = _parts_directory(target)
+        directory.mkdir(parents=True, exist_ok=True)
+    else:
+        target.mkdir(parents=True, exist_ok=True)
+        directory = target
+
+    shard = directory / f"part-{uuid.uuid4().hex}.parquet"
+    frame.to_parquet(shard, index=False)
     return target
 
 
 def read_raw(path: Path | str) -> pd.DataFrame:
     target = Path(path)
-    if not target.exists():
+    frames: list[pd.DataFrame] = []
+
+    if target.exists() and target.is_file():
+        frames.append(pd.read_parquet(target))
+    elif target.exists() and target.is_dir():
+        parts = sorted(target.glob("*.parquet"))
+        frames.extend(pd.read_parquet(part) for part in parts)
+
+    parts_directory = _parts_directory(target)
+    if (
+        parts_directory.exists()
+        and parts_directory.is_dir()
+        and parts_directory != target
+    ):
+        parts = sorted(parts_directory.glob("*.parquet"))
+        frames.extend(pd.read_parquet(part) for part in parts)
+
+    if not frames:
         return pd.DataFrame()
-    return pd.read_parquet(target)
+    return pd.concat(frames, ignore_index=True, sort=False)
 
 
 def completed_cells(path: Path | str) -> set[tuple[str, str, int]]:

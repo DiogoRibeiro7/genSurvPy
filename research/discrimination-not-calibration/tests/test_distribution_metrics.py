@@ -16,7 +16,11 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from survival_misspec.metrics import antolini_concordance, d_calibration
+from survival_misspec.metrics import (
+    antolini_concordance,
+    d_calibration,
+    prediction_error,
+)
 
 
 def _exponential_surface(rates: np.ndarray, grid: np.ndarray) -> np.ndarray:
@@ -93,6 +97,23 @@ def test_d_calibration_uses_censored_subjects_rather_than_dropping_them() -> Non
         f"(p={outcome['d_calibration_p']:.4g}); the censored contributions are "
         f"probably being mishandled"
     )
+
+
+def test_d_calibration_uses_step_values_not_linear_interpolation() -> None:
+    """Distribution metrics must not invent between-step probabilities."""
+    grid = np.array([0.0, 1.0, 2.0])
+    predicted = np.array([[1.0, 0.8, 0.2]])
+    observed = np.array([0.5])
+
+    outcome = d_calibration(predicted, grid, observed, np.ones(1, dtype=bool))
+
+    # Right-continuous step lookup uses S(1.0) = 0.8. Linear interpolation would
+    # use 0.9 and place the event in the top bin.
+    expected = np.zeros(10)
+    expected[8] = 1.0
+    uniform = np.full(10, 0.1)
+    statistic = float(((expected - uniform) ** 2 / uniform).sum())
+    assert outcome["d_calibration_statistic"] == pytest.approx(statistic)
 
 
 def test_antolini_agrees_with_a_known_ranking_when_hazards_are_proportional() -> None:
@@ -176,6 +197,49 @@ def test_antolini_administratively_censors_at_the_horizon() -> None:
     inside = int((times <= 2.0).sum())
     assert outcome["antolini_pairs"] > 0
     assert outcome["antolini_pairs"] <= inside * n
+
+
+def test_antolini_uses_the_next_step_at_event_time() -> None:
+    grid = np.array([0.0, 1.0, 2.0])
+    predicted = np.array(
+        [
+            [1.0, 0.4, 0.4],
+            [1.0, 0.6, 0.3],
+        ]
+    )
+    time = np.array([0.5, 1.5])
+    event = np.array([True, True])
+
+    outcome = antolini_concordance(predicted, grid, time, event)
+
+    assert outcome["antolini_pairs"] == 1
+    assert outcome["c_index_antolini"] == pytest.approx(1.0)
+
+
+def test_prediction_error_only_labels_a_point_metric_when_it_is_at_tau() -> None:
+    grid = np.array([0.0, 0.5, 1.0])
+    predicted = np.tile(np.exp(-grid), (20, 1))
+    time = np.linspace(0.1, 0.9, 20)
+    event = np.ones(20, dtype=bool)
+
+    outcome = prediction_error(predicted, grid, time, event, time, event, tau=1.0)
+
+    assert np.isnan(outcome["brier_at_tau"])
+    assert np.isnan(outcome["auc_at_tau"])
+    assert np.isnan(outcome["brier_at_tau_time"])
+
+
+def test_prediction_error_reports_tau_when_tau_is_inside_support() -> None:
+    grid = np.array([0.0, 0.5, 1.0])
+    predicted = np.tile(np.exp(-grid), (30, 1))
+    time = np.linspace(0.1, 1.4, 30)
+    event = np.ones(30, dtype=bool)
+
+    outcome = prediction_error(predicted, grid, time, event, time, event, tau=1.0)
+
+    assert outcome["brier_at_tau_time"] == pytest.approx(1.0)
+    assert outcome["auc_at_tau_time"] == pytest.approx(1.0)
+    assert np.isfinite(outcome["brier_at_tau"])
 
 
 def test_antolini_handles_a_sample_with_no_events() -> None:

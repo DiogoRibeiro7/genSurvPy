@@ -101,6 +101,13 @@ subjects are split into deciles of $\hat S_i(\tau)$, observed survival within
 each is estimated by Kaplan–Meier, and the size-weighted mean absolute gap is
 reported.
 
+D-calibration is reported as a distributional diagnostic, not as a like-for-like
+comparative primary measure for all estimators. Haider et al.'s theorem assumes
+strictly decreasing survival curves, while the random survival forest and
+gradient-boosted estimators return flat step functions. Their D-calibration
+results must therefore be read with that non-comparability qualification unless
+an alternative such as A-calibration is added before the production lock.
+
 **These use only observed, censored data.** That is their role in the argument:
 they are what an analyst without access to the truth can compute. The
 operational question the paper asks is whether they detect the error that MISE
@@ -195,8 +202,8 @@ application's judgement, not a statistical constant.
 
 ## 7. Monte Carlo uncertainty
 
-Every reported quantity is an average over $R$ independent replications, so
-every one carries
+Every reported cell quantity is an average over $R$ independent replications,
+so every one carries
 
 $$
 \mathrm{MCSE}(\hat\mu) \;=\; \frac{s_Y}{\sqrt{R}} .
@@ -205,8 +212,17 @@ $$
 $R$ is chosen from the precision the conclusions require, by inverting this
 expression on pilot variability — not from convention.
 
-Two cells whose intervals overlap are not distinguishable at the replication
-count used, and the paper does not describe them as if they were.
+Estimator contrasts are computed within replication,
+
+$$
+D_r = L_{A,r} - L_{B,r},
+$$
+
+and reported as $\bar D$ with $\mathrm{MCSE}(\bar D)=s_D/\sqrt{R}$. This keeps
+the paired Monte Carlo design: estimators within a scenario and replication
+share the same simulated training and evaluation samples, so comparing
+separately aggregated MCSEs would throw away information and is not used as a
+decision rule.
 
 ---
 

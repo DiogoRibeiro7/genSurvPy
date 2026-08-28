@@ -19,10 +19,12 @@ import numpy as np
 import pandas as pd
 import pytest
 from survival_misspec.aggregation import (
+    adequacy_region_from_pairs,
     aggregate,
     completed_cells,
     failure_rates,
     mcse,
+    paired_differences,
     replications_for_precision,
     write_raw,
 )
@@ -348,6 +350,87 @@ def test_aggregate_excludes_failures_from_means_but_counts_them() -> None:
     assert summary["n_replications_scored"] == 2
 
 
+def test_aggregate_reports_vector_parameter_recovery() -> None:
+    raw = pd.DataFrame(
+        [
+            {
+                "scenario_id": "s",
+                "estimator_id": "cox",
+                "replication_id": 0,
+                "fitted": True,
+                "scored": True,
+                "beta_abs_bias_mean": 0.2,
+                "beta_bias_mean": 0.1,
+                "beta_rmse": 0.25,
+            },
+            {
+                "scenario_id": "s",
+                "estimator_id": "cox",
+                "replication_id": 1,
+                "fitted": True,
+                "scored": True,
+                "beta_abs_bias_mean": 0.4,
+                "beta_bias_mean": 0.3,
+                "beta_rmse": 0.45,
+            },
+        ]
+    )
+
+    summary = aggregate(raw).iloc[0]
+
+    assert summary["beta_abs_bias_mean_mean"] == pytest.approx(0.3)
+    assert summary["beta_bias_mean_mean"] == pytest.approx(0.2)
+    assert summary["beta_rmse_mean"] == pytest.approx(0.35)
+
+
+def test_paired_differences_preserve_the_matched_design() -> None:
+    raw = pd.DataFrame(
+        [
+            {
+                "scenario_id": "s",
+                "estimator_id": "cox",
+                "replication_id": 0,
+                "fitted": True,
+                "scored": True,
+                "mise": 0.10,
+            },
+            {
+                "scenario_id": "s",
+                "estimator_id": "rsf",
+                "replication_id": 0,
+                "fitted": True,
+                "scored": True,
+                "mise": 0.13,
+            },
+            {
+                "scenario_id": "s",
+                "estimator_id": "cox",
+                "replication_id": 1,
+                "fitted": True,
+                "scored": True,
+                "mise": 0.20,
+            },
+            {
+                "scenario_id": "s",
+                "estimator_id": "rsf",
+                "replication_id": 1,
+                "fitted": True,
+                "scored": True,
+                "mise": 0.19,
+            },
+        ]
+    )
+
+    paired = paired_differences(raw, "cox")
+    rsf = paired[paired["estimator_id"] == "rsf"].iloc[0]
+
+    assert rsf["mise_difference_mean"] == pytest.approx(0.01)
+    assert rsf["mise_difference_mcse"] == pytest.approx(mcse([0.03, -0.01]))
+
+    adequacy = adequacy_region_from_pairs(paired, epsilon=0.02)
+    assert bool(adequacy[adequacy["estimator_id"] == "rsf"]["within_epsilon"].iloc[0])
+
+
 def test_failure_rates_are_reported_separately() -> None:
     rates = failure_rates(_raw()).iloc[0]
     assert rates["attempted"] == 3
@@ -364,6 +447,31 @@ def test_completed_cells_supports_resumption(tmp_path) -> None:
 
     assert ("s", "cox", 0) in done
     assert len(done) == 3
+
+
+def test_write_raw_appends_parquet_shards_without_rewriting(tmp_path) -> None:
+    path = tmp_path / "raw.parquet"
+
+    write_raw(_raw().to_dict("records"), path)
+    write_raw(
+        [
+            {
+                "scenario_id": "s",
+                "estimator_id": "rsf",
+                "replication_id": 0,
+                "fitted": True,
+                "scored": True,
+                "mise": 0.4,
+            }
+        ],
+        path,
+    )
+
+    assert path.is_dir()
+    assert len(list(path.glob("*.parquet"))) == 2
+    done = completed_cells(path)
+    assert ("s", "rsf", 0) in done
+    assert len(done) == 4
 
 
 # ---------------------------------------------------------------------------

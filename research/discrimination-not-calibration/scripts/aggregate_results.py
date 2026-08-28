@@ -13,9 +13,12 @@ Writes to ``results/processed/``:
     separate so that a cell's metrics and its reliability are never read as one
     number.
 
+``paired_differences.parquet``
+    Within-replication differences between each estimator and the reference.
+
 ``adequacy.parquet``
     Excess loss of each estimator over the reference, across a range of
-    epsilon, for the adequacy region.
+    epsilon, for the adequacy region, with paired MCSEs.
 
 Nothing here decides anything. It aggregates and reports uncertainty; the
 interpretation belongs in the paper, conditional on the DGPs studied.
@@ -33,9 +36,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
 
 from survival_misspec.aggregation import (  # noqa: E402
-    adequacy_region,
+    adequacy_region_from_pairs,
     aggregate,
     failure_rates,
+    paired_differences,
     read_raw,
 )
 
@@ -70,6 +74,10 @@ def main() -> int:
     summary.to_parquet(out / "summary.parquet", index=False)
     print(f"summary         {len(summary)} cells -> {out / 'summary.parquet'}")
 
+    paired = paired_differences(raw, arguments.reference)
+    paired.to_parquet(out / "paired_differences.parquet", index=False)
+    print(f"paired diffs    {len(paired)} rows -> {out / 'paired_differences.parquet'}")
+
     failures = failure_rates(raw)
     failures.to_parquet(out / "failures.parquet", index=False)
     total_failures = int(
@@ -80,9 +88,7 @@ def main() -> int:
     frames = []
     for epsilon in EPSILONS:
         try:
-            frames.append(
-                adequacy_region(summary, arguments.reference, epsilon=epsilon)
-            )
+            frames.append(adequacy_region_from_pairs(paired, epsilon=epsilon))
         except ValueError as error:
             print(f"adequacy        skipped at epsilon={epsilon}: {error}")
             break

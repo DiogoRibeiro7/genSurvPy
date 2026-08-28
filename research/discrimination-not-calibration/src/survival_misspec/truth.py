@@ -168,17 +168,26 @@ def _survival_aft_log_logistic(
         S(t \\mid X) = \\frac{1}{1 + v}
         = \\frac{1}{1 + e^{\\eta}\\,(t/\\text{scale})^{\\text{shape}}}.
 
-    Note the generator clips ``U`` to ``[0.001, 0.999]``, which truncates both
-    tails of ``T``. The expression above is the untruncated law; the difference
-    is confined to the extreme 0.1% at each end and is far outside any
-    evaluation horizon this study uses. ``tests/test_truth.py`` quantifies it
-    rather than assuming it away.
+    The generator clips ``U`` to ``[0.001, 0.999]`` before transforming it.
+    This is a winsorised event-time distribution with endpoint atoms, not the
+    untruncated log-logistic law. With
+    ``q(t) = v / (1 + v)``, the implemented survival is 1 below the lower
+    generated endpoint, ``1 - q(t)`` on the interior, and 0 at and above the
+    upper generated endpoint.
     """
     grid = _as_times(times)
     shape = float(params["shape"])
     scale = float(params["scale"])
     eta = _linear_predictor(truth)
-    return 1.0 / (1.0 + np.exp(eta) * (grid / scale) ** shape)
+    odds = np.exp(eta) * (grid / scale) ** shape
+    quantile = odds / (1.0 + odds)
+    lower = 0.001
+    upper = 0.999
+    tolerance = 1e-12
+    survival = 1.0 - quantile
+    survival = np.where(quantile < lower - tolerance, 1.0, survival)
+    survival = np.where(quantile >= upper - tolerance, 0.0, survival)
+    return np.asarray(survival, dtype=float)
 
 
 # ---------------------------------------------------------------------------

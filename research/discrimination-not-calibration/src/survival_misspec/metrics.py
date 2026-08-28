@@ -190,31 +190,52 @@ def prediction_error(
     test = Surv.from_arrays(np.asarray(test_event, bool), np.asarray(test_time, float))
 
     grid = np.asarray(times, dtype=float)
-    # These estimators are only defined strictly inside the observed follow-up
-    # of the test set; asking outside it raises rather than extrapolating.
-    upper = min(
-        tau, float(np.max(test_time[np.asarray(test_event, bool)], initial=0.0))
-    )
-    usable = (grid > float(np.min(test_time))) & (grid < upper)
+    train_followup = np.asarray(train_time, dtype=float)
+    test_followup = np.asarray(test_time, dtype=float)
+
+    # scikit-survival requires evaluation times to sit strictly inside the
+    # observed follow-up support. Use the support restriction explicitly and
+    # reserve the "at tau" names for calculations that are truly at tau.
+    lower = max(float(np.min(train_followup)), float(np.min(test_followup)))
+    support_upper = min(float(np.max(train_followup)), float(np.max(test_followup)))
+    usable = (grid > lower) & (grid <= float(tau)) & (grid < support_upper)
 
     out: dict[str, float] = {}
+    tau_index = int(np.searchsorted(grid, tau, side="left"))
+    tau_on_grid = tau_index < grid.size and np.isclose(grid[tau_index], tau)
+    tau_usable = bool(tau_on_grid and tau > lower and tau < support_upper)
+    out["brier_at_tau_time"] = float(tau) if tau_usable else float("nan")
+    out["auc_at_tau_time"] = float(tau) if tau_usable else float("nan")
+
     if usable.sum() < 2:
-        return {
-            "brier_at_tau": float("nan"),
-            "integrated_brier_score": float("nan"),
-            "auc_mean": float("nan"),
-            "prediction_error_note": "no grid point inside the usable follow-up range",
-        }
+        out.update(
+            {
+                "brier_at_tau": float("nan"),
+                "integrated_brier_score": float("nan"),
+                "auc_mean": float("nan"),
+                "auc_at_tau": float("nan"),
+                "prediction_error_note": (
+                    "no grid point inside the usable follow-up range"
+                ),
+            }
+        )
+        return out
 
     sub_grid = grid[usable]
     sub_predicted = predicted[:, usable]
 
     try:
         _, scores = brier_score(train, test, sub_predicted, sub_grid)
-        out["brier_at_tau"] = float(scores[-1])
         out["integrated_brier_score"] = float(
             integrated_brier_score(train, test, sub_predicted, sub_grid)
         )
+        if tau_usable:
+            _, tau_score = brier_score(
+                train, test, predicted[:, [tau_index]], np.asarray([tau], dtype=float)
+            )
+            out["brier_at_tau"] = float(tau_score[0])
+        else:
+            out["brier_at_tau"] = float("nan")
     except Exception as exception:  # noqa: BLE001
         out["brier_at_tau"] = float("nan")
         out["integrated_brier_score"] = float("nan")
@@ -225,9 +246,19 @@ def prediction_error(
             train, test, 1.0 - sub_predicted, sub_grid
         )
         out["auc_mean"] = float(mean_auc)
-        out["auc_at_tau"] = float(auc[-1])
+        if tau_usable:
+            tau_auc, _ = cumulative_dynamic_auc(
+                train,
+                test,
+                1.0 - predicted[:, [tau_index]],
+                np.asarray([tau], dtype=float),
+            )
+            out["auc_at_tau"] = float(tau_auc[0])
+        else:
+            out["auc_at_tau"] = float("nan")
     except Exception as exception:  # noqa: BLE001
         out["auc_mean"] = float("nan")
+        out["auc_at_tau"] = float("nan")
         out["auc_error"] = f"{type(exception).__name__}: {exception}"
 
     return out
@@ -296,17 +327,68 @@ def _survival_at(
     predicted: NDArray[np.float64],
     grid: NDArray[np.float64],
     times: NDArray[np.float64],
+    step_like: NDArray[np.bool_] | None = None,
 ) -> NDArray[np.float64]:
-    """Each subject's own predicted survival at its own time, by interpolation.
+    """Each subject's own predicted survival at its own time.
 
-    Times beyond the grid are clipped to its last point, the same convention
-    the step-function adapters use. It cannot flatter a model: it holds the
-    predicted survival at a late time no lower than the curve's last value.
+    Distribution metrics compare the survival probabilities an estimator
+    actually reports. The non-parametric estimators return step functions, so
+    linear interpolation would create probabilities that were never predicted
+    and can break the tie structure Antolini's index is meant to expose. The
+    lookup is therefore right-continuous for rows with flat stretches. Smooth
+    rows are interpolated between reported values, avoiding a coarse-grid
+    discretisation artefact for parametric curves.
     """
+    if step_like is None:
+        step_like = _step_like_rows(predicted)
+
     clipped = np.clip(np.asarray(times, dtype=float), grid[0], grid[-1])
+    columns = np.clip(np.searchsorted(grid, clipped, side="left"), 0, grid.size - 1)
     out = np.empty(predicted.shape[0], dtype=float)
     for row in range(predicted.shape[0]):
-        out[row] = float(np.interp(clipped[row], grid, predicted[row]))
+        if step_like[row]:
+            out[row] = float(predicted[row, columns[row]])
+        else:
+            out[row] = float(np.interp(clipped[row], grid, predicted[row]))
+    return out
+
+
+def _step_like_rows(predicted: NDArray[np.float64]) -> NDArray[np.bool_]:
+    """Rows with flat stretches should be evaluated as step functions."""
+    return np.any(np.isclose(np.diff(predicted, axis=1), 0.0, atol=1e-12), axis=1)
+
+
+def _survival_at_common_time(
+    predicted: NDArray[np.float64],
+    grid: NDArray[np.float64],
+    time: float,
+    step_like: NDArray[np.bool_] | None = None,
+) -> NDArray[np.float64]:
+    """All subjects' predicted survival at one time, vectorised."""
+    if step_like is None:
+        step_like = _step_like_rows(predicted)
+
+    clipped = float(np.clip(time, grid[0], grid[-1]))
+    step_column = int(
+        np.clip(np.searchsorted(grid, clipped, side="left"), 0, grid.size - 1)
+    )
+    out = predicted[:, step_column].astype(float, copy=True)
+
+    smooth = ~step_like
+    if smooth.any():
+        if clipped <= grid[0]:
+            out[smooth] = predicted[smooth, 0]
+        elif clipped >= grid[-1]:
+            out[smooth] = predicted[smooth, -1]
+        else:
+            right = int(np.searchsorted(grid, clipped, side="right"))
+            left = right - 1
+            weight = (clipped - grid[left]) / (grid[right] - grid[left])
+            out[smooth] = (
+                predicted[smooth, left] * (1.0 - weight)
+                + predicted[smooth, right] * weight
+            )
+
     return out
 
 
@@ -520,20 +602,18 @@ def antolini_concordance(
         rng = np.random.default_rng(seed)
         event_index = rng.choice(event_index, size=max_events, replace=False)
 
-    columns = np.clip(
-        np.searchsorted(grid, observed[event_index], side="left"), 0, grid.size - 1
-    )
-
     concordant = 0.0
     tied = 0.0
     comparable = 0.0
-    for position, subject in enumerate(event_index):
-        column = int(columns[position])
+    step_like = _step_like_rows(predicted)
+    for subject in event_index:
         later = observed > observed[subject]
         if not later.any():
             continue
-        own = predicted[subject, column]
-        others = predicted[later, column]
+        event_time = float(observed[subject])
+        at_event = _survival_at_common_time(predicted, grid, event_time, step_like)
+        own = at_event[subject]
+        others = at_event[later]
         comparable += float(others.size)
         concordant += float((own < others).sum())
         tied += float((own == others).sum())

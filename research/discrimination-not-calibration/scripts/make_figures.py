@@ -19,6 +19,7 @@ one after it leaves this directory.
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -104,6 +105,27 @@ def _require(frame: pd.DataFrame, columns: list[str], name: str) -> bool:
     return True
 
 
+def _summarise_factor(block: pd.DataFrame, factor: str) -> pd.DataFrame:
+    """Average scenario means by factor with MCSEs propagated."""
+    rows = []
+    for value, factor_block in block.groupby(factor):
+        means = pd.to_numeric(factor_block["mise_mean"], errors="coerce")
+        mcse = pd.to_numeric(factor_block["mise_mcse"], errors="coerce")
+        keep = means.notna()
+        if not keep.any():
+            continue
+        means = means[keep]
+        mcse = mcse[keep].fillna(0.0)
+        rows.append(
+            {
+                factor: value,
+                "mise": float(means.mean()),
+                "mcse": float(math.sqrt(float((mcse**2).sum())) / len(means)),
+            }
+        )
+    return pd.DataFrame.from_records(rows).sort_values(factor)
+
+
 # ---------------------------------------------------------------------------
 # 1. The central figure: discrimination against recovery of the truth
 # ---------------------------------------------------------------------------
@@ -131,7 +153,7 @@ def figure_discrimination_vs_truth(
     axis.set_yscale("log")
     axis.set_xlabel("Harrell C-index")
     axis.set_ylabel("MISE against the true survival function (log scale)")
-    axis.set_title("Discrimination does not determine recovery of the truth")
+    axis.set_title("Discrimination and truth-recovery metrics")
     # Below the axes: the interesting part of this figure is the vertical
     # spread at a fixed C-index, and a legend sitting in it hides the argument.
     axis.legend(fontsize=7, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.13))
@@ -172,7 +194,7 @@ def figure_calibration_vs_discrimination(
 
     axis.set_xlabel("Harrell C-index")
     axis.set_ylabel("Grouped calibration error at $\\tau$")
-    axis.set_title("Calibration and discrimination move independently")
+    axis.set_title("Calibration and discrimination metrics")
     axis.legend(fontsize=7, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.13))
     _save(figure, "fig2_calibration_vs_discrimination", out, exploratory)
 
@@ -196,12 +218,9 @@ def _factor_panel(
 
     figure, axis = plt.subplots(figsize=(5.4, 4.0))
     for estimator, block in summary.groupby("estimator_id"):
-        grouped = (
-            block.groupby(factor)
-            .agg(mise=("mise_mean", "mean"), mcse=("mise_mcse", "mean"))
-            .reset_index()
-            .sort_values(factor)
-        )
+        grouped = _summarise_factor(block, factor)
+        if grouped.empty:
+            continue
         style = _style(estimator)
         style["linestyle"] = "-"
         axis.errorbar(
@@ -275,40 +294,7 @@ def figure_illustrative_curves(raw: pd.DataFrame, out: Path, exploratory: bool) 
     C-index is at or above the median, so the choice is reproducible and cannot
     be the most flattering example someone went looking for.
     """
-    needed = ["c_index_harrell", "mise", "scenario_id", "estimator_id"]
-    if not _require(raw, needed, "fig7"):
-        return
-
-    scored = raw[raw.get("scored", pd.Series(False, index=raw.index)).fillna(False)]
-    if scored.empty:
-        print("  fig7: skipped, nothing scored")
-        return
-
-    median_c = scored["c_index_harrell"].median()
-    candidates = scored[scored["c_index_harrell"] >= median_c]
-    if candidates.empty:
-        print("  fig7: skipped, no candidate cell")
-        return
-
-    pick = candidates.loc[candidates["mise"].idxmax()]
-
-    figure, axis = plt.subplots(figsize=(5.4, 4.0))
-    axis.axis("off")
-    axis.text(
-        0.5,
-        0.5,
-        "Selected cell:\n"
-        f"{pick['scenario_id']}\n{pick['estimator_id']}\n\n"
-        f"C-index {pick['c_index_harrell']:.3f} (at or above the median)\n"
-        f"MISE {pick['mise']:.5f}\n\n"
-        "Curves are drawn by regenerating this cell from its recorded seed;\n"
-        "see scripts/make_figures.py --illustrate.",
-        ha="center",
-        va="center",
-        fontsize=9,
-    )
-    axis.set_title("Good discrimination, poor absolute prediction")
-    _save(figure, "fig7_illustrative_case", out, exploratory)
+    print("  fig7: skipped, illustrative curve export is not implemented")
 
 
 # ---------------------------------------------------------------------------
