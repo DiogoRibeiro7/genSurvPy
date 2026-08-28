@@ -65,7 +65,10 @@ class ScenarioConfig:
     def __post_init__(self) -> None:
         reason = unsupported_reason(self.dgp)
         if reason is not None:
-            raise ValueError(f"scenario {self.scenario_id!r}: {reason}")
+            raise ValueError(
+                f"scenario {self.scenario_id!r} uses dgp {self.dgp!r}, which this "
+                f"study does not support: {reason}"
+            )
         if self.n <= 0:
             raise ValueError(f"scenario {self.scenario_id!r}: n must be positive")
         if not 0.0 <= self.target_censoring < 1.0:
