@@ -8,7 +8,7 @@ from gen_surv._rng import RandomStateLike, resolve_rng
 from gen_surv._truth import record
 from gen_surv.bivariate import sample_bivariate_distribution
 from gen_surv.censoring import CensoringFunc, rexpocens, runifcens
-from gen_surv.validation import validate_gen_tdcm_inputs
+from gen_surv.validation import ParameterError, validate_gen_tdcm_inputs
 
 
 def generate_censored_observations(
@@ -52,12 +52,36 @@ def generate_censored_observations(
     rng = resolve_rng(seed)
 
     z1 = b[:, 1]
-    x = lam * b[:, 0] * np.exp(beta[0] * z1)
+
+    # A heavy-tailed covariate distribution -- a Weibull `dist_par` shape well
+    # below 1 -- puts `z1` in the tens of thousands, and `exp(beta[0] * z1)`
+    # then leaves the range of a float. Neither outcome is survivable:
+    # overflow to `inf` makes `t1 = log_term / inf` exactly 0.0, which
+    # `status = (t <= c)` reports as an *observed event at time zero* in a
+    # zero-length risk interval; underflow to 0.0 makes `t` infinite, silently
+    # reported as censored. Both are frames of the right shape carrying data no
+    # analysis should be handed, so this raises rather than returning one.
+    # Errors are suppressed only because the result is inspected immediately
+    # below and turned into a message that says what to change; NumPy's warning
+    # names the expression, not the parameter behind it.
+    with np.errstate(over="ignore", under="ignore"):
+        exp_b0_z1 = np.exp(beta[0] * z1)
+    if not np.all(np.isfinite(exp_b0_z1)) or np.any(exp_b0_z1 == 0.0):
+        extreme = float(z1[np.argmax(np.abs(beta[0] * z1))])
+        raise ParameterError(
+            "beta",
+            beta,
+            f"combined with the covariate distribution, exp(beta[0] * z) left "
+            f"the range of a float (largest covariate drawn: {extreme:.3g}). "
+            f"Reduce beta[0], or widen the Weibull shape in dist_par -- a "
+            f"shape below 1 is heavy-tailed and draws very large covariates",
+        )
+
+    x = lam * b[:, 0] * exp_b0_z1
     u = rng.uniform(size=n)
     c = rfunc(n, cens_par, rng)
 
     threshold = 1 - np.exp(-x)
-    exp_b0_z1 = np.exp(beta[0] * z1)
     log_term = -np.log(1 - u)
 
     # Before the crossover the hazard is lam * exp(beta[0] * z1); after it, that
@@ -122,7 +146,10 @@ def gen_tdcm(
     dist : {"weibull", "exponential"}
         Type of marginal distributions.
     corr : float
-        Correlation coefficient between covariates.
+        Correlation between the baseline covariate and the crossover time, on
+        the latent normal scale. Must be in ``(0, 1)`` for ``dist='weibull'``
+        and ``(-1, 1)`` for ``dist='exponential'``; the endpoints make the
+        copula's covariance singular.
     dist_par : Sequence[float]
         Distribution parameters.
     model_cens : {"uniform", "exponential"}
