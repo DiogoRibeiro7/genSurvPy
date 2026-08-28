@@ -15,6 +15,7 @@ Twelve generators, grouped by the question they answer.
 | An illness-death process, as observed states | [`thmm`](thmm.md) | Panel of state observations at times |
 | An exposure that changes during follow-up | [`tdcm`](tdcm.md) | Cox model with a covariate that switches value mid-follow-up |
 | The same event happening more than once | [`recurrent_events`](recurrent-events.md) | Andersen-Gill and Prentice-Williams-Peterson processes |
+| A state structure the twelve models do not cover | [`gen_multistate`](multistate.md) | Any transition graph, either clock, either layout |
 
 ## Decide by hazard shape
 
@@ -34,6 +35,7 @@ flowchart TD
     E --> E1["cmm / thmm<br/>illness-death"]
     E --> E2["tdcm<br/>covariate changes, not the state"]
     E --> E3["recurrent_events<br/>the same event, repeatedly"]
+    E --> E4["gen_multistate<br/>any graph you describe"]
 ```
 
 ## The parameter each model is "about"
@@ -51,6 +53,7 @@ the short version of what to feed an estimator:
 | `cmm` / `thmm` | `rate` per transition | Transitions divided by time at risk in the origin state |
 | `tdcm` | `beta` — baseline and time-dependent effects | Cox model on the `(start, stop]` frame |
 | `recurrent_events` | `betas`, and `stratum_effects` for PWP | Time-varying Cox on the `(start, stop]` frame |
+| `gen_multistate` | one baseline and `coefficients` per edge | Transitions divided by time at risk, per edge |
 
 ## They all share these arguments
 

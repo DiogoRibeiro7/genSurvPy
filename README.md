@@ -48,6 +48,9 @@ needed only for the two conversion helpers:
 pip install scikit-survival
 ```
 
+The package ships `py.typed`, so `mypy` and `pyright` check your calls into it
+rather than treating it as untyped.
+
 ## Thirty seconds
 
 ```python
@@ -116,6 +119,37 @@ generates — start at
 > return several rows per subject, and column names differ between families.
 > See [Output schemas](https://diogoribeiro7.github.io/genSurvPy/getting-started/schemas/)
 > before writing code that consumes a generated frame.
+
+## A thirteenth, outside `generate()`
+
+The twelve above each fix a state structure. When yours is not among them,
+`gen_multistate` takes the graph itself:
+
+```python
+from gen_surv import ExponentialBaseline, Transition, WeibullBaseline, gen_multistate
+
+multistate = gen_multistate(
+    n=500,
+    transitions=[
+        Transition(1, 2, WeibullBaseline(shape=1.2, scale=3.0), [0.4]),  # fall ill
+        Transition(2, 1, ExponentialBaseline(rate=0.6), [0.0]),          # recover
+        Transition(2, 3, ExponentialBaseline(rate=0.2), [0.6]),          # die while ill
+    ],
+    clock="reset",
+    seed=1,
+)
+```
+
+Every edge carries its own baseline hazard and coefficients. A state with no
+outgoing edge is absorbing, and cycles are allowed - recovery above is a
+transition like any other. `clock="forward"` measures the hazard from entry to
+the study, giving a Markov process; `clock="reset"` restarts it at each state,
+giving a semi-Markov one.
+
+`cmm` and `thmm` are configurations of this engine rather than separate
+implementations. It takes a list of objects rather than scalars, so it has no
+`model=` string and no command-line form - import it directly. See
+[The multistate engine](https://diogoribeiro7.github.io/genSurvPy/models/multistate/).
 
 ## The ground truth, not just the data
 
@@ -195,7 +229,7 @@ A bug fix in a sampler changes the draws a seed produces, so **pin the version
 alongside the seed** for anything that must reproduce:
 
 ```text
-gen-surv==2.1.0
+gen-surv==3.0.0
 ```
 
 See
@@ -250,7 +284,7 @@ Work happens on `develop`; `main` carries releases. See
   title   = {gen_surv: Survival Data Simulation in Python},
   author  = {Diogo Ribeiro},
   url     = {https://github.com/DiogoRibeiro7/genSurvPy},
-  version = {2.1.0}
+  version = {3.0.0}
 }
 ```
 

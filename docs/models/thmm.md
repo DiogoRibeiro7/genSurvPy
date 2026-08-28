@@ -7,6 +7,14 @@ subject's state is recorded.
 "Time-homogeneous" means every transition intensity is constant in time. The
 states are observed, so despite the name this is **not** a hidden Markov model.
 
+!!! info "Built on the multistate engine"
+
+    Since 3.0.0 this is a configuration of [`gen_multistate`](multistate.md) -
+    the illness-death graph with exponential edges and a panel layout - rather
+    than a separate implementation. Its columns, dtypes and id base are
+    unchanged (subjects are still numbered from 1), but **a given seed no longer
+    reproduces its 2.1.0 output**.
+
 ```mermaid
 stateDiagram-v2
     direction LR
@@ -69,17 +77,18 @@ print(df.head(6))
 ```
 
 ```text
-   id     time  state        X0
-0   1  0.00000      1  0.773956
-1   1  0.79890      3  0.773956
-2   2  0.00000      1  0.975622
-3   2  0.21746      3  0.975622
-4   3  0.00000      1  0.370798
-5   3  1.19747      3  0.370798
+   id      time  state        X0
+0   1  0.000000      1  0.773956
+1   1  2.573206      3  0.773956
+2   2  0.000000      1  0.438878
+3   2  1.260936      3  0.438878
+4   3  0.000000      1  0.858598
+5   3  0.158588      1  0.858598
 ```
 
 Every subject opens with an entry observation in state 1 at time 0. Subject `1`
-is then observed in state 3 at `t = 0.799` — dead, without ever being ill.
+is then observed in state 3 at `t = 2.573` — dead, without ever being ill.
+Subject `3`'s second row is still state 1, so it was censored while healthy.
 
 !!! warning "There is no `status` column"
 
@@ -115,7 +124,7 @@ print(f"1->3  declared={rate[1]}  mle={int((second['state'] == 3).sum()) / expos
 ```
 
 ```text
-1->2  declared=0.2  mle=0.200
+1->2  declared=0.2  mle=0.198
 1->3  declared=0.3  mle=0.299
 ```
 
@@ -145,6 +154,7 @@ state process. The split mirrors `genCMM` and `genTHMM` in the R package.
 
 ## Related
 
+- [The multistate engine](multistate.md) — what this model is a configuration of
 - [Illness-death, intervals (CMM)](cmm.md)
 - [Output schemas](../getting-started/schemas.md#thmm-observed-state-panel)
 - API: [`gen_thmm`](../api/generators.md#gen_surv.thmm.gen_thmm)

@@ -55,9 +55,23 @@ items here are about finding the ones that have not been.
 - [ ] **Wider property-based testing.** Hypothesis is already used in a few
       places; extend it to parameter validation and invariants across all
       generators. Complements the statistical tests rather than replacing them.
-- [ ] **Centralised parameter validation.** Finite and positive checks are
-      applied inconsistently, so some invalid values still reach NumPy and
-      surface as confusing downstream errors.
+- [x] **Centralised parameter validation.** Finiteness is now checked where
+      positivity is. The inconsistency had a single cause: every comparison
+      with NaN is false, so `value <= 0` admitted it, and `inf > 0` is true.
+      `ensure_positive_sequence` had guarded against both; the scalar
+      `ensure_positive` had not.
+
+      Probing all twelve generators with NaN and infinity in every numeric
+      argument found **39 that were accepted**. They came back as a frame of
+      the right shape quietly full of NaN, as `OverflowError: high - low range
+      exceeds valid bounds` from a uniform draw, or — for
+      `gen_recurrent_events(followup_time=nan)` — as a call that never
+      returned, the sampling loop comparing candidates against a bound nothing
+      can exceed. `cmm` and `thmm` also checked only the *length* of `rate`, so
+      a negative entry surfaced as `ValueError: scale < 0` from inside NumPy.
+
+      All rejected now, with `tests/test_input_hardening.py` walking every
+      numeric argument of every model to keep it that way.
 - [ ] **Return the maturity classifier to `5 - Production/Stable`** once the
       items above are in place. Distribution tests have now shipped for all
       twelve generators, which was the stated blocker; R parity fixtures and
@@ -88,8 +102,14 @@ items here are about finding the ones that have not been.
       `pyreadr` are mandatory today, so simulating a Weibull dataset pulls in a
       plotting stack and two file-format libraries. Move them behind `viz`, `io`
       and `sklearn` extras with `all` as a convenience.
-- [ ] **Add `py.typed`** so downstream users get the annotations that are already
-      written and checked.
+- [x] **Added `py.typed`.** The annotations were written and mypy checked them
+      on every commit, but PEP 561 tells a type checker to ignore an installed
+      package's inline types without the marker, so none of it reached anyone.
+      A downstream `mypy` reported `Cannot find implementation or library stub
+      for module named "gen_surv"` and silently accepted
+      `gen_cphm(n="not an integer", ...)`; it now reports the argument type.
+      Measured by installing the built wheel into a clean environment and
+      running mypy over a downstream file, before and after.
 
 ## Repository hygiene
 
@@ -174,19 +194,35 @@ repetitive.
       numerical inverse, which is its own piece of work.
 - [ ] **Spline baseline.** A `SplineBaseline` implementing the protocol, with a
       monotone fit on the log cumulative hazard and a numerical inverse.
-- [ ] **General multistate engine.** An arbitrary transition graph with
-      per-transition hazards, supporting both `clock="forward"` (Markov) and
-      `clock="reset"` (semi-Markov), built on the baseline hazard protocol.
+- [x] **General multistate engine.** `gen_multistate` walks an arbitrary
+      transition graph. Each edge is a `Transition` carrying its own
+      `BaselineHazard` and coefficients, both clocks are supported --
+      `clock="forward"` for a Markov process, `clock="reset"` for a semi-Markov
+      one -- and either canonical layout can be returned. Cycles are allowed, so
+      recovery is a transition like any other, and a state with no outgoing
+      edge is absorbing.
 
-      **Note on the second half of this item.** Making CMM and THMM
-      configurations of the engine would change what a given seed produces:
-      both draw their covariates, censoring times and latent transition times
-      in a particular vectorised order, and a general engine walks the graph
-      per subject instead. The frozen baselines in `tests/baselines` would all
-      have to be regenerated, which is a reproducibility break for anyone who
-      pinned a seed. Ship the engine as a new generator first, show it
-      reproduces the CMM and THMM *distributions*, and fold the two in at the
-      next major version.
+      **CMM and THMM are now configurations of it.** `gen_cmm` builds the
+      illness-death graph with Weibull edges on a reset clock; `gen_thmm` builds
+      it with exponential edges and asks for the panel layout. Their columns,
+      dtypes and id bases are unchanged, and every distribution test still
+      passes, but **a given seed produces different data**, which is why this
+      landed as 3.0.0. The frozen baselines for those two models were
+      regenerated; the other ten are untouched, which is the evidence the change
+      is confined.
+
+- [x] **Vectorised the multistate engine.** It advances the whole cohort a wave
+      at a time: subjects sharing a state are drawn for together, so the sampling
+      and the inversions are array operations and the number of Python
+      iterations is the longest path any subject takes rather than the number of
+      subjects. The frame is assembled from concatenated arrays, which turned
+      out to cost more than the sampling once the loop was gone.
+
+      Measured as the minimum of fifteen runs, at n=10000: `cmm` 135.7 ms to
+      9.8 ms, `thmm` 165.0 ms to 9.9 ms. Against 2.1.0, before the engine
+      existed, `cmm` is 1.7x slower (5.9 ms) and `thmm` 8.8x faster (87.3 ms),
+      the latter because it had always looped per subject.
+
 - [x] **Canonical output schemas.** Documented as contracts on the output
       schemas page, and enforced: `EXPECTED_COLUMNS` in the regression suite
       pins every generator's column list, and a further test fails if a model is

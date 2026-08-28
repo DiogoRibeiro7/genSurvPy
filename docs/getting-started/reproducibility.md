@@ -108,12 +108,16 @@ datasets = [generate(model="cphm", n=500, beta=0.5, covariate_range=2.0,
 
 A bug fix in a sampler changes the draws it makes, so a patch release can
 change the data a given seed produces. That has already happened: the 1.3.0 and
-2.0.0 releases corrected sampling bugs and deliberately changed output.
+2.0.0 releases corrected sampling bugs and deliberately changed output, and
+3.0.0 rebuilt `cmm` and `thmm` on the
+[multistate engine](../models/multistate.md), which draws one candidate per
+outgoing edge per visit where the old implementations drew all three latent
+times up front. Those two generators changed for every seed.
 
 **If a result must be reproducible for a paper, pin the version:**
 
 ```
-gen-surv==2.1.0
+gen-surv==3.0.0
 ```
 
 and record it alongside the seed. Record both in the artefact itself where you

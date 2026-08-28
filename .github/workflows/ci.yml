@@ -4,17 +4,32 @@ on:
   push:
     branches:
       - main
+      - develop
     tags:
       - 'v*'
   pull_request:
     branches:
       - main
+      - develop
+
+# Adding `develop` doubles the trigger surface, so supersede rather than pile
+# up: a second push to a pull request cancels the first run. Only pull
+# requests are cancelled -- a run on `main`, `develop` or a tag is a record of
+# whether that commit was good and always finishes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
     name: Test with Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
+      # One version failing should not cancel the others: knowing whether a
+      # failure is version-specific is most of the diagnosis. On the v3.0.0
+      # tag, 3.11 failed and took 3.12 and 3.13 down as cancelled, which hid
+      # that the cause had nothing to do with the version.
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
 
@@ -52,7 +67,12 @@ jobs:
       - name: Check runtime dependencies
         run: |
           poetry run python - <<'PY'
-          import importlib, sys
+          # `import importlib` does not bind the `util` submodule. This read
+          # worked only when something else had already imported it, which is
+          # why it passed on main and raised on the v3.0.0 tag from the very
+          # same commit.
+          import importlib.util
+          import sys
           missing = [m for m in ("pandas",) if importlib.util.find_spec(m) is None]
           if missing:
               print("Missing dependencies:", ", ".join(missing))

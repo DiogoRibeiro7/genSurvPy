@@ -89,6 +89,11 @@ specified.
 | `tdcm` | Cox with a time-dependent covariate | one row per subject | [TDCM](models/tdcm.md) |
 | `recurrent_events` | Repeated events per subject (AG, PWP) | one row per at-risk interval | [Recurrent events](models/recurrent-events.md) |
 
+There is a thirteenth generator that `generate()` cannot reach.
+[`gen_multistate`](models/multistate.md) takes an arbitrary transition graph as
+a list of objects rather than a set of scalars, so it has no `model=` string and
+no command-line form. `cmm` and `thmm` are configurations of it.
+
 Not sure which one you need? [Choosing a model](models/index.md) walks through
 the decision.
 
@@ -143,7 +148,7 @@ Several models draw their coefficients for you when you omit them, and
   title   = {gen_surv: Survival Data Simulation in Python},
   author  = {Diogo Ribeiro},
   url     = {https://github.com/DiogoRibeiro7/genSurvPy},
-  version = {2.1.0}
+  version = {3.0.0}
 }
 ```
 

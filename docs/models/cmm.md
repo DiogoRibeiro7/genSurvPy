@@ -7,6 +7,15 @@ Three states: **1 healthy**, **2 ill**, **3 dead**. A subject starts healthy and
 either falls ill first (`1 → 2`, then possibly `2 → 3`) or dies directly
 (`1 → 3`).
 
+!!! info "Built on the multistate engine"
+
+    Since 3.0.0 this is a configuration of [`gen_multistate`](multistate.md) -
+    the illness-death graph with Weibull edges and a reset clock - rather than a
+    separate implementation. Its columns, dtypes and parameters are unchanged,
+    but **a given seed no longer reproduces its 2.1.0 output**. Reach for the
+    engine directly when you need a state structure this page does not
+    describe.
+
 ```mermaid
 stateDiagram-v2
     direction LR
@@ -91,22 +100,22 @@ print(df.head(6))
    id  start      stop  from_state  to_state  status        X0
 0   0    0.0  2.819921           1         2       0  0.773956
 1   0    0.0  2.819921           1         3       0  0.773956
-2   1    0.0  4.574156           1         2       0  0.438878
-3   1    0.0  4.574156           1         3       1  0.438878
+2   1    0.0  1.891403           1         2       0  0.438878
+3   1    0.0  1.891403           1         3       1  0.438878
 4   2    0.0  0.158588           1         2       0  0.858598
 5   2    0.0  0.158588           1         3       0  0.858598
 ```
 
 Read subject `1`: it was at risk of both `1 → 2` and `1 → 3` over
-`[0, 4.574)`, and the `1 → 3` row carries `status = 1`, so it died without
-falling ill. Subject `0` has `status = 0` on both rows — censored while still
-healthy.
+`[0, 1.891)`, and the `1 → 3` row carries `status = 1`, so it died without ever
+falling ill. Subjects `0` and `2` have `status = 0` on both of their rows —
+censored while still healthy, contributing time at risk and no event.
 
-Six subjects, thirteen rows. **Never use `len(df)` as a sample size:**
+Six subjects, twelve rows. **Never use `len(df)` as a sample size:**
 
 ```python
 df["id"].nunique()      # 6
-len(df)                 # 13
+len(df)                 # 12
 ```
 
 ## Check: do the intensities come back?
@@ -130,9 +139,9 @@ for (fs, ts), true_l in zip([(1, 2), (1, 3), (2, 3)], [rate[0], rate[2], rate[4]
 ```
 
 ```text
-1->2  declared=0.3  mle=0.298
-1->3  declared=0.2  mle=0.199
-2->3  declared=0.5  mle=0.504
+1->2  declared=0.3  mle=0.299
+1->3  declared=0.2  mle=0.198
+2->3  declared=0.5  mle=0.503
 ```
 
 ## Fitting a transition-specific model
@@ -153,6 +162,7 @@ For `2 → 3`, remember the clock resets: use `stop - start` as the duration, no
 
 ## Related
 
+- [The multistate engine](multistate.md) — what this model is a configuration of
 - [Illness-death, panel (THMM)](thmm.md) — the same process, observed states
 - [Output schemas](../getting-started/schemas.md#cmm-counting-process-intervals) — every column
 - [Competing risks](competing-risks.md) — `1 → 2` versus `1 → 3` is itself a competing-risks problem
