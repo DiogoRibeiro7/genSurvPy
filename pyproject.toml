@@ -60,7 +60,7 @@ gen_surv = "gen_surv.cli:app"
 packages = [{ include = "gen_surv" }]
 
 [tool.poetry.group.dev.dependencies]
-pytest = ">=9.0.3,<10.0.0"
+pytest = ">=9.1.1,<10.0.0"
 pytest-cov = "^7.0.0"
 pytest-benchmark = "^5.3.0"
 mypy = "^1.18.2"
