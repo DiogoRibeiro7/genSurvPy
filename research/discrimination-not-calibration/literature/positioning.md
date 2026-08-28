@@ -8,6 +8,7 @@
 | Lillelund et al. (2025) | **yes** — abstract, Sections 1–2 |
 | Struthers & Kalbfleisch (1986) | **yes** — Sections 1–3.1, Theorem 2.1 |
 | Antolini et al. (2005) | **yes** — Summary, Sections 2.2.2–2.3.1 |
+| Birolo et al. (2025) | **yes** — Abstract, Sections 3.1–3.3 |
 | Austin et al. (2020) | not yet |
 | Sonabend et al. (2022) | not yet |
 | Burk et al. (2026) | not yet |
@@ -16,11 +17,13 @@
 | Graf et al. (1999), Heagerty et al. (2000) | |
 | Heagerty & Zheng (2005), Gerds & Schumacher (2006), | deposited, not yet read |
 | Uno et al. (2011) | |
-| Birolo et al. (2025) | **not deposited** — nearest competitor |
+| Royston & Parmar (2002), Ishwaran et al. (2008), | |
+| Hothorn et al. (2006), Steyerberg et al. (2010), | **not deposited** |
+| Simonsen & Waagepetersen (2025) | |
 
-Claims below about the four read papers come from the papers themselves. Claims
-about the rest come from the author's summary and are marked as such. Nothing here may
-be cited in the manuscript until its source has been read.
+Claims below about the five read papers come from the papers themselves. Claims
+about the rest come from the author's summary and are marked as such. Nothing
+here may be cited in the manuscript until its source has been read.
 
 ---
 
@@ -59,10 +62,38 @@ That is established, and recently and explicitly so. On the author's reading:
   truth. They argue the C-index is overused; we measure what its use permits.
   Their Figure 1 also shows D-calibration is among the least-used measures in
   the surveyed literature, which supports reporting it here.
-- **Birolo et al. (2025)** explicitly observe that models with a high C-index
-  can be badly calibrated under non-proportional hazards. This is the nearest
-  conceptual competitor and the paper we must differentiate against most
-  carefully.
+- **Birolo et al. (2025)**, *Beyond Cox Models* — **read**. The nearest
+  competitor, and closer than the summary suggested. They benchmark eight
+  methods (four of them deep learning) on three synthetic and three clinical
+  datasets, and they already hold two positions this study might have thought
+  were its own:
+
+  - they argue Harrell's C is *improper* for non-proportional models and
+    advocate **Antolini's index** instead, which is exactly the substitution
+    made here — so using Antolini is following their recommendation, not
+    innovating;
+  - they observe that "occasionally high C-index models happen to be badly
+    calibrated" and recommend pairing Antolini's C with the Brier score.
+
+  **But their evaluation is entirely on observed data.** Section 3.3 lists
+  four metrics: Harrell's C at three time quartiles, Antolini's C, the Brier
+  score, and time-dependent AUROC. Their synthetic datasets are *generated
+  from* a known survival function — events sampled according to a survival
+  function built from the features — and that function is never used to score
+  anything.
+
+  So the nearest competitor had the truth available and did not measure against
+  it. That is the cleanest statement of this study's gap, and it comes from the
+  competitor's own methods section rather than from an assumption about what
+  they did.
+
+  Their synthetic mechanisms are LinPH, NonLinPH and NonPH (piecewise constant
+  over 16 intervals). Ours overlap on the PH/non-PH axis and add a cure
+  fraction, whose survival plateau no proportional-hazards model can represent.
+  Their conclusion is guidance on *which model to choose* given sample size,
+  non-linearity and non-PH; ours is *how much error a metric permits*. Those
+  are different questions and should be stated as such rather than contrasted
+  competitively.
 - **Burk et al. (2026)** set the current benchmarking context: 21 models, 34
   datasets, several discrimination, calibration and scoring metrics.
 
@@ -98,6 +129,14 @@ The sharpened question is therefore not "do these metrics disagree?" but:
 
 This reframes the contribution from *a phenomenon* to *a measurement*. The
 phenomenon is prior work; the calibrated ruler is ours.
+
+**The strongest evidence that the gap is real comes from the nearest
+competitor.** Birolo et al. (2025) generate synthetic survival data *from* a
+known survival function and then evaluate with Harrell's C, Antolini's C, the
+Brier score and time-dependent AUROC — four measures computed from observed
+outcomes. The generating function is available to them throughout and is never
+used to score a prediction. A study can therefore hold the truth and still not
+measure against it, which is what this one does differently.
 
 ### What this changes in the paper
 
