@@ -187,6 +187,8 @@ METRICS = {
         "c_index_harrell",
         "c_index_uno",
         "c_index_at_tau",
+        "c_index_antolini",
+        "d_calibration_p",
         "brier_at_tau",
         "integrated_brier_score",
         "auc_mean",

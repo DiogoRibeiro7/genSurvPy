@@ -25,6 +25,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy import stats
 
 # scikit-survival 0.25.0 still calls `np.trapz`, which NumPy 2.0 removed in
 # favour of `np.trapezoid`. Without this every Brier and AUC call returns
@@ -37,6 +38,8 @@ if not hasattr(np, "trapz"):  # pragma: no cover - environment dependent
     np.trapz = np.trapezoid  # type: ignore[attr-defined]
 
 __all__ = [
+    "d_calibration",
+    "antolini_concordance",
     "integrated_squared_error",
     "integrated_absolute_error",
     "truth_recovery",
@@ -283,6 +286,171 @@ def grouped_calibration_error(
     }
 
 
+# ---------------------------------------------------------------------------
+# Measures defined on the predicted distribution rather than on a score
+# ---------------------------------------------------------------------------
+
+
+def _survival_at(
+    predicted: NDArray[np.float64],
+    grid: NDArray[np.float64],
+    times: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """Each subject's own predicted survival at its own time, by interpolation.
+
+    Times beyond the grid are clipped to its last point, the same convention
+    the step-function adapters use. It cannot flatter a model: it holds the
+    predicted survival at a late time no lower than the curve's last value.
+    """
+    clipped = np.clip(np.asarray(times, dtype=float), grid[0], grid[-1])
+    out = np.empty(predicted.shape[0], dtype=float)
+    for row in range(predicted.shape[0]):
+        out[row] = float(np.interp(clipped[row], grid, predicted[row]))
+    return out
+
+
+def d_calibration(
+    predicted: NDArray[np.float64],
+    grid: NDArray[np.float64],
+    time: NDArray[np.float64],
+    event: NDArray[np.bool_],
+    n_bins: int = 10,
+) -> dict[str, float]:
+    """Distributional calibration, after Haider et al. (2020).
+
+    If a model's predicted survival function is right then evaluating it at
+    each subject's own event time gives a Uniform(0, 1) variable -- the same
+    probability integral transform used to validate the truth functions
+    themselves. D-calibration bins those values and tests the counts against
+    uniform.
+
+    Censored subjects are not discarded. A subject censored at C with predicted
+    survival s there is known only to fall somewhere in [0, s], so it
+    contributes mass one spread across that range: the bin holding s receives
+    the part of it below s, and every lower bin its full width, each divided by
+    s. Dropping them would bias the statistic towards subjects who happened to
+    fail early, which is precisely the subjects a censored study over-observes.
+
+    This asks about the whole predicted distribution, where a calibration curve
+    asks about one horizon. The distribution is the object this study is about.
+    """
+    grid = np.asarray(grid, dtype=float)
+    observed = np.asarray(time, dtype=float)
+    had_event = np.asarray(event, dtype=bool)
+
+    # Administratively censor at the end of the grid. The predicted curve is
+    # only defined out to tau, so a subject observed beyond it must be treated
+    # as censored there rather than have its survival clipped to S(tau): the
+    # clipped version piles every late subject into one bin and rejects even a
+    # model that is exactly right. Cox on a correctly specified Cox mechanism,
+    # with MISE 6e-5, was rejected at p < 1e-4 before this.
+    horizon = float(grid[-1])
+    beyond = observed > horizon
+    observed = np.where(beyond, horizon, observed)
+    had_event = had_event & ~beyond
+
+    survival_at_observed = _survival_at(predicted, grid, observed)
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    counts = np.zeros(n_bins, dtype=float)
+
+    for value in survival_at_observed[had_event]:
+        index = min(int(np.searchsorted(edges, value, side="right")) - 1, n_bins - 1)
+        counts[max(index, 0)] += 1.0
+
+    width = edges[1] - edges[0]
+    for value in survival_at_observed[~had_event]:
+        if value <= 0.0:
+            counts[0] += 1.0
+            continue
+        upper = min(int(np.searchsorted(edges, value, side="right")) - 1, n_bins - 1)
+        upper = max(upper, 0)
+        counts[upper] += (value - edges[upper]) / value
+        if upper > 0:
+            counts[:upper] += width / value
+
+    total = float(counts.sum())
+    if total <= 0:
+        return {
+            "d_calibration_statistic": float("nan"),
+            "d_calibration_p": float("nan"),
+        }
+
+    expected = total / n_bins
+    statistic = float(((counts - expected) ** 2 / expected).sum())
+
+    return {
+        "d_calibration_statistic": statistic,
+        "d_calibration_p": float(stats.chi2.sf(statistic, df=n_bins - 1)),
+        # Normalised by the sample size so it is comparable across evaluation
+        # sets, which the raw chi-square is not.
+        "d_calibration_normalised": statistic / total,
+    }
+
+
+def antolini_concordance(
+    predicted: NDArray[np.float64],
+    grid: NDArray[np.float64],
+    time: NDArray[np.float64],
+    event: NDArray[np.bool_],
+    max_events: int = 800,
+    seed: int = 0,
+) -> dict[str, float]:
+    """Time-dependent concordance, after Antolini et al. (2005).
+
+    Harrell and Uno reduce a predicted distribution to one score before
+    comparing anything, and Sonabend et al. (2022) show that how the reduction
+    is done can move the resulting number substantially. Antolini's index makes
+    no reduction: for a comparable pair with T_i < T_j it asks whether the model
+    gave subject i the lower survival probability **at the time i actually
+    failed**,
+
+        S_i(T_i) < S_j(T_i).
+
+    That is the right question when hazards are not proportional, because the
+    ranking of two subjects can then reverse with the horizon and no single
+    score represents it.
+
+    Comparable pairs are subsampled on a fixed seed when there are many events,
+    so cost does not grow quadratically across hundreds of thousands of cells.
+    The number of pairs actually used is reported alongside the index.
+    """
+    grid = np.asarray(grid, dtype=float)
+    observed = np.asarray(time, dtype=float)
+    had_event = np.asarray(event, dtype=bool)
+
+    event_index = np.flatnonzero(had_event)
+    if event_index.size == 0:
+        return {"c_index_antolini": float("nan"), "antolini_pairs": 0}
+
+    if event_index.size > max_events:
+        rng = np.random.default_rng(seed)
+        event_index = rng.choice(event_index, size=max_events, replace=False)
+
+    columns = np.clip(
+        np.searchsorted(grid, observed[event_index], side="left"), 0, grid.size - 1
+    )
+
+    concordant = 0.0
+    comparable = 0.0
+    for position, subject in enumerate(event_index):
+        column = int(columns[position])
+        later = observed > observed[subject]
+        if not later.any():
+            continue
+        own = predicted[subject, column]
+        others = predicted[later, column]
+        comparable += float(others.size)
+        concordant += float((own < others).sum()) + 0.5 * float((own == others).sum())
+
+    if comparable == 0:
+        return {"c_index_antolini": float("nan"), "antolini_pairs": 0}
+
+    return {
+        "c_index_antolini": concordant / comparable,
+        "antolini_pairs": int(comparable),
+    }
+
+
 def evaluate_all(
     *,
     predicted: NDArray[np.float64],
@@ -328,6 +496,14 @@ def evaluate_all(
             predicted[:, index], eval_time, eval_event, float(grid[index])
         )
     )
+
+    # Measures defined on the predicted distribution rather than on a score.
+    # The contribution this study claims concerns individual survival
+    # distributions, so the calibration and discrimination measures it reports
+    # should be the ones defined for distributions -- not only those defined at
+    # a single horizon or on a static risk ranking.
+    results.update(d_calibration(predicted, grid, eval_time, eval_event))
+    results.update(antolini_concordance(predicted, grid, eval_time, eval_event))
 
     # The same ranking measured on predicted survival at tau rather than on the
     # model's native score. Under proportional hazards the two agree; where
