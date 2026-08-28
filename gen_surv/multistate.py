@@ -248,6 +248,30 @@ def _walk_cohort(
             winner = np.argmin(candidates, axis=0)
             best = candidates[winner, np.arange(len(here))]
 
+            # A baseline whose shape is far below one puts the inverse
+            # cumulative hazard at a very high power -- t = H ** (1 / shape) --
+            # so for H < 1 the sojourn underflows to exactly 0.0 and the
+            # subject appears to leave the state at the instant it arrived.
+            # The interval layout then carries a row with start == stop and
+            # status == 1: an observed transition with no time at risk, which
+            # contributes nothing to an occurrence/exposure estimate and which
+            # no counting-process fitter can use. The frame is otherwise well
+            # formed, so nothing downstream would question it.
+            arrived = entered[here]
+            degenerate = np.isfinite(best) & (best <= arrived)
+            if np.any(degenerate):
+                edge = edges[int(winner[np.flatnonzero(degenerate)[0]])][1]
+                raise ParameterError(
+                    "baseline",
+                    edge.baseline,
+                    f"the {edge.origin} -> {edge.destination} sojourn underflowed "
+                    f"to zero, so the transition would be reported at the instant "
+                    f"the state was entered, in an interval of no length. A "
+                    f"Weibull shape well below 1 does this: the inverse "
+                    f"cumulative hazard raises the drawn hazard to the power "
+                    f"1/shape. Use a larger shape for this edge",
+                )
+
             # A tie between the transition and the end of follow-up goes to the
             # transition, matching the R implementation's `c < min(...)`.
             stops = ~np.isfinite(best) | (best > ends[here])

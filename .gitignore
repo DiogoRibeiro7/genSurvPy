@@ -59,3 +59,17 @@ site/
 
 # Type checker cache
 .mypy_cache/
+
+# Literature PDFs used for the local research studies. Third-party
+# copyrighted papers: never committed, force-added, archived into a release, or
+# copied into a tracked directory. tests/test_papers_not_tracked.py enforces
+# this.
+papers/
+
+# Pilot artefacts from the research studies: exploratory, regenerable from the
+# config and seeds, and never to be confused with frozen production results.
+# scripts/run_pilot.py refuses to read a file containing production rows for
+# the same reason. Production results are tracked; these are not.
+research/*/results/raw/pilot.parquet
+research/*/results/processed/
+research/*/results/figures/
