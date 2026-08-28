@@ -132,6 +132,46 @@ $\hat\beta \approx \beta$ and $\hat S(t \mid X) \approx S(t \mid X)$ are
 related but distinct targets, and the study reports both precisely so they can
 be seen to come apart.
 
+### Why the table is sparse, from theory rather than caution
+
+Struthers & Kalbfleisch (1986, Theorem 2.1) show that under a misspecified
+proportional-hazards model the maximum partial likelihood estimator is still
+**consistent** — but for a parameter $\beta^*$ defined implicitly as the
+solution of
+
+$$
+h(\beta) = \int_0^\infty s^{(1)}(x)\,dx
+- \int_0^\infty \frac{s^{(1)}(\beta, x)}{s^{(0)}(\beta, x)}\, s^{(0)}(x)\,dx
+= 0 .
+$$
+
+So $\hat\beta$ does not wander: it converges to a well-defined limit that is
+simply **not** the generating parameter. Calling $\hat\beta - \beta$ a "bias"
+for a non-proportional mechanism would name the distance between two different
+quantities.
+
+Two consequences the paper must carry.
+
+**The estimand moves with the censoring level.** $s^{(0)}$ and $s^{(1)}$ are
+expectations involving the at-risk indicator $Y_i(t)$, so $\beta^*$ depends on
+the censoring distribution. This study varies censoring across four levels by
+design. For the misspecified mechanisms, comparing $\hat\beta$ across those
+levels therefore compares **different estimands**, and any apparent trend in
+$\hat\beta$ with censoring is not evidence of finite-sample bias.
+
+Nothing analogous affects MISE: its target $S_i(t)$ is fixed by the mechanism
+and does not move with censoring. That is an argument for the primary outcome
+being what it is, and it came from the theory rather than from preference.
+
+**`aft_weibull` belongs in the table and the other AFT mechanisms do not.**
+Struthers & Kalbfleisch note that when the AFT error $W$ has the extreme-value
+distribution, the partial likelihood estimates $\beta = \sigma^{-1}\alpha$
+exactly. That is the Weibull case, and only the Weibull case: with normal
+errors (`aft_ln`) or logistic errors (`aft_log_logistic`) the mechanism is not
+proportional hazards and $\beta^*$ is not $\alpha$ under any rescaling. The
+correspondence table was built on that reasoning before the paper was read; it
+now rests on it.
+
 ---
 
 ## 6. The adequacy region

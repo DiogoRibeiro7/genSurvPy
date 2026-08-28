@@ -6,10 +6,16 @@
 |---|---|
 | Haider et al. (2020) | **yes** — Section 3.5, Appendix B.5, Theorem B.3 |
 | Lillelund et al. (2025) | **yes** — abstract, Sections 1–2 |
+| Struthers & Kalbfleisch (1986) | **yes** — Sections 1–3.1, Theorem 2.1 |
 | Austin et al. (2020) | not yet |
 | Sonabend et al. (2022) | not yet |
 | Burk et al. (2026) | not yet |
-| the remaining 17 | not deposited |
+| Cox (1972), Grambsch & Therneau (1994), | |
+| Schemper et al. (2009), Harrell et al. (1982), | deposited, not yet read |
+| Graf et al. (1999), Heagerty et al. (2000) | |
+| Antolini (2005), Heagerty & Zheng (2005), | |
+| Gerds & Schumacher (2006), Uno et al. (2011), | **not deposited** |
+| Birolo et al. (2025) | |
 
 Claims below about the first two come from the papers themselves. Claims about
 the rest come from the author's summary and are marked as such. Nothing here may
