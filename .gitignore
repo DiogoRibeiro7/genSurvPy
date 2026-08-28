@@ -66,3 +66,11 @@ site/
 # directory. research/*/literature/ holds our own notes and bibliography
 # instead. tests/test_papers_not_tracked.py enforces this.
 papers/
+
+# Pilot artefacts from the research studies. They are exploratory, they are
+# regenerable from the config and seeds, and they must never be confused with
+# frozen production results -- scripts/run_pilot.py refuses to read a file
+# containing production rows for the same reason. Production results are
+# tracked; these are not.
+research/*/results/raw/pilot.parquet
+research/*/results/processed/pilot_*

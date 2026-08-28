@@ -113,7 +113,20 @@ def prepare_scenario(
         scenario.dgp, n=calibration_n, **params, seed=PREPARATION_SEED + 1
     )
     latent = np.asarray(reference.truth["event_time"], dtype=float)
-    finite = latent[np.isfinite(latent)]
+    usable = np.isfinite(latent)
+
+    # A cured subject never fails, and `gen_mixture_cure` encodes that as
+    # `max_time * 100` -- a finite sentinel, not an event time. Taking a
+    # quantile over it put tau at 1000 for mixture_cure where every other
+    # mechanism sits between 0.96 and 5.4, so MISE was integrated over a
+    # horizon 385 times too long and that arm of the study was not comparable
+    # with any other. The truth records cure status, so exclude it explicitly
+    # rather than trying to recognise the sentinel by its value.
+    cured = reference.truth.get("cured")
+    if cured is not None:
+        usable &= np.asarray(cured) == 0
+
+    finite = latent[usable]
 
     if finite.size == 0:
         return PreparedScenario(
@@ -127,6 +140,26 @@ def prepare_scenario(
         )
 
     tau = float(np.quantile(finite, metrics.tau_quantile))
+
+    # tau should sit inside the bulk of the failure times. If it is orders of
+    # magnitude above the median, something non-failure has been counted as an
+    # event time -- which is how the sentinel above was found.
+    median = float(np.median(finite))
+    if median > 0 and tau > 50 * median:
+        return PreparedScenario(
+            config=scenario,
+            params=params,
+            tau=tau,
+            time_grid=(),
+            censoring_achieved=calibration.achieved,
+            feasible=False,
+            reason=(
+                f"tau={tau:.4g} is more than 50x the median failure time "
+                f"({median:.4g}); a non-failure value is probably being counted "
+                f"as an event time"
+            ),
+        )
+
     grid = tuple(np.linspace(0.0, tau, metrics.n_time_points).tolist())
 
     return PreparedScenario(

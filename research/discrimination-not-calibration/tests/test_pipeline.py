@@ -364,3 +364,44 @@ def test_completed_cells_supports_resumption(tmp_path) -> None:
 
     assert ("s", "cox", 0) in done
     assert len(done) == 3
+
+
+# ---------------------------------------------------------------------------
+# Scenario preparation
+# ---------------------------------------------------------------------------
+
+
+def test_tau_excludes_cured_subjects() -> None:
+    """A cured subject's recorded time is a sentinel, not a failure time.
+
+    `gen_mixture_cure` writes `max_time * 100` for the cured, which is finite.
+    Including it put tau at 1000 for mixture_cure where every other mechanism
+    sits between 0.96 and 5.4, so the primary loss was integrated over a
+    horizon 385 times too long and that arm was incomparable with the rest.
+    """
+    from survival_misspec.config import MetricsConfig, ScenarioConfig
+    from survival_misspec.experiments import prepare_scenario
+
+    scenario = ScenarioConfig(
+        scenario_id="cure",
+        dgp="mixture_cure",
+        n=500,
+        target_censoring=0.5,
+        effect_size=0.5,
+        params={
+            "cure_fraction": 0.3,
+            "baseline_hazard": 0.7,
+            "betas_survival": [0.5, -0.25],
+            "betas_cure": [0.25, 0.1],
+            "model_cens": "uniform",
+        },
+    )
+    prepared = prepare_scenario(
+        scenario, MetricsConfig(0.8, 51, (0.5,), ("mise",)), calibration_n=4000
+    )
+
+    assert prepared.feasible, prepared.reason
+    assert prepared.tau < 20.0, (
+        f"tau={prepared.tau} looks like the cured sentinel (max_time * 100), "
+        "not a failure-time quantile"
+    )
