@@ -7,18 +7,19 @@
 | Haider et al. (2020) | **yes** — Section 3.5, Appendix B.5, Theorem B.3 |
 | Lillelund et al. (2025) | **yes** — abstract, Sections 1–2 |
 | Struthers & Kalbfleisch (1986) | **yes** — Sections 1–3.1, Theorem 2.1 |
+| Antolini et al. (2005) | **yes** — Summary, Sections 2.2.2–2.3.1 |
 | Austin et al. (2020) | not yet |
 | Sonabend et al. (2022) | not yet |
 | Burk et al. (2026) | not yet |
 | Cox (1972), Grambsch & Therneau (1994), | |
 | Schemper et al. (2009), Harrell et al. (1982), | deposited, not yet read |
 | Graf et al. (1999), Heagerty et al. (2000) | |
-| Antolini (2005), Heagerty & Zheng (2005), | |
-| Gerds & Schumacher (2006), Uno et al. (2011), | **not deposited** |
-| Birolo et al. (2025) | |
+| Heagerty & Zheng (2005), Gerds & Schumacher (2006), | deposited, not yet read |
+| Uno et al. (2011) | |
+| Birolo et al. (2025) | **not deposited** — nearest competitor |
 
-Claims below about the first two come from the papers themselves. Claims about
-the rest come from the author's summary and are marked as such. Nothing here may
+Claims below about the four read papers come from the papers themselves. Claims
+about the rest come from the author's summary and are marked as such. Nothing here may
 be cited in the manuscript until its source has been read.
 
 ---
@@ -153,11 +154,48 @@ which is also why Kaplan–Meier is only *asymptotically* D-calibrated.
 Given the flat-region problem above it may be the better measure for the
 step-function estimators, which is worth settling before the freeze.
 
-**Antolini's time-dependent concordance** (2005) uses the predicted survival
-distribution rather than a static risk score, which makes it the right
-discrimination measure when the mechanism is non-proportional. We currently
-report Harrell, Uno, and a concordance computed on $1 - \hat S(\tau)$; the last
-is a crude stand-in for what Antolini defines properly.
+**Antolini's time-dependent concordance** is implemented and has now been
+**checked against the paper**. Equation 11 is
+
+$$
+C^{td} = P\bigl(\hat S(T_i \mid X_i) < \hat S(T_i \mid X_j)
+\;\big|\; T_i < T_j,\; D_i = 1\bigr),
+$$
+
+and the comparability rule — subject $i$ must have failed, subject $j$ need only
+have a later observed time, censored or not — was already right. Two details
+were not.
+
+**The horizon.** Section 2.3 restricts the index to $[0, \tau]$ by
+*administratively censoring at $\tau$*, not by evaluating late events at the
+boundary. The implementation had clipped an event at $T_i > \tau$ to the last
+grid point and still counted it as an event, inventing comparisons the
+definition excludes.
+
+**Ties.** Equation 12 uses a strict inequality, so a tie contributes zero, not
+the one half of Harrell's convention. This is not a technicality here, and its
+effect is asymmetric across the estimators:
+
+| estimator | tie fraction | effect of the 0.5 convention |
+|---|---|---|
+| `cox_ph` | 0.000 | none |
+| `weibull_aft` | 0.000 | none |
+| `gradient_boosted` | 0.013 | +0.007 |
+| `random_survival_forest` | 0.057 | **+0.029** |
+
+The parametric models predict smooth curves and have no ties at all; the
+step-function models do, so the convention alone moves their index by up to
+three hundredths. The published definition is used and the tie fraction is
+reported alongside, because a reader comparing these numbers with another
+implementation — most of which use 0.5 — would otherwise see the step-function
+models systematically lower for a purely conventional reason. This is precisely
+the class of problem Sonabend et al. (2022) name: how a distribution is turned
+into a comparison changes the number.
+
+Together with the D-calibration flat-region caveat above, **both** distributional
+measures are biased against the step-function estimators, for different and
+independent reasons. The paper must say so rather than let two artefacts
+accumulate into an apparent finding.
 
 **The working title.** *Discrimination Is Not Calibration* asserts the claim
 that is no longer ours, and sits close to an ICML position paper that makes it.

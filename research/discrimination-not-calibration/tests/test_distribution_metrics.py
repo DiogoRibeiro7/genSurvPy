@@ -110,19 +110,38 @@ def test_antolini_agrees_with_a_known_ranking_when_hazards_are_proportional() ->
     grid = np.linspace(0.0, float(np.quantile(times, 0.95)), 60)
     predicted = _exponential_surface(rates, grid)
 
-    outcome = antolini_concordance(
+    correct = antolini_concordance(
         predicted, grid, times, np.ones(n, dtype=bool), max_events=400
     )
+    # The same curves handed to the wrong subjects. A threshold on the index
+    # alone would only pin whatever the code currently returns; this pins the
+    # property that actually matters.
+    shuffled = antolini_concordance(
+        predicted[np.random.default_rng(0).permutation(n)],
+        grid,
+        times,
+        np.ones(n, dtype=bool),
+        max_events=400,
+    )
 
-    assert outcome["antolini_pairs"] > 0
-    assert outcome["c_index_antolini"] > 0.65, (
-        f"a model given the exact hazards should rank well; got "
-        f"{outcome['c_index_antolini']:.4f}"
+    assert correct["antolini_pairs"] > 0
+    assert correct["c_index_antolini"] > shuffled["c_index_antolini"] + 0.1, (
+        f"a model given the exact hazards should rank far better than the same "
+        f"curves misassigned; got {correct['c_index_antolini']:.4f} against "
+        f"{shuffled['c_index_antolini']:.4f}"
     )
 
 
-def test_antolini_is_uninformative_for_a_model_that_cannot_discriminate() -> None:
-    """Identical predictions for everyone must give one half, not an accident."""
+def test_antolini_scores_identical_predictions_by_the_published_rule() -> None:
+    """Equation 12 is a strict inequality, so a tie is not half a concordance.
+
+    Harrell's convention gives ties one half; Antolini's estimator does not.
+    With identical predictions for everyone the index is therefore 0, not 0.5.
+    That looks harsh, and it is the published definition -- so the tie fraction
+    is reported alongside, because two of this study's estimators predict step
+    functions whose values are frequently exactly equal and the choice of
+    convention would otherwise silently decide their score.
+    """
     rng = np.random.default_rng(4)
     n = 800
     times = rng.exponential(1.0, size=n)
@@ -131,7 +150,32 @@ def test_antolini_is_uninformative_for_a_model_that_cannot_discriminate() -> Non
 
     outcome = antolini_concordance(predicted, grid, times, np.ones(n, dtype=bool))
 
-    assert outcome["c_index_antolini"] == pytest.approx(0.5, abs=1e-9)
+    assert outcome["c_index_antolini"] == pytest.approx(0.0, abs=1e-9)
+    assert outcome["antolini_tie_fraction"] == pytest.approx(1.0, abs=1e-9)
+
+
+def test_antolini_administratively_censors_at_the_horizon() -> None:
+    """Section 2.3 restricts to [0, tau] by censoring at tau, not by clipping.
+
+    An event after the horizon is not an event within it, so it cannot be the
+    earlier member of a comparable pair. Clipping it to the last grid point --
+    the previous behaviour -- invented comparisons the definition excludes and
+    evaluated them at the wrong time.
+    """
+    n = 60
+    rng = np.random.default_rng(9)
+    rates = rng.uniform(0.5, 2.0, size=n)
+    times = np.linspace(0.1, 10.0, n)
+    grid = np.linspace(0.0, 2.0, 30)
+    predicted = _exponential_surface(rates, grid)
+
+    outcome = antolini_concordance(predicted, grid, times, np.ones(n, dtype=bool))
+
+    # Only subjects failing at or before tau = 2.0 may act as events, and each
+    # needs someone later, so the last one inside the horizon cannot contribute.
+    inside = int((times <= 2.0).sum())
+    assert outcome["antolini_pairs"] > 0
+    assert outcome["antolini_pairs"] <= inside * n
 
 
 def test_antolini_handles_a_sample_with_no_events() -> None:

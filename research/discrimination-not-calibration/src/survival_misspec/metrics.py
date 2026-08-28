@@ -418,32 +418,65 @@ def antolini_concordance(
     max_events: int = 800,
     seed: int = 0,
 ) -> dict[str, float]:
-    """Time-dependent concordance, after Antolini et al. (2005).
+    r"""Time-dependent concordance, after Antolini et al. (2005), Equation 11.
+
+    .. math::
+
+        C^{td} = P\bigl(\hat S(T_i \mid X_i) < \hat S(T_i \mid X_j)
+                 \;\big|\; T_i < T_j,\; D_i = 1\bigr)
 
     Harrell and Uno reduce a predicted distribution to one score before
-    comparing anything, and Sonabend et al. (2022) show that how the reduction
-    is done can move the resulting number substantially. Antolini's index makes
-    no reduction: for a comparable pair with T_i < T_j it asks whether the model
-    gave subject i the lower survival probability **at the time i actually
-    failed**,
+    comparing anything, and Sonabend et al. (2022) show the reduction itself can
+    move the number. Antolini's index makes none: for a comparable pair it asks
+    whether the model gave subject *i* the lower survival probability **at the
+    time i actually failed**. That is the right question when hazards are not
+    proportional, because the ranking of two subjects can then reverse with the
+    horizon and no single score represents it.
 
-        S_i(T_i) < S_j(T_i).
+    **Checked against the paper.** Three details were wrong when this was
+    written from a description, and are now as published.
 
-    That is the right question when hazards are not proportional, because the
-    ranking of two subjects can then reverse with the horizon and no single
-    score represents it.
+    *Comparability.* Subject *i* must have had the event; subject *j* need only
+    have a later observed time, censored or not. That was already right, and the
+    summary states it explicitly.
+
+    *The horizon.* Section 2.3 restricts the index to ``[0, tau]`` by
+    **administratively censoring at tau**, not by evaluating late events at the
+    boundary. This previously clipped an event at ``T_i > tau`` to the last grid
+    point and still counted it as an event, which both invents a comparison the
+    definition excludes and evaluates it at the wrong time.
+
+    *Ties.* Equation 12 uses a strict inequality, so a tie contributes zero, not
+    the one half of Harrell's convention. This is not a technicality here: the
+    random survival forest and gradient boosting predict step functions, whose
+    values are frequently exactly equal, so the two conventions can differ
+    materially for exactly two of the four estimators. The published definition
+    is used, and ``antolini_tie_fraction`` is returned so the paper can report
+    how much of the index that choice is deciding rather than leave a reader to
+    wonder.
 
     Comparable pairs are subsampled on a fixed seed when there are many events,
     so cost does not grow quadratically across hundreds of thousands of cells.
-    The number of pairs actually used is reported alongside the index.
     """
     grid = np.asarray(grid, dtype=float)
     observed = np.asarray(time, dtype=float)
     had_event = np.asarray(event, dtype=bool)
 
+    # Administrative censoring at the end of the grid, which is tau. A subject
+    # observed beyond it is censored there and is no longer an event, so it
+    # cannot be the earlier member of a comparable pair.
+    horizon = float(grid[-1])
+    beyond = observed > horizon
+    observed = np.where(beyond, horizon, observed)
+    had_event = had_event & ~beyond
+
     event_index = np.flatnonzero(had_event)
     if event_index.size == 0:
-        return {"c_index_antolini": float("nan"), "antolini_pairs": 0}
+        return {
+            "c_index_antolini": float("nan"),
+            "antolini_pairs": 0,
+            "antolini_tie_fraction": float("nan"),
+        }
 
     if event_index.size > max_events:
         rng = np.random.default_rng(seed)
@@ -454,6 +487,7 @@ def antolini_concordance(
     )
 
     concordant = 0.0
+    tied = 0.0
     comparable = 0.0
     for position, subject in enumerate(event_index):
         column = int(columns[position])
@@ -463,14 +497,20 @@ def antolini_concordance(
         own = predicted[subject, column]
         others = predicted[later, column]
         comparable += float(others.size)
-        concordant += float((own < others).sum()) + 0.5 * float((own == others).sum())
+        concordant += float((own < others).sum())
+        tied += float((own == others).sum())
 
     if comparable == 0:
-        return {"c_index_antolini": float("nan"), "antolini_pairs": 0}
+        return {
+            "c_index_antolini": float("nan"),
+            "antolini_pairs": 0,
+            "antolini_tie_fraction": float("nan"),
+        }
 
     return {
         "c_index_antolini": concordant / comparable,
         "antolini_pairs": int(comparable),
+        "antolini_tie_fraction": tied / comparable,
     }
 
 
