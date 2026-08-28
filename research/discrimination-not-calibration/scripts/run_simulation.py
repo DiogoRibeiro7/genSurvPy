@@ -17,8 +17,10 @@ pilot cannot be mistaken for a production result later.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -38,6 +40,20 @@ from survival_misspec.validation import (  # noqa: E402
 FLUSH_EVERY = 200
 
 
+def _worker(task):
+    """Run one cell in a subprocess.
+
+    Defined at module level so it can be pickled. Parallel execution is safe
+    here by construction, not by luck: seeds come from
+    ``(master_seed, scenario_id, replication_id, stream)``, so a cell's data
+    does not depend on which worker runs it, on how many workers there are, or
+    on the order the cells complete. A run with eight workers is the same
+    experiment as a run with one.
+    """
+    prepared, estimator, replication_id, master_seed = task
+    return run_cell(prepared, estimator, replication_id, master_seed)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(HERE.parent / "config"))
@@ -49,6 +65,12 @@ def main() -> int:
         "--max-cells", type=int, default=None, help="stop early (debugging)"
     )
     parser.add_argument("--calibration-n", type=int, default=20000)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="parallel worker processes; the result is identical to --workers 1",
+    )
     arguments = parser.parse_args()
 
     study = load_study(arguments.config)
@@ -101,43 +123,56 @@ def main() -> int:
         print("nothing to run")
         return 1
 
+    pending = [
+        (ready, estimator, replication_id, study.master_seed)
+        for ready in prepared
+        for estimator in study.estimators
+        for replication_id in range(study.n_replications)
+        if (ready.scenario_id, estimator.estimator_id, replication_id) not in done
+    ]
     total = len(prepared) * len(study.estimators) * study.n_replications
+    print(f"\n{len(pending):,} cells to run of {total:,} ({len(done):,} already done)")
+
+    workers = max(1, min(arguments.workers, (os.cpu_count() or 2)))
+    print(f"workers       {workers}")
+
     started = time.perf_counter()
     buffer: list[dict] = []
-    completed = 0
     ran = 0
 
-    for ready in prepared:
-        for estimator in study.estimators:
-            for replication_id in range(study.n_replications):
-                key = (ready.scenario_id, estimator.estimator_id, replication_id)
-                completed += 1
-                if key in done:
-                    continue
+    def record(row: dict) -> None:
+        nonlocal buffer, ran
+        row["study_hash"] = study.hash
+        row["git_commit"] = provenance.git_commit
+        row["gen_surv_version"] = provenance.gen_surv_version
+        row["is_production"] = bool(arguments.lock)
+        buffer.append(row)
+        ran += 1
+        if len(buffer) >= FLUSH_EVERY:
+            write_raw(buffer, out)
+            buffer.clear()
+            elapsed = time.perf_counter() - started
+            rate = ran / elapsed if elapsed else 0.0
+            remaining = (len(pending) - ran) / rate if rate else float("nan")
+            print(
+                f"  {ran:,}/{len(pending):,}  {rate:.1f} cells/s  "
+                f"eta {remaining / 60:.1f} min"
+            )
 
-                row = run_cell(ready, estimator, replication_id, study.master_seed)
-                row["study_hash"] = study.hash
-                row["git_commit"] = provenance.git_commit
-                row["gen_surv_version"] = provenance.gen_surv_version
-                row["is_production"] = bool(arguments.lock)
-                buffer.append(row)
-                ran += 1
-
-                if len(buffer) >= FLUSH_EVERY:
-                    write_raw(buffer, out)
-                    buffer = []
-                    elapsed = time.perf_counter() - started
-                    rate = ran / elapsed if elapsed else 0.0
-                    remaining = (total - completed) / rate if rate else float("nan")
-                    print(
-                        f"  {completed:,}/{total:,}  ran {ran:,}  "
-                        f"{rate:.1f} cells/s  eta {remaining / 60:.1f} min"
-                    )
-
+    if workers == 1:
+        for task in pending:
+            record(_worker(task))
+            if arguments.max_cells and ran >= arguments.max_cells:
+                break
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(_worker, task): task for task in pending}
+            for future in as_completed(futures):
+                record(future.result())
                 if arguments.max_cells and ran >= arguments.max_cells:
-                    write_raw(buffer, out)
-                    print(f"stopped early at {ran} cells (--max-cells)")
-                    return 0
+                    for pending_future in futures:
+                        pending_future.cancel()
+                    break
 
     if buffer:
         write_raw(buffer, out)

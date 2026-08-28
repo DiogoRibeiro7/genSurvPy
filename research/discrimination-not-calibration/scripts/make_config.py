@@ -87,10 +87,28 @@ PILOT = {
     "replications": 10,
 }
 
+#: The production grid, pruned from the full Cartesian design on pilot
+#: evidence rather than by preference. The pilot measured how far each factor
+#: moves the primary loss:
+#:
+#:     estimator 6.4x, dgp 6.1x, censoring 3.2x, n 1.7x
+#:
+#: so no factor is redundant and none is dropped. Two *levels* are, both
+#: interior points on smooth trends: n=500 sits between 250 and 1000 on a 1.7x
+#: range, and effect=0.25 between the null and 0.5.
+#:
+#: R=500 comes from inverting MCSE = s / sqrt(R) on pilot variability at a
+#: target of 0.001 on MISE. That covers the 90th percentile of cells; the
+#: hardest (aft_log_logistic at n=250 with 70% censoring) needs about 5000 and
+#: stays underpowered. Its Monte Carlo error is reported rather than hidden,
+#: and comparisons there are described as indistinguishable.
+#:
+#: mixture_cure loses its low-censoring cells automatically: a 30% cure
+#: fraction puts a floor of about 31% on the censoring rate.
 PRODUCTION = {
-    "n": [250, 500, 1000, 5000],
+    "n": [250, 1000, 5000],
     "censoring": [0.1, 0.3, 0.5, 0.7],
-    "effect": [0.0, 0.25, 0.5, 1.0],
+    "effect": [0.0, 0.5, 1.0],
     "replications": 500,
 }
 

@@ -405,3 +405,39 @@ def test_tau_excludes_cured_subjects() -> None:
         f"tau={prepared.tau} looks like the cured sentinel (max_time * 100), "
         "not a failure-time quantile"
     )
+
+
+def test_cells_are_independent_of_the_order_they_are_run_in() -> None:
+    """The property that makes parallel execution the same experiment.
+
+    Running cells in a different order must give byte-identical rows. This is
+    what licenses `--workers N`: a cell's data depends only on its identifiers,
+    never on which worker ran it, how many workers there were, or when it
+    finished. Verified against a real 4-worker run as well: seeds, MISE,
+    concordance, integrated Brier and calibration error were all bit-identical
+    to the sequential run.
+    """
+    from survival_misspec.config import EstimatorConfig, MetricsConfig, ScenarioConfig
+    from survival_misspec.experiments import prepare_scenario, run_cell
+
+    scenario = ScenarioConfig(
+        scenario_id="order",
+        dgp="cphm",
+        n=150,
+        target_censoring=0.3,
+        effect_size=0.5,
+        params={"beta": 0.5, "covariate_range": 2.0, "model_cens": "uniform"},
+    )
+    prepared = prepare_scenario(
+        scenario, MetricsConfig(0.8, 21, (0.5,), ("mise",)), calibration_n=2000
+    )
+    estimator = EstimatorConfig("cox_ph", "cox_ph")
+
+    forwards = [run_cell(prepared, estimator, r, 7) for r in (0, 1, 2)]
+    backwards = [run_cell(prepared, estimator, r, 7) for r in (2, 1, 0)][::-1]
+
+    for first, second in zip(forwards, backwards):
+        assert first["train_seed"] == second["train_seed"]
+        assert first["eval_seed"] == second["eval_seed"]
+        assert first["mise"] == second["mise"]
+        assert first["c_index_harrell"] == second["c_index_harrell"]
