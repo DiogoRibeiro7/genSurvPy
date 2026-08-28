@@ -333,6 +333,29 @@ def d_calibration(
 
     This asks about the whole predicted distribution, where a calibration curve
     asks about one horizon. The distribution is the object this study is about.
+
+    **Verified against the source.** The censoring weights above are the ones in
+    the proof of Theorem B.3: the bucket holding ``S_c`` receives
+    ``(S_c - p_k) / S_c`` and every bucket entirely below it receives
+    ``(p_{k+1} - p_k) / S_c``, with uncensored subjects contributing weight one
+    to their own bucket. The test is Pearson's chi-square against uniform at
+    ``p > 0.05``. This implementation was originally written from a description
+    and has since been checked against the paper; it agrees.
+
+    **A precondition that matters here.** The theorem assumes survival curves
+    are *strictly* monotonically decreasing. Where a curve is flat, terms in the
+    proof do not cancel and buckets spanning the flat region take a larger share
+    than they should -- so the statistic is inflated and the test over-rejects.
+    Two of this study's four estimators, the random survival forest and gradient
+    boosting, predict step functions with exactly such flat regions. Some part
+    of their poorer D-calibration is therefore an artefact of the measure rather
+    than evidence about the model, and the paper must say so rather than read
+    the rejection at face value. The parametric estimators are unaffected: their
+    curves are smooth and strictly decreasing.
+
+    Censoring works the other way, smoothing the bucket proportions and raising
+    the p-value, so the test is conservative under heavy censoring -- which is
+    also why Kaplan-Meier is only *asymptotically* D-calibrated.
     """
     grid = np.asarray(grid, dtype=float)
     observed = np.asarray(time, dtype=float)

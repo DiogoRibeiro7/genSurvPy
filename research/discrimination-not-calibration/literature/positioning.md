@@ -1,10 +1,19 @@
 # Positioning and the contribution claim
 
-**Status:** revised on the author's reading of the recent literature. **None of
-the cited papers have been read by the agent that wrote this file** — the PDFs
-are not yet in the repository-local `papers/` directory. What follows records a
-decision and its rationale; it is not a literature review, and it must not be
-turned into one until the papers have actually been read.
+**Status:** partially read.
+
+| paper | read? |
+|---|---|
+| Haider et al. (2020) | **yes** — Section 3.5, Appendix B.5, Theorem B.3 |
+| Lillelund et al. (2025) | **yes** — abstract, Sections 1–2 |
+| Austin et al. (2020) | not yet |
+| Sonabend et al. (2022) | not yet |
+| Burk et al. (2026) | not yet |
+| the remaining 17 | not deposited |
+
+Claims below about the first two come from the papers themselves. Claims about
+the rest come from the author's summary and are marked as such. Nothing here may
+be cited in the manuscript until its source has been read.
 
 ---
 
@@ -24,9 +33,25 @@ That is established, and recently and explicitly so. On the author's reading:
 - **Sonabend, Bender & Vollmer (2022)** show that distribution predictions can
   be made to look good on discrimination depending on how they are reduced to a
   risk score — "C-hacking".
-- **Lillelund, Qi, Greiner & Pedersen (2025)**, *Stop Chasing the C-index*, is
-  close enough to our working title that "the C-index is insufficient" cannot
-  be our novelty.
+- **Lillelund, Qi, Greiner & Pedersen (2025)**, *Position: Stop Chasing the
+  C-index when Evaluating Survival Analysis Models* — **read**. Now published
+  at ICML 2026 (PMLR 306), not a preprint, which raises the bar for
+  differentiation.
+
+  It is a **position paper**: a survey of 92 methodological and application
+  papers from 2023–2025 finding roughly 72% rely on metrics misaligned with
+  their stated objective, plus a "ladder hypothesis" relating models, metrics
+  and censoring assumptions, illustrated by controlled experiments. Its
+  emphasis is that censoring assumptions are usually left implicit, and that
+  metric choice must follow from the research objective.
+
+  More differentiable than it first appeared. Their contribution is *normative
+  and diagnostic* — practice is misaligned, here is a framework for aligning
+  it. Ours is *quantitative* — given an apparently acceptable metric value,
+  here is how far the estimated distribution has actually moved from a known
+  truth. They argue the C-index is overused; we measure what its use permits.
+  Their Figure 1 also shows D-calibration is among the least-used measures in
+  the surveyed literature, which supports reporting it here.
 - **Birolo et al. (2025)** explicitly observe that models with a high C-index
   can be badly calibrated under non-proportional hazards. This is the nearest
   conceptual competitor and the paper we must differentiate against most
@@ -99,14 +124,28 @@ the interesting middle of the misspecification axis. `lifelines.CRCSplineFitter`
 is available and is the same family Austin et al. used. Adding a fifth
 estimator raises the production run from 432,000 to 540,000 cells.
 
-**D-calibration** (Haider et al. 2020) and **A-calibration** (Simonsen &
-Waagepetersen 2025) are calibration measures designed for individual survival
-*distributions* rather than for a single horizon. Our current grouped
-calibration error is a decile comparison at $\tau$, which is coarser and
-engages the calibration literature less directly. Both are computable from what
-each replicate already produces, and neither needs another fit — so they are
-cheap to add and would strengthen exactly the component the repositioning makes
-central.
+**D-calibration** is implemented and has now been **verified against Haider et
+al. (2020)**. The censoring weights match the proof of Theorem B.3 exactly: the
+bucket holding $S_c$ receives $(S_c - p_k)/S_c$, every bucket entirely below it
+receives $(p_{k+1} - p_k)/S_c$, uncensored subjects contribute weight one to
+their own bucket, and the test is Pearson's chi-square against uniform at
+$p > 0.05$. It was written from a description and turns out to agree with the
+source.
+
+Reading it surfaced a precondition the study must report. **Theorem B.3 assumes
+survival curves are strictly monotonically decreasing.** Where a curve is flat,
+terms in the proof fail to cancel and buckets spanning the flat region take more
+than their share, inflating the statistic and over-rejecting. The random
+survival forest and gradient boosting predict step functions with exactly such
+flats, so part of their worse D-calibration in our results is an artefact of the
+measure rather than evidence about the model. The parametric estimators are
+unaffected. Censoring pushes the other way — it smooths the bucket proportions
+and raises the p-value — so the test is conservative under heavy censoring,
+which is also why Kaplan–Meier is only *asymptotically* D-calibrated.
+
+**A-calibration** (Simonsen & Waagepetersen 2025) is unread and unimplemented.
+Given the flat-region problem above it may be the better measure for the
+step-function estimators, which is worth settling before the freeze.
 
 **Antolini's time-dependent concordance** (2005) uses the predicted survival
 distribution rather than a static risk score, which makes it the right
@@ -115,10 +154,17 @@ report Harrell, Uno, and a concordance computed on $1 - \hat S(\tau)$; the last
 is a crude stand-in for what Antolini defines properly.
 
 **The working title.** *Discrimination Is Not Calibration* asserts the claim
-that is no longer ours. A title naming the measurement rather than the
-phenomenon would match the contribution — something built around evaluation
-against known truth, or the distance between an adequate-looking model and the
-generating distribution. This is the author's call.
+that is no longer ours, and sits close to an ICML position paper that makes it.
+A title naming the *measurement* would match the contribution. Candidates:
+
+- *How Wrong Can an Adequate-Looking Survival Model Be?* — states the question
+  the study answers.
+- *Measuring What Survival Metrics Permit: Evaluation Against a Known
+  Data-Generating Truth* — names the method.
+- *The Distance Behind the C-index: Truth-Based Evaluation of Survival
+  Distribution Predictions* — names the gap.
+
+Author's call.
 
 ---
 
