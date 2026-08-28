@@ -59,3 +59,14 @@ site/
 
 # Type checker cache
 .mypy_cache/
+
+# Literature PDFs used for the local research studies. Third-party
+# copyrighted papers: never committed, force-added, archived into a release, or
+# copied into a tracked directory. tests/test_papers_not_tracked.py enforces
+# this.
+papers/
+
+# The research studies themselves are local only. They are not part of the
+# published package and are not built by CI, and the manuscripts they contain
+# are not for publication before submission.
+research/

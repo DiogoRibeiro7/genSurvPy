@@ -200,7 +200,14 @@ MODEL_STRATEGIES: Dict[str, st.SearchStrategy[Dict[str, Any]]] = {
             "cens_par": POSITIVE,
             "beta": _coefs(3),
             "covariate_range": POSITIVE,
-            "rate": _positives(6),
+            # `rate` is (intensity, shape) per edge. The shapes are drawn from
+            # MODERATE rather than POSITIVE: a Weibull shape well below 1 makes
+            # the inverse cumulative hazard `H ** (1 / shape)` underflow to
+            # exactly zero, which `gen_multistate` now refuses. See
+            # `test_multistate_refuses_an_underflowing_sojourn` for that region.
+            "rate": st.tuples(
+                POSITIVE, MODERATE, POSITIVE, MODERATE, POSITIVE, MODERATE
+            ).map(list),
         }
     ),
     "thmm": st.fixed_dictionaries(
@@ -524,3 +531,48 @@ def test_tdcm_raises_rather_than_emitting_zero_time_events() -> None:
             lam=1.0,
             seed=0,
         )
+
+
+def test_multistate_refuses_an_underflowing_sojourn() -> None:
+    """A zero-length risk interval used to be emitted as an observed transition.
+
+    A Weibull shape far below 1 puts the inverse cumulative hazard at a very
+    high power -- ``t = H ** (1 / shape)`` -- so for ``H < 1`` the sojourn
+    underflows to exactly ``0.0``. The subject then appeared to leave the state
+    at the instant it arrived, and the interval layout carried a row with
+    ``start == stop`` and ``status == 1``: an observed transition with no time
+    at risk, contributing nothing to an occurrence/exposure estimate and usable
+    by no counting-process fitter.
+
+    Nothing structural distinguished that frame from a good one -- right
+    columns, right dtypes, no NaN, non-negative times -- which is why the
+    invariant had to be ``stop > start`` rather than ``stop >= start`` before
+    this was visible at all.
+    """
+    with pytest.raises(ValidationError, match="underflow"):
+        generate(
+            model="cmm",
+            n=5,
+            model_cens="uniform",
+            cens_par=1.0,
+            beta=[0.0, 0.0, 0.0],
+            covariate_range=1.0,
+            rate=[1.0, 1.0, 1.0, 1.0, 1.0, 0.0625],
+            seed=0,
+        )
+
+
+def test_multistate_still_accepts_a_small_but_workable_shape() -> None:
+    """The guard must reject an underflow, not every shape below one."""
+    frame = generate(
+        model="cmm",
+        n=50,
+        model_cens="uniform",
+        cens_par=1.0,
+        beta=[0.0, 0.0, 0.0],
+        covariate_range=1.0,
+        rate=[1.0, 0.7, 1.0, 0.7, 1.0, 0.7],
+        seed=0,
+    )
+    assert len(frame) > 0
+    assert (frame["stop"] > frame["start"]).all()
