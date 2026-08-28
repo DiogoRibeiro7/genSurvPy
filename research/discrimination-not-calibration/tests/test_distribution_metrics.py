@@ -205,3 +205,40 @@ def test_antolini_subsampling_is_deterministic() -> None:
     )
 
     assert first == second
+
+
+def test_expected_mortality_is_one_transformation_for_every_model() -> None:
+    """Sonabend et al. (2022) call the alternative the third form of C-hacking.
+
+    Scoring each model on its own native risk means comparing a Cox partial
+    hazard against a negative expected survival time against a forest's summed
+    cumulative hazard, all with one concordance measure — three different
+    mathematical objects, so the comparison says little about the models. This
+    derives the score from the predicted curve in one fixed way, so the only
+    thing differing between estimators is the curve itself.
+    """
+    from survival_misspec.metrics import expected_mortality
+
+    grid = np.linspace(0.0, 2.0, 40)
+    rates = np.array([0.5, 1.0, 2.0])
+    predicted = _exponential_surface(rates, grid)
+
+    risk = expected_mortality(predicted, grid)
+
+    # A higher hazard must give a higher risk, and the transformation is exact
+    # for the exponential: the integral of H(t) = rate * t over [0, tau].
+    assert risk[0] < risk[1] < risk[2]
+    np.testing.assert_allclose(risk, rates * grid[-1] ** 2 / 2.0, rtol=1e-3)
+
+
+def test_expected_mortality_ranks_a_survival_curve_the_right_way_round() -> None:
+    """Higher risk must mean earlier failure, or every concordance flips."""
+    from survival_misspec.metrics import expected_mortality
+
+    grid = np.linspace(0.0, 1.0, 30)
+    healthier = np.exp(-0.2 * grid).reshape(1, -1)
+    sicker = np.exp(-3.0 * grid).reshape(1, -1)
+
+    risk = expected_mortality(np.vstack([healthier, sicker]), grid)
+
+    assert risk[1] > risk[0]

@@ -38,6 +38,7 @@ if not hasattr(np, "trapz"):  # pragma: no cover - environment dependent
     np.trapz = np.trapezoid  # type: ignore[attr-defined]
 
 __all__ = [
+    "expected_mortality",
     "d_calibration",
     "antolini_concordance",
     "integrated_squared_error",
@@ -309,6 +310,43 @@ def _survival_at(
     return out
 
 
+def expected_mortality(
+    predicted: NDArray[np.float64], grid: NDArray[np.float64]
+) -> NDArray[np.float64]:
+    r"""One risk score, computed the same way for every model.
+
+    .. math::
+
+        r_i = \sum_k \hat H(t_k \mid x_i)
+            = -\sum_k \log \hat S(t_k \mid x_i)
+
+    the summed cumulative hazard over the evaluation grid — the "expected
+    mortality" transformation of Ishwaran et al. (2008).
+
+    **Why this exists.** Sonabend et al. (2022) identify three forms of
+    C-hacking, and the third is evaluating distribution predictions with a
+    discrimination measure without justifying the transformation used to get
+    there. This study previously scored Harrell's concordance on each model's
+    *native* score: a partial hazard for Cox, a negative expected survival time
+    for the Weibull AFT, and scikit-survival's expected mortality for the forest
+    and the boosted model. Three different mathematical objects compared with
+    one measure, which is the comparison Sonabend et al. call meaningless.
+
+    Deriving the score from the predicted survival curve in one fixed way makes
+    the concordances comparable across estimators, because the only thing that
+    differs between them is then the curve itself. The native scores are still
+    reported, separately and under their own name — Sonabend et al. note that
+    reporting both is legitimate, and only conflating them is not.
+
+    Antolini's index needs no transformation at all and remains the measure to
+    prefer where the mechanism is non-proportional.
+    """
+    grid = np.asarray(grid, dtype=float)
+    safe = np.clip(predicted, 1e-12, 1.0)
+    cumulative_hazard = -np.log(safe)
+    return np.trapezoid(cumulative_hazard, grid, axis=1)
+
+
 def d_calibration(
     predicted: NDArray[np.float64],
     grid: NDArray[np.float64],
@@ -544,8 +582,25 @@ def evaluate_all(
     grid = np.asarray(times, dtype=float)
     results: dict[str, Any] = {}
     results.update(truth_recovery(predicted, truth, grid, tau))
+
+    # Discrimination on one transformation applied identically to every model,
+    # so the concordances are comparable. Scoring each model on its own native
+    # risk is the third form of C-hacking in Sonabend et al. (2022): three
+    # different mathematical objects compared with one measure.
+    common = expected_mortality(predicted, grid)
     results.update(
-        discrimination(risk, train_time, train_event, eval_time, eval_event, tau)
+        discrimination(common, train_time, train_event, eval_time, eval_event, tau)
+    )
+
+    # The native score, reported separately and named as such. Sonabend et al.
+    # are explicit that reporting both is legitimate and only conflating them is
+    # not, so these must never be pooled with the values above.
+    native = discrimination(risk, train_time, train_event, eval_time, eval_event, tau)
+    results.update(
+        {
+            "c_index_harrell_native": native["c_index_harrell"],
+            "c_index_uno_native": native.get("c_index_uno", float("nan")),
+        }
     )
     results.update(
         prediction_error(
@@ -568,10 +623,11 @@ def evaluate_all(
     results.update(d_calibration(predicted, grid, eval_time, eval_event))
     results.update(antolini_concordance(predicted, grid, eval_time, eval_event))
 
-    # The same ranking measured on predicted survival at tau rather than on the
-    # model's native score. Under proportional hazards the two agree; where
-    # they diverge, the ranking itself depends on the horizon, which is worth
-    # recording rather than assuming away.
+    # The same ranking taken from survival at tau alone rather than from the
+    # whole curve. Under proportional hazards it agrees with the measures above;
+    # where it diverges, the ranking depends on the horizon. Reported under its
+    # own name because it is a third transformation, and choosing among the
+    # three by which flatters a model is precisely the first form of C-hacking.
     results["c_index_at_tau"] = discrimination(
         -predicted[:, index], train_time, train_event, eval_time, eval_event, tau
     )["c_index_harrell"]

@@ -9,6 +9,7 @@
 | Struthers & Kalbfleisch (1986) | **yes** — Sections 1–3.1, Theorem 2.1 |
 | Antolini et al. (2005) | **yes** — Summary, Sections 2.2.2–2.3.1 |
 | Birolo et al. (2025) | **yes** — Abstract, Sections 3.1–3.3 |
+| Sonabend et al. (2022) | **yes** — Abstract, Sections 1–3.1 |
 | Austin et al. (2020) | not yet |
 | Sonabend et al. (2022) | not yet |
 | Burk et al. (2026) | not yet |
@@ -40,9 +41,32 @@ That is established, and recently and explicitly so. On the author's reading:
 - **Austin, Harrell & van Klaveren (2020)** give graphical calibration curves
   and the integrated calibration index for survival models, and use
   misspecification simulations to do it.
-- **Sonabend, Bender & Vollmer (2022)** show that distribution predictions can
-  be made to look good on discrimination depending on how they are reduced to a
-  risk score — "C-hacking".
+- **Sonabend, Bender & Vollmer (2022)** — **read**. They define three forms of
+  C-hacking: **(I)** computing several concordance indices and reporting only
+  the most favourable; **(II)** reporting different indices under one generic
+  name; **(III)** evaluating distribution predictions with a discrimination
+  measure without justifying the transformation used to get there.
+
+  **This study was doing the third.** Harrell's concordance was computed on each
+  model's *native* risk: a partial hazard for Cox, a negative expected survival
+  time for the Weibull AFT, and scikit-survival's summed cumulative hazard for
+  the forest and the boosted model. Three different mathematical objects
+  compared with one measure, which is the comparison the paper calls virtually
+  meaningless.
+
+  Fixed by deriving the score from the predicted curve in one fixed way for
+  every model — expected mortality, the summed cumulative hazard over the
+  evaluation grid — so the only thing differing between estimators is the curve
+  itself. The native scores are still reported, separately and under their own
+  names, which the paper explicitly says is legitimate; only conflating them is
+  not. On the smoke case the change is nil for the parametric models and
+  −0.0067 for the forest, and it should matter more where hazards are not
+  proportional.
+
+  Two further obligations follow for the manuscript. The study reports four
+  discrimination measures, so it must report **all** of them rather than the
+  one that suits a conclusion (Type I), and must name each distinctly rather
+  than calling any of them "the c-index" (Type II).
 - **Lillelund, Qi, Greiner & Pedersen (2025)**, *Position: Stop Chasing the
   C-index when Evaluating Survival Analysis Models* — **read**. Now published
   at ICML 2026 (PMLR 306), not a preprint, which raises the bar for
