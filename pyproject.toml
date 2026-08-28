@@ -73,6 +73,21 @@ flake8 = ">=6.1,<8.0"
 scikit-survival = ">=0.25,<0.29"
 pre-commit = "^4.3.0"
 
+# Dependencies of the research studies under research/, not of the package.
+# The published gen-surv wheel must not acquire these merely because a paper
+# uses them, so they live in their own group rather than in the runtime list.
+#
+# PyYAML was previously undeclared: the research configuration loader imports
+# it, but it was only present transitively through mkdocs and pre-commit, so a
+# clean install without the docs group would have failed at load_study.
+#
+# scikit-survival is also in the dev group, where the package's own sksurv
+# adapter tests need it. It is repeated here so a research-only install works
+# without pulling the whole development toolchain.
+[tool.poetry.group.research.dependencies]
+pyyaml = "^6.0"
+scikit-survival = ">=0.25,<0.29"
+
 [tool.poetry.group.docs.dependencies]
 mkdocs = ">=1.6,<2.0"
 mkdocs-material = ">=9.5,<10.0"

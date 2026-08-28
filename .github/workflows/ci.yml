@@ -61,8 +61,13 @@ jobs:
       - name: Verify the lock file matches pyproject.toml
         run: poetry check --lock
 
+      # The research studies under research/ are collected by the same pytest
+      # run, so their dependencies must be installed. Before this they were
+      # not: PyYAML resolved only because pre-commit happened to pull it in,
+      # and the research config loader would have failed the moment that
+      # changed.
       - name: Install dependencies
-        run: poetry install --with dev --no-interaction
+        run: poetry install --with dev,research --no-interaction
 
       - name: Check runtime dependencies
         run: |
@@ -116,7 +121,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: poetry install --with dev --no-interaction
+        run: poetry install --with dev,research --no-interaction
 
       - name: Run pre-commit checks
         run: poetry run pre-commit run --all-files

@@ -1,0 +1,33 @@
+\section{Introduction}
+\label{sec:introduction}
+
+% STRUCTURE ONLY. Written after production; no conclusions before results.
+%
+% The argument this section must make, in order:
+%
+% 1. Survival prediction models are routinely reported with a concordance
+%    index, and a concordance index is a property of a *ranking*. It is
+%    invariant to any strictly monotone transformation of the risk score, so a
+%    model whose predicted probabilities are uniformly wrong attains the same
+%    value as one that is exactly right. State this as the formal fact it is:
+%    it is what makes the question non-vacuous.
+%
+% 2. That discrimination and calibration can disagree is KNOWN. Say so here,
+%    plainly and early, with citations. Do not stage it as a discovery. See
+%    \citet{austin2020graphical}, \citet{sonabend2022chacking},
+%    \citet{birolo2025beyond}, \citet{lillelund2025stop}.
+%
+% 3. The gap: all of that work evaluates against censored observations, which
+%    do not contain the true conditional survival function. So the size of the
+%    error a conventional metric permits has not been measured -- only its
+%    existence demonstrated.
+%
+% 4. The contribution: evaluation against an analytically known S(t | x),
+%    which permits the integrated squared distance between the predicted and
+%    the true individual survival curve directly.
+%
+% 5. The question, stated as a measurement: when conventional metrics still
+%    describe a model as adequate, how far has the estimated individual
+%    survival distribution moved from the truth?
+%
+% 6. Contributions list. Be precise about which are novel and which reproduce.

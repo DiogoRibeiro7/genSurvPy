@@ -1,0 +1,22 @@
+\section{Reproducibility}
+\label{sec:reproducibility}
+
+% Generated content plus a short narrative. The claim to support is that for
+% every number in the paper the chain
+%
+%   result -> replication -> seed -> scenario -> DGP parameters -> estimator
+%          -> metric -> gen_surv version -> git commit
+%
+% can be reconstructed automatically.
+%
+% Must state:
+% - the frozen commit and the gen_surv version, taken from
+%   ../protocol/experiment_lock.json;
+% - that seeds derive from (master_seed, scenario_id, replication_id, stream),
+%   so a parallel run is the same experiment as a sequential one -- verified,
+%   with 4 workers and 1 worker producing bit-identical seeds and metrics;
+% - that the runner refuses to start against a mismatched lock, and that the
+%   installed package version is cross-checked against the repository's;
+% - that the truth functions were validated by probability integral transform,
+%   with the Kolmogorov-Smirnov p-values;
+% - where the code and the raw replicate-level results are.
