@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased
+## v3.1.0 (2026-08-28)
 
 Property-based tests across all twelve generators, and the two `tdcm` defects
 they found.
