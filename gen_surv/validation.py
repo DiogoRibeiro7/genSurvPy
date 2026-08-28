@@ -413,16 +413,21 @@ def validate_gen_tdcm_inputs(
     _validate_base(n, model_cens, cens_par)
     ensure_in_choices(dist, "dist", {"weibull", "exponential"})
 
+    # The endpoints are excluded because the Gaussian copula underneath cannot
+    # take them: its covariance is [[1, corr], [corr, 1]], singular at
+    # |corr| = 1. This validator used to allow them and the call failed later
+    # inside `validate_dg_biv_inputs`, reporting a different range than the one
+    # checked here.
     if dist == "weibull":
-        if not (0 < corr <= 1):
-            raise ParameterError("corr", corr, "with dist='weibull' must be in (0,1]")
+        if not (0 < corr < 1):
+            raise ParameterError("corr", corr, "with dist='weibull' must be in (0,1)")
         ensure_sequence_length(dist_par, _WEIBULL_DIST_PAR_LEN, "dist_par")
         ensure_positive_sequence(dist_par, "dist_par")
 
     if dist == "exponential":
-        if not (-1 <= corr <= 1):
+        if not (-1 < corr < 1):
             raise ParameterError(
-                "corr", corr, "with dist='exponential' must be in [-1,1]"
+                "corr", corr, "with dist='exponential' must be in (-1,1)"
             )
         ensure_sequence_length(dist_par, _EXP_DIST_PAR_LEN, "dist_par")
         ensure_positive_sequence(dist_par, "dist_par")

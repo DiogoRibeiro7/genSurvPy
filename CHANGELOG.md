@@ -1,5 +1,44 @@
 # CHANGELOG
 
+## v3.1.0 (2026-08-28)
+
+Property-based tests across all twelve generators, and the two `tdcm` defects
+they found.
+
+### Behaviour changes
+
+- **`gen_tdcm` raises when `exp(beta[0] * z)` leaves the range of a float**
+  instead of returning a frame. A Weibull `dist_par` shape below 1 is an
+  exponent above 1 in `(-log(1 - u) / a) ** (1 / b)`, so the covariate reached
+  the tens of thousands and the linear predictor overflowed. `t = log_term /
+  inf` is exactly 0.0, and `status = (t <= c)` then reported an **observed
+  event at time zero** for every subject, in a zero-length risk interval; with
+  the sign of `beta[0]` flipped it underflowed instead and every subject came
+  back censored. Both frames had the right columns, the right dtypes and no
+  NaN. No correct call changes behaviour — the affected parameter combinations
+  never produced usable data.
+- **`gen_tdcm` rejects `corr` at the endpoints.** `validate_gen_tdcm_inputs`
+  allowed `(0, 1]` for Weibull and `[-1, 1]` for exponential, and the
+  documentation promised the same, but the Gaussian copula underneath needs
+  strict inequalities: its covariance `[[1, corr], [corr, 1]]` is singular at
+  `|corr| = 1`. Those values already failed — deeper in, reporting a different
+  range from a helper the caller never named. They now fail at the model's own
+  boundary, quoting the range it actually enforces.
+
+### Tests
+
+- **`tests/test_properties.py`** drives every generator from Hypothesis:
+  output invariants (the column contract, no NaN or infinity, `status` within
+  its declared set, no zero-length risk intervals, no event at time zero), the
+  seed contract (the same seed gives the same frame, and an `int` agrees with
+  the generator it seeds), and rejection of out-of-domain values. A test fails
+  if a model is registered without a strategy.
+
+### Documentation
+
+- The `corr` range on the TDCM page and in the `gen_tdcm` docstring now match
+  what is enforced.
+
 ## v3.0.0 (2026-08-25)
 
 A general multistate engine, with the two illness-death models rebuilt on top of
