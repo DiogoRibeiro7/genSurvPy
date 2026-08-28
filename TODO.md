@@ -52,9 +52,32 @@ items here are about finding the ones that have not been.
 - [ ] **R parity fixtures.** Frozen reference outputs from the R `genSurv`
       package for the models ported from it, so divergence is detected rather
       than argued about. Column names differ by design, so parity is on values.
-- [ ] **Wider property-based testing.** Hypothesis is already used in a few
-      places; extend it to parameter validation and invariants across all
-      generators. Complements the statistical tests rather than replacing them.
+- [x] **Wider property-based testing.** `tests/test_properties.py` drives all
+      twelve generators from Hypothesis: output invariants (the column
+      contract, no NaN or infinity, `status` within its declared set, no
+      zero-length risk intervals, no event at time zero), the seed contract
+      (the same seed gives the same frame, and an `int` agrees with the
+      generator it seeds), and rejection of out-of-domain values. A test fails
+      if a model is registered without a strategy, so none can escape it.
+
+      It found two defects on its way in, both in `tdcm`.
+
+      `validate_gen_tdcm_inputs` allowed `corr` at the endpoints — `(0, 1]` for
+      Weibull and `[-1, 1]` for exponential, which the documentation promised
+      too — while the Gaussian copula underneath requires strict inequalities,
+      its covariance `[[1, corr], [corr, 1]]` being singular at `|corr| = 1`.
+      The endpoints passed the model's own check, failed deeper in, and quoted
+      a different range from a helper the caller never named.
+
+      The second was worse. A Weibull `dist_par` shape below 1 is an exponent
+      above 1 in `(-log(1 - u) / a) ** (1 / b)`, so the covariate reached the
+      tens of thousands and `exp(beta[0] * z)` left the range of a float. Then
+      `t = log_term / inf` is exactly 0.0 and `status = (t <= c)` reported an
+      **observed event at time zero** for every subject, in a zero-length risk
+      interval; with the sign of `beta[0]` flipped it underflowed instead and
+      every subject came back censored. Both frames had the right columns, the
+      right dtypes and no NaN, so a finiteness check passed them. `gen_tdcm`
+      now raises, naming the largest covariate drawn and what to change.
 - [x] **Centralised parameter validation.** Finiteness is now checked where
       positivity is. The inconsistency had a single cause: every comparison
       with NaN is false, so `value <= 0` admitted it, and `inf > 0` is true.
@@ -73,9 +96,9 @@ items here are about finding the ones that have not been.
       All rejected now, with `tests/test_input_hardening.py` walking every
       numeric argument of every model to keep it that way.
 - [ ] **Return the maturity classifier to `5 - Production/Stable`** once the
-      items above are in place. Distribution tests have now shipped for all
-      twelve generators, which was the stated blocker; R parity fixtures and
-      wider property-based testing remain. Worth waiting for those: the
+      items above are in place. Distribution tests and property-based tests
+      have now shipped for all twelve generators; **R parity fixtures are the
+      last blocker**. Worth waiting for those: the
       distribution work found two more defects on its way in, which is not yet
       the profile of a package claiming stability.
 
@@ -139,12 +162,17 @@ Small, concrete, and each one has already cost time:
       `ci.yml` now runs `poetry check --lock`, so a `pyproject.toml` edit
       without a matching relock fails immediately instead of resolving
       differently in silence.
-- [ ] **Fix the `develop`/`main` divergence.** Squash-merging `develop -> main`
-      leaves the squash commit outside `develop`'s history, so every subsequent
-      release pull request conflicts. A conflicting pull request gets **no CI run
-      at all** rather than a failing one, which reads as "still queued" and is
-      easy to misdiagnose. Either use merge commits for release PRs, or reset
-      `develop` to `main` after each release.
+- [x] **Fixed the `develop`/`main` divergence.** Release pull requests use
+      merge commits now, and `main` is merged back into `develop` immediately
+      after each one, so the branches stay level and no release PR replays an
+      earlier merge as a phantom diff.
+
+      A second cause of "no CI run at all" turned out to be unrelated and
+      worse: both workflows were scoped to `main`, so **every** pull request
+      into `develop` reported no checks, conflicting or not. Tests only ran at
+      the release boundary, batched, after the commits were already in. Both
+      now run on `develop` as well, and the concurrency group is keyed on the
+      pull request number so a PR run cannot cancel a branch run.
 - [x] **Removed the vestigial `[tool.semantic_release]` configuration**, which no
       workflow read, along with the `python-semantic-release` development
       dependency that existed only to serve it.
@@ -267,8 +295,11 @@ of generators" to "a tool for evaluating survival methodology".
 
 ## Performance
 
-- [ ] **Vectorise the remaining subject-level loops.** `gen_thmm` still loops per
-      subject. This is where the available speedup actually is.
+- [ ] **Vectorise the remaining subject-level loops.** `gen_thmm` no longer
+      does — the multistate engine removed that loop, with the measurements in
+      the architecture section above. `cphm`, `piecewise_exponential`,
+      `mixture_cure`, both competing-risks models and `recurrent_events` still
+      draw one subject at a time, and that is where the remaining speedup is.
 - [ ] **Benchmark before optimising further.** The benchmark suite exists; use it
       to justify any change rather than assuming one is needed.
 - [ ] **Parallel generation via `SeedSequence.spawn()`**, which gives reproducible

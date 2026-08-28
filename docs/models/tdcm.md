@@ -36,7 +36,7 @@ gen_tdcm(n, dist, corr, dist_par, model_cens, cens_par, beta, lam, seed=None)
 |---|---|---|---|
 | `n` | `int` | > 0 | number of subjects |
 | `dist` | `str` | `"weibull"` or `"exponential"` | marginals of the bivariate covariate draw |
-| `corr` | `float` | `(0, 1]` for Weibull, `[-1, 1]` for exponential | dependence between baseline covariate and crossover time |
+| `corr` | `float` | `(0, 1)` for Weibull, `(-1, 1)` for exponential | dependence between baseline covariate and crossover time |
 | `dist_par` | `Sequence[float]` | **4** for Weibull, **2** for exponential; all > 0 | parameters of those marginals |
 | `model_cens` | `str` | `"uniform"` or `"exponential"` | censoring mechanism |
 | `cens_par` | `float` | > 0 | censoring parameter |
