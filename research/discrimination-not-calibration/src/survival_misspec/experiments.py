@@ -220,7 +220,9 @@ def parameter_recovery(
         "beta_true": true_vector.tolist(),
         "beta_hat": fitted.tolist(),
         "beta_bias": bias.tolist(),
+        "beta_bias_mean": float(np.mean(bias)),
         "beta_abs_bias_mean": float(np.mean(np.abs(bias))),
+        "beta_rmse": float(np.sqrt(np.mean(bias**2))),
     }
     # A single-covariate scenario is the common case and is far easier to
     # aggregate if the scalar is also available directly.

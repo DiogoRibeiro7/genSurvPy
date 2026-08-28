@@ -183,28 +183,22 @@ def test_mixture_cure_plateaus_at_the_cure_probability() -> None:
     assert far.min() > 0.01, "the plateau should be well away from zero"
 
 
-def test_log_logistic_truncation_is_quantified_not_assumed() -> None:
-    """The generator clips U to [0.001, 0.999]; the truth function does not.
-
-    That makes the analytic expression the *untruncated* law, so the two differ
-    in the extreme tails. The docstring claims the gap is far outside any
-    horizon this study uses. This measures it instead of taking that on trust.
-    """
+def test_log_logistic_truth_matches_the_generator_clipping() -> None:
+    """The truth function must match the implemented winsorised DGP."""
     params = CASES["aft_log_logistic"]
-    result = simulate("aft_log_logistic", n=40000, **params, seed=5)
-    event_time = np.asarray(result.truth["event_time"], dtype=float)
+    result = simulate("aft_log_logistic", n=200, **params, seed=5)
+    eta = np.asarray(result.truth["linear_predictor"], dtype=float)
+    shape = float(params["shape"])
+    scale = float(params["scale"])
 
-    # The clipping bites only where S is below 0.001 or above 0.999. Confirm the
-    # study's horizon -- the 80th percentile of the event times -- is nowhere
-    # near it.
-    tau = float(np.quantile(event_time, 0.80))
-    surface = true_survival("aft_log_logistic", np.array([tau]), result.truth, params)
+    lower_time = scale * (0.001 / 0.999) ** (1.0 / shape) * np.exp(-eta / shape)
+    upper_time = scale * (0.999 / 0.001) ** (1.0 / shape) * np.exp(-eta / shape)
 
-    assert surface.min() > 0.01, (
-        "at the evaluation horizon the true survival should be far above the "
-        "0.001 clipping boundary; if it is not, the truncation matters and the "
-        "truth function needs the truncated form"
-    )
+    lower_surface = true_survival("aft_log_logistic", lower_time, result.truth, params)
+    upper_surface = true_survival("aft_log_logistic", upper_time, result.truth, params)
+
+    np.testing.assert_allclose(np.diag(lower_surface), 0.999, atol=1e-12)
+    np.testing.assert_allclose(np.diag(upper_surface), 0.0, atol=1e-12)
 
 
 def test_unsupported_dgp_raises_with_the_reason() -> None:

@@ -20,7 +20,7 @@ import argparse
 import os
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -165,14 +165,28 @@ def main() -> int:
             if arguments.max_cells and ran >= arguments.max_cells:
                 break
     else:
+        max_submitted = max(workers, workers * 2)
+        task_iterator = iter(pending)
+        futures = set()
+
         with ProcessPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(_worker, task): task for task in pending}
-            for future in as_completed(futures):
-                record(future.result())
-                if arguments.max_cells and ran >= arguments.max_cells:
-                    for pending_future in futures:
-                        pending_future.cancel()
-                    break
+            for _ in range(min(max_submitted, len(pending))):
+                futures.add(pool.submit(_worker, next(task_iterator)))
+
+            while futures:
+                done_futures, futures = wait(futures, return_when=FIRST_COMPLETED)
+                for future in done_futures:
+                    record(future.result())
+                    if arguments.max_cells and ran >= arguments.max_cells:
+                        for pending_future in futures:
+                            pending_future.cancel()
+                        futures.clear()
+                        break
+                    try:
+                        task = next(task_iterator)
+                    except StopIteration:
+                        continue
+                    futures.add(pool.submit(_worker, task))
 
     if buffer:
         write_raw(buffer, out)

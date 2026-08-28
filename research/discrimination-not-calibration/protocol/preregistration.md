@@ -1,7 +1,7 @@
 # Preregistration
 
-**Study:** *Discrimination Is Not Calibration: A Controlled Simulation Study of
-Survival-Model Misspecification*
+**Study:** *The Distance Behind the C-index: Truth-Based Evaluation of Survival
+Distribution Predictions*
 
 **Protocol version:** 0.1.0
 **Status:** design fixed; **not yet frozen, not yet run**

@@ -16,6 +16,7 @@ than emitting an empty table that looks finished.
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -52,6 +53,37 @@ def _pm(mean: float, mcse: float, digits: int = 4) -> str:
     if pd.isna(mcse):
         return f"{mean:.{digits}f}"
     return f"{mean:.{digits}f} \\;({mcse:.{digits}f})"
+
+
+def _mean_and_mcse(
+    frame: pd.DataFrame, mean_column: str, mcse_column: str
+) -> pd.Series:
+    """Mean of scenario means, with independent cell MCSEs propagated."""
+    values = pd.to_numeric(frame[mean_column], errors="coerce")
+    standard_errors = pd.to_numeric(frame[mcse_column], errors="coerce")
+    keep = values.notna()
+    if not keep.any():
+        return pd.Series({"mean": float("nan"), "mcse": float("nan")})
+
+    values = values[keep]
+    standard_errors = standard_errors[keep].fillna(0.0)
+    mean = float(values.mean())
+    mcse = float(math.sqrt(float((standard_errors**2).sum())) / len(values))
+    return pd.Series({"mean": mean, "mcse": mcse})
+
+
+def _wilson_interval(
+    failures: int, attempted: int, z: float = 1.96
+) -> tuple[float, float]:
+    """Wilson score interval for a binomial failure probability."""
+    if attempted <= 0:
+        return float("nan"), float("nan")
+    p = failures / attempted
+    denominator = 1.0 + z**2 / attempted
+    centre = (p + z**2 / (2 * attempted)) / denominator
+    radius = z * math.sqrt((p * (1 - p) + z**2 / (4 * attempted)) / attempted)
+    radius /= denominator
+    return max(0.0, centre - radius), min(1.0, centre + radius)
 
 
 def table_scenarios(study, out: Path) -> None:
@@ -123,20 +155,20 @@ def table_main_results(summary: pd.DataFrame, out: Path) -> None:
         print(f"  table3: skipped, missing {missing}")
         return
 
-    grouped = (
-        summary.groupby(["dgp", "estimator_id"])
-        .agg(
-            mise=("mise_mean", "mean"),
-            mise_mcse=("mise_mcse", "mean"),
-            c_index=("c_index_harrell_mean", "mean"),
-            c_index_mcse=("c_index_harrell_mcse", "mean"),
-            ibs=("integrated_brier_score_mean", "mean"),
-            ibs_mcse=("integrated_brier_score_mcse", "mean"),
-            calib=("calibration_error_mean", "mean"),
-            calib_mcse=("calibration_error_mcse", "mean"),
-        )
-        .reset_index()
-    )
+    rows = []
+    for (dgp, estimator_id), block in summary.groupby(["dgp", "estimator_id"]):
+        record = {"dgp": dgp, "estimator_id": estimator_id}
+        for label, mean_column, mcse_column in (
+            ("mise", "mise_mean", "mise_mcse"),
+            ("c_index", "c_index_harrell_mean", "c_index_harrell_mcse"),
+            ("ibs", "integrated_brier_score_mean", "integrated_brier_score_mcse"),
+            ("calib", "calibration_error_mean", "calibration_error_mcse"),
+        ):
+            estimate = _mean_and_mcse(block, mean_column, mcse_column)
+            record[label] = estimate["mean"]
+            record[f"{label}_mcse"] = estimate["mcse"]
+        rows.append(record)
+    grouped = pd.DataFrame.from_records(rows)
 
     body = [
         r"\begin{table}[t]",
@@ -176,11 +208,11 @@ def table_parameter_recovery(summary: pd.DataFrame, out: Path) -> None:
     The table is short by design. Its point is that an unbiased coefficient and
     a recovered survival function are different achievements.
     """
-    if "beta_bias_scalar_mean" not in summary.columns:
+    if "beta_abs_bias_mean_mean" not in summary.columns:
         print("  table4: skipped, no parameter-recovery columns")
         return
 
-    applicable = summary.dropna(subset=["beta_bias_scalar_mean"])
+    applicable = summary.dropna(subset=["beta_abs_bias_mean_mean"])
     if applicable.empty:
         print("  table4: skipped, no cell had a corresponding parameter")
         return
@@ -193,16 +225,29 @@ def table_parameter_recovery(summary: pd.DataFrame, out: Path) -> None:
         r"nowhere else: elsewhere the estimands differ and a difference would "
         r"not be a bias.}",
         r"\label{tab:recovery}",
-        r"\begin{tabular}{llrr}",
+        r"\begin{tabular}{llrrr}",
         r"\toprule",
-        r"Mechanism & Estimator & Bias of $\hat\beta$ & MISE \\",
+        r"Mechanism & Estimator & Mean bias & Mean absolute bias & MISE \\",
         r"\midrule",
     ]
     for row in applicable.itertuples():
+        signed = (
+            row.beta_bias_scalar_mean
+            if hasattr(row, "beta_bias_scalar_mean")
+            and not pd.isna(row.beta_bias_scalar_mean)
+            else row.beta_bias_mean_mean
+        )
+        signed_mcse = (
+            row.beta_bias_scalar_mcse
+            if hasattr(row, "beta_bias_scalar_mcse")
+            and not pd.isna(row.beta_bias_scalar_mcse)
+            else row.beta_bias_mean_mcse
+        )
         body.append(
             f"\\texttt{{{_escape(str(row.dgp))}}} & "
             f"\\texttt{{{_escape(str(row.estimator_id))}}} & "
-            f"{_pm(row.beta_bias_scalar_mean, getattr(row, 'beta_bias_scalar_mcse', float('nan')), 4)} & "
+            f"{_pm(signed, signed_mcse, 4)} & "
+            f"{_pm(row.beta_abs_bias_mean_mean, row.beta_abs_bias_mean_mcse, 4)} & "
             f"{_pm(row.mise_mean, row.mise_mcse, 5)} \\\\"
         )
     body += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
@@ -229,12 +274,12 @@ def table_failures(failures: pd.DataFrame, out: Path) -> None:
         .reset_index()
     )
     grouped["rate"] = grouped["fit_failures"] / grouped["attempted"]
-    # The rate is a proportion estimated from a finite number of attempts, so
-    # it carries a standard error like any other estimate here. A failure rate
-    # of 0 out of 20 and 0 out of 2000 are not the same claim.
-    grouped["rate_se"] = (
-        grouped["rate"] * (1.0 - grouped["rate"]) / grouped["attempted"]
-    ) ** 0.5
+    intervals = [
+        _wilson_interval(int(row.fit_failures), int(row.attempted))
+        for row in grouped.itertuples()
+    ]
+    grouped["rate_low"] = [low for low, _ in intervals]
+    grouped["rate_high"] = [high for _, high in intervals]
 
     body = [
         r"\begin{table}[t]",
@@ -245,14 +290,14 @@ def table_failures(failures: pd.DataFrame, out: Path) -> None:
         r"\label{tab:failures}",
         r"\begin{tabular}{lrrrr}",
         r"\toprule",
-        r"Estimator & Attempted & Fit failures & Scoring failures & Rate \\",
+        r"Estimator & Attempted & Fit failures & Scoring failures & Rate (95\% CI) \\",
         r"\midrule",
     ]
     for row in grouped.itertuples():
         body.append(
             f"\\texttt{{{_escape(str(row.estimator_id))}}} & {int(row.attempted)} & "
             f"{int(row.fit_failures)} & {int(row.score_failures)} & "
-            f"{_pm(row.rate, row.rate_se, 4)} \\\\"
+            f"{row.rate:.4f} [{row.rate_low:.4f}, {row.rate_high:.4f}] \\\\"
         )
     body += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     _write(

@@ -1,4 +1,4 @@
-"""Discrimination Is Not Calibration: a controlled simulation study.
+"""Truth-based evaluation of survival distribution predictions.
 
 Research code for the paper of that name. It uses ``gen_surv`` as its
 simulation engine and lives inside the same repository, but it is not part of
