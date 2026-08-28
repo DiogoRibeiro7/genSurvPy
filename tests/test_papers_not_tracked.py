@@ -25,6 +25,12 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 #: another name. Checked against tracked paths, not the working tree.
 PDF_SUFFIXES = {".pdf", ".djvu", ".epub"}
 
+#: The one legitimate reason to track a PDF: a figure this project generated
+#: for its own manuscript, which LaTeX wants as vector art. Narrow on purpose --
+#: these are directories the figure scripts write to and nothing else does, so
+#: a paper cannot inherit the exemption by being renamed into `paper/`.
+GENERATED_FIGURE_DIRECTORIES = ("paper/figures/", "results/figures/")
+
 
 def _git(*arguments: str) -> str:
     result = subprocess.run(
@@ -86,18 +92,50 @@ def test_no_file_below_papers_is_tracked(tracked_files: list[str]) -> None:
 def test_no_pdfs_are_tracked_anywhere(tracked_files: list[str]) -> None:
     """Copying a PDF out of papers/ into a tracked directory evades the rule above.
 
-    The package and its research directories have no legitimate reason to
-    commit a PDF. If one is ever needed -- a figure exported for the
-    manuscript, say -- prefer a vector source that is not a paper, or add an
-    explicit exception here with the reason.
+    The one legitimate exception is a figure this project generated for its own
+    manuscript, which is a PDF because LaTeX wants vector art. That exemption is
+    kept as narrow as the rule allows: only the directories the figure scripts
+    write to, and `test_the_figure_exemption_cannot_be_used_to_smuggle_a_paper`
+    checks that what sits there really came from them.
     """
     offenders = [
         path
         for path in tracked_files
         if pathlib.PurePath(path).suffix.lower() in PDF_SUFFIXES
+        and not any(marker in path for marker in GENERATED_FIGURE_DIRECTORIES)
     ]
 
     assert not offenders, (
         "Document files are tracked. If any of these came out of papers/, "
         "they are copyrighted and must not be committed:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_the_figure_exemption_cannot_be_used_to_smuggle_a_paper(
+    tracked_files: list[str],
+) -> None:
+    """A PDF under a figures directory must actually be a generated figure.
+
+    The exemption above exists so the manuscript can carry its own plots. It
+    would be useless as a rule if a downloaded paper could be dropped into
+    `paper/figures/` and inherit it, so every tracked PDF there must have the
+    counterpart the figure scripts always write beside it: a `.png` of the same
+    name.
+    """
+    figures = [
+        path
+        for path in tracked_files
+        if pathlib.PurePath(path).suffix.lower() == ".pdf"
+        and any(marker in path for marker in GENERATED_FIGURE_DIRECTORIES)
+    ]
+
+    tracked = set(tracked_files)
+    unpaired = [
+        path for path in figures if path[: -len(".pdf")] + ".png" not in tracked
+    ]
+
+    assert not unpaired, (
+        "These tracked PDFs sit in a figures directory but have no matching "
+        ".png, so they were not produced by make_figures.py and the figure "
+        "exemption does not cover them:\n  " + "\n  ".join(unpaired)
     )
