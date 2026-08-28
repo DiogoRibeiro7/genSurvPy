@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## Unreleased
+
+R parity fixtures, and the maturity classifier returned to
+`5 - Production/Stable`.
+
+### Tests
+
+- **R parity fixtures.** `scripts/generate_r_fixtures.R` freezes real output
+  from R `genSurv` 1.0.6 into `tests/fixtures/r_parity/`, and
+  `tests/test_r_parity.py` compares against it. CI never needs R installed.
+
+  Parity is on distributions, not values: R draws from the Mersenne Twister and
+  we draw from PCG64, so identical numbers are impossible however faithful the
+  port. Each comparison is a statistic with a three-sigma band allowing for the
+  Monte Carlo error on both sides, and both sides are frozen, so the tests are
+  deterministic. `cphm`, `cmm` and `thmm` agree with R.
+
+- **`tdcm`'s divergence from R is now pinned as intended behaviour.** Asked for
+  Weibull marginals with `dist.par = c(1, 2, 1, 2)`, R's `dgBIV` returns mean 2
+  and median `2*log(2)` — chi-square with two degrees of freedom — ignoring the
+  parameterisation it was given. Against the Weibull it was asked for, a KS test
+  gives `p = 0` for R and `p = 0.87` for ours. This is the same defect 2.0.0
+  corrected for the exponential case; a test now records it for the Weibull case
+  so our sampler is not "fixed" into agreement with R.
+
+### Packaging
+
+- **`Development Status :: 5 - Production/Stable`**, replacing `4 - Beta`. The
+  three conditions the roadmap set are met: distribution tests and
+  property-based tests across all twelve generators, and R parity fixtures for
+  the four ported from R.
+
 ## v3.1.0 (2026-08-28)
 
 Property-based tests across all twelve generators, and the two `tdcm` defects

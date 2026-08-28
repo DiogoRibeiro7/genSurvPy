@@ -49,9 +49,36 @@ items here are about finding the ones that have not been.
       the `tdcm` sign error, neither of which any shape-based test could see.
       The new tests fail on a 5% error in a covariate effect and a 3% error in a
       Weibull shape, which was verified by introducing exactly those.
-- [ ] **R parity fixtures.** Frozen reference outputs from the R `genSurv`
-      package for the models ported from it, so divergence is detected rather
-      than argued about. Column names differ by design, so parity is on values.
+- [x] **R parity fixtures.** `scripts/generate_r_fixtures.R` freezes real
+      output from R `genSurv` 1.0.6 into `tests/fixtures/r_parity/`, and
+      `tests/test_r_parity.py` compares against it. CI never needs R.
+
+      Parity is on **distributions, not values**: R draws from the Mersenne
+      Twister and we draw from PCG64, so identical numbers are impossible
+      however faithful the port. Each comparison is a statistic — a censoring
+      rate, an occurrence/exposure intensity per edge, a state occupancy —
+      with a three-sigma band allowing for the Monte Carlo error on both
+      sides. Both sides are frozen, so the tests are deterministic. The
+      measured discriminating power is recorded in the module: a 10% change in
+      `cphm`'s `beta` is caught, and 15% in a `cmm` or `thmm` rate.
+
+      Three of the four ported models agree: `cphm`, `cmm` and `thmm`. Reading
+      R's source settled two apparent divergences that were not: R's `genCMM`
+      labels `trans = 1` as the **1 -> 3** edge and `trans = 2` as 1 -> 2, and
+      its `genTDCM` splits the risk interval at the crossover where we return
+      one row per subject.
+
+      **`tdcm` genuinely diverges, and should.** Asked for Weibull marginals
+      with `dist.par = c(1, 2, 1, 2)`, R's `dgBIV` returns mean 2 and median
+      2*log(2) — chi-square with two degrees of freedom, an exponential with
+      mean 2 — ignoring the parameterisation it was given. Against the Weibull
+      it was asked for, KS gives p = 0 for R and p = 0.87 for ours. This is the
+      same defect 2.0.0 corrected for the exponential case, now recorded for
+      the Weibull case, and a test pins it so nobody "fixes" our sampler into
+      agreement with R.
+
+      Three comparisons looked significant at one seed and vanished over
+      eight, which is why the tests average over several.
 - [x] **Wider property-based testing.** `tests/test_properties.py` drives all
       twelve generators from Hypothesis: output invariants (the column
       contract, no NaN or infinity, `status` within its declared set, no
@@ -95,10 +122,10 @@ items here are about finding the ones that have not been.
 
       All rejected now, with `tests/test_input_hardening.py` walking every
       numeric argument of every model to keep it that way.
-- [ ] **Return the maturity classifier to `5 - Production/Stable`** once the
-      items above are in place. Distribution tests and property-based tests
-      have now shipped for all twelve generators; **R parity fixtures are the
-      last blocker**. Worth waiting for those: the
+- [x] **Returned the maturity classifier to `5 - Production/Stable`.** All
+      three stated conditions are met: distribution tests and property-based
+      tests for all twelve generators, and R parity fixtures for the four
+      ported from R. Worth waiting for those: the
       distribution work found two more defects on its way in, which is not yet
       the profile of a package claiming stability.
 
