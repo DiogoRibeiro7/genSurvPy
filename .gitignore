@@ -74,3 +74,12 @@ papers/
 # tracked; these are not.
 research/*/results/raw/pilot.parquet
 research/*/results/processed/pilot_*
+
+# Figures and processed tables regenerated from a pilot run. The production
+# ones are tracked; these carry a "PILOT - NOT FOR PUBLICATION" stamp and are
+# reproducible from the config and seeds, so committing them would only invite
+# confusion about which results a figure came from.
+research/*/results/figures/
+research/*/results/processed/summary.parquet
+research/*/results/processed/failures.parquet
+research/*/results/processed/adequacy.parquet
