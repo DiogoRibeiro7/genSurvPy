@@ -59,3 +59,10 @@ site/
 
 # Type checker cache
 .mypy_cache/
+
+# Literature PDFs used for the research studies under research/.
+# Local only: these are third-party copyrighted papers and must never be
+# committed, force-added, archived into a release, or copied into a tracked
+# directory. research/*/literature/ holds our own notes and bibliography
+# instead. tests/test_papers_not_tracked.py enforces this.
+papers/
