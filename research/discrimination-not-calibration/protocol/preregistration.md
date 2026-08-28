@@ -13,17 +13,47 @@ on the record.
 
 ---
 
-## 1. Question
+## 1. Question and contribution
 
-> Can a survival model maintain apparently good discrimination while producing
-> materially incorrect individual survival probabilities under model
-> misspecification?
+> When conventional survival metrics continue to describe a fitted model as
+> adequate, how far has the estimated individual survival distribution actually
+> moved from the known data-generating distribution?
 
 The study is not a benchmark and does not ask which estimator has the highest
-C-index. It asks whether the metrics an analyst can compute without knowing the
-truth detect the error that can only be measured when the truth *is* known.
+C-index.
+
+### What is not claimed
+
+**That discrimination and calibration can disagree is established prior work,
+not a finding of this study.** Austin et al. (2020) give calibration curves and
+the integrated calibration index for survival models using misspecification
+simulations; Sonabend et al. (2022) show discrimination scores can be inflated
+by how a distribution prediction is reduced to a risk score; Birolo et al.
+(2025) explicitly observe a high C-index alongside poor calibration under
+non-proportional hazards; and Lillelund et al. (2025) argue the case under the
+title *Stop Chasing the C-index*. The related-work section states plainly what
+each establishes and what is left.
+
+### What is claimed
+
+Every one of those studies evaluates against **censored observations**. This
+one evaluates against the **analytically known conditional survival function**,
+available because each mechanism is a generator whose sampling law is written
+down and validated by probability integral transform. That permits the direct
+integrated squared distance between the predicted and the true individual
+survival curve — a quantity no evaluation on observed data can compute, because
+observed data do not contain the truth.
+
+The contribution is therefore a **measurement, not a phenomenon**: how much
+truth-error is consistent with an apparently acceptable value of each
+conventional metric. The unit of interest is the metric, not the estimator; an
+estimator ranking is a by-product.
 
 ## 2. Hypotheses
+
+H1 and H2 restate an established phenomenon. They are included because the
+study must reproduce it before it can quantify it, **not** as novel claims. H3
+and H4 concern where it bites and how far it goes.
 
 **H1.** Concordance and recovery of the true survival function are weakly
 related across misspecified scenarios. Formally, the correlation between the
@@ -84,7 +114,9 @@ there described as indistinguishable rather than as findings.
 
 **Primary:** MISE, the integrated squared error between the predicted and the
 true conditional survival function over $[0, \tau]$, on an independent
-evaluation sample.
+evaluation sample. Under the contribution stated in §1 this is not one metric
+among several: it is the reference against which the conventional metrics are
+assessed.
 
 **Secondary:** MIAE and its horizon-normalised form; Harrell and Uno
 concordance; time-dependent AUC; Brier score and integrated Brier score;
