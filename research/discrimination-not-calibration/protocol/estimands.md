@@ -59,10 +59,19 @@ $$
 \mathrm{MIAE} \;=\; \frac{1}{n}\sum_{i=1}^{n} \mathrm{IAE}_i .
 $$
 
-**MISE is the primary outcome.** MIAE is reported alongside it because
-$\mathrm{MIAE}/\tau$ is a mean absolute error in survival *probability*, which
-a reader can judge against a clinical or actuarial tolerance. A squared error
-integrated over time cannot be read that way.
+Raw MISE is the primary within-scenario loss. Cross-mechanism figures and
+headline summaries use the horizon-normalised squared loss
+
+$$
+\mathrm{nMISE} = \mathrm{MISE}/\tau,
+\qquad
+\mathrm{RMISE} = \sqrt{\mathrm{nMISE}} .
+$$
+
+RMISE is on the survival-probability scale and is comparable across mechanisms
+whose $\tau$ differs. MIAE is reported alongside it because
+$\mathrm{MIAE}/\tau$ is a mean absolute error in survival probability, which a
+reader can judge against a clinical or actuarial tolerance.
 
 Both are computed on an independent evaluation sample drawn from the same
 mechanism, never on the data the model was fitted to.
@@ -95,11 +104,13 @@ differ, the ranking itself depends on the horizon, which is worth seeing.
 
 ## 4. Prediction error and calibration
 
-The Brier score at $t$ and its integral over the grid, with
-inverse-probability-of-censoring weights, and a grouped calibration error:
+The Brier score at $t$ and its integral over a fixed scenario-level IPCW grid,
+with inverse-probability-of-censoring weights, and a grouped calibration error:
 subjects are split into deciles of $\hat S_i(\tau)$, observed survival within
-each is estimated by Kaplan–Meier, and the size-weighted mean absolute gap is
-reported.
+each is estimated by Kaplan-Meier, and the size-weighted mean absolute gap is
+reported. If a replication cannot support the prespecified IPCW grid, its IBS
+and mean AUC are recorded as unavailable; the grid is not shortened after the
+replication is observed.
 
 D-calibration is reported as a distributional diagnostic, not as a like-for-like
 comparative primary measure for all estimators. Haider et al.'s theorem assumes
@@ -197,6 +208,11 @@ quantity on the scale of the chosen loss, and the region is reported as a
 function of $\epsilon$ over a range, conditional on the DGPs studied, the
 horizon $\tau$ and the loss. What counts as an adequate approximation is an
 application's judgement, not a statistical constant.
+
+The headline quantity is the 90th percentile of RMISE conditional on bins of a
+conventional metric, primarily Harrell's C-index. This reports the upper tail of
+truth-error compatible with similar conventional metric values, which is the
+measurement question of the study.
 
 ---
 

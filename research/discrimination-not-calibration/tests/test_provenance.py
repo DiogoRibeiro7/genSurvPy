@@ -41,7 +41,17 @@ def _write(tmp_path, study: StudyConfig):
     return write_lock(
         tmp_path / "experiment_lock.json",
         study,
-        [{"scenario_id": "s1", "tau": 1.0}],
+        [
+            {
+                "scenario_id": "s1",
+                "scenario_hash": study.scenarios[0].hash,
+                "params": {"beta": 0.5, "cens_par": 2.0},
+                "tau": 1.0,
+                "time_grid": [0.0, 0.5, 1.0],
+                "ipcw_time_grid": [0.5, 1.0],
+                "feasible": True,
+            }
+        ],
         protocol_version="0.1.0",
         allow_dirty_tree=True,
     )
@@ -163,3 +173,57 @@ def test_lock_hash_distinguishes_experiments(tmp_path) -> None:
     first = _write(tmp_path / "a", _study())
     second = _write(tmp_path / "b", _study(master_seed=2))
     assert first.lock_hash != second.lock_hash
+
+
+def test_lock_hash_includes_prepared_scenarios(tmp_path) -> None:
+    study = _study()
+    first = write_lock(
+        tmp_path / "a" / "lock.json",
+        study,
+        [
+            {
+                "scenario_id": "s1",
+                "scenario_hash": study.scenarios[0].hash,
+                "params": {"beta": 0.5, "cens_par": 2.0},
+                "tau": 1.0,
+                "time_grid": [0.0, 0.5, 1.0],
+                "ipcw_time_grid": [0.5, 1.0],
+                "feasible": True,
+            }
+        ],
+        protocol_version="0.1.0",
+        allow_dirty_tree=True,
+    )
+    second = write_lock(
+        tmp_path / "b" / "lock.json",
+        study,
+        [
+            {
+                "scenario_id": "s1",
+                "scenario_hash": study.scenarios[0].hash,
+                "params": {"beta": 0.5, "cens_par": 3.0},
+                "tau": 1.2,
+                "time_grid": [0.0, 0.6, 1.2],
+                "ipcw_time_grid": [0.6, 1.2],
+                "feasible": True,
+            }
+        ],
+        protocol_version="0.1.0",
+        allow_dirty_tree=True,
+    )
+
+    assert first.lock_hash != second.lock_hash
+
+
+def test_lock_verification_requires_prepared_scenarios(tmp_path) -> None:
+    study = _study()
+    path = tmp_path / "experiment_lock.json"
+    _write(tmp_path, study)
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["scenarios"][0].pop("time_grid")
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    problems = verify_lock(path, study, strict_commit=False)
+
+    assert any("missing ['time_grid']" in problem for problem in problems)

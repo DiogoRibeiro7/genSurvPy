@@ -21,7 +21,7 @@ afterwards would let the headline result be tuned.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -43,6 +43,8 @@ __all__ = [
     "antolini_concordance",
     "integrated_squared_error",
     "integrated_absolute_error",
+    "normalised_mise",
+    "root_mean_integrated_squared_error",
     "truth_recovery",
     "discrimination",
     "prediction_error",
@@ -110,9 +112,12 @@ def truth_recovery(
     """MISE, MIAE and the tail of the per-subject error distribution."""
     ise = integrated_squared_error(predicted, truth, times, tau)
     iae = integrated_absolute_error(predicted, truth, times, tau)
+    nmise = normalised_mise(ise, tau)
 
     return {
         "mise": float(np.mean(ise)),
+        "normalised_mise": float(nmise),
+        "root_mean_integrated_squared_error": float(np.sqrt(nmise)),
         "mise_sd": float(np.std(ise, ddof=1)) if ise.size > 1 else float("nan"),
         "miae": float(np.mean(iae)),
         "miae_p90": float(np.quantile(iae, 0.90)),
@@ -121,6 +126,19 @@ def truth_recovery(
         # survival probability, comparable across scenarios with different tau.
         "mean_absolute_survival_error": float(np.mean(iae) / tau),
     }
+
+
+def normalised_mise(ise: NDArray[np.float64], tau: float) -> float:
+    """Mean integrated squared error per unit time."""
+    if tau <= 0:
+        return float("nan")
+    return float(np.mean(ise) / tau)
+
+
+def root_mean_integrated_squared_error(ise: NDArray[np.float64], tau: float) -> float:
+    """RMISE, on the survival-probability scale and comparable across tau."""
+    nmise = normalised_mise(ise, tau)
+    return float(np.sqrt(nmise)) if np.isfinite(nmise) else float("nan")
 
 
 def discrimination(
@@ -169,6 +187,7 @@ def prediction_error(
     test_time: NDArray[np.float64],
     test_event: NDArray[np.bool_],
     tau: float,
+    evaluation_times: NDArray[np.float64] | None = None,
 ) -> dict[str, float]:
     """Brier score, integrated Brier score, and time-dependent AUC.
 
@@ -207,7 +226,53 @@ def prediction_error(
     out["brier_at_tau_time"] = float(tau) if tau_usable else float("nan")
     out["auc_at_tau_time"] = float(tau) if tau_usable else float("nan")
 
-    if usable.sum() < 2:
+    if evaluation_times is None:
+        sub_grid = grid[usable]
+        sub_predicted = predicted[:, usable]
+    else:
+        fixed_grid = np.asarray(evaluation_times, dtype=float)
+        if fixed_grid.size < 2:
+            out.update(
+                {
+                    "brier_at_tau": float("nan"),
+                    "integrated_brier_score": float("nan"),
+                    "auc_mean": float("nan"),
+                    "auc_at_tau": float("nan"),
+                    "prediction_error_note": (
+                        "fixed IPCW interval has fewer than two time points"
+                    ),
+                }
+            )
+            return out
+        supported = (
+            (fixed_grid > lower)
+            & (fixed_grid <= float(tau))
+            & (fixed_grid < support_upper)
+        )
+        if not bool(np.all(supported)):
+            out.update(
+                {
+                    "brier_at_tau": float("nan"),
+                    "integrated_brier_score": float("nan"),
+                    "auc_mean": float("nan"),
+                    "auc_at_tau": float("nan"),
+                    "prediction_error_note": (
+                        "replication does not support the fixed IPCW interval"
+                    ),
+                }
+            )
+            return out
+        columns = np.searchsorted(grid, fixed_grid, side="left")
+        if (
+            columns.size != fixed_grid.size
+            or np.any(columns >= grid.size)
+            or not np.allclose(grid[columns], fixed_grid)
+        ):
+            raise ValueError("fixed IPCW grid is not a subset of the prediction grid")
+        sub_grid = fixed_grid
+        sub_predicted = predicted[:, columns]
+
+    if sub_grid.size < 2:
         out.update(
             {
                 "brier_at_tau": float("nan"),
@@ -220,9 +285,6 @@ def prediction_error(
             }
         )
         return out
-
-    sub_grid = grid[usable]
-    sub_predicted = predicted[:, usable]
 
     try:
         _, scores = brier_score(train, test, sub_predicted, sub_grid)
@@ -392,6 +454,24 @@ def _survival_at_common_time(
     return out
 
 
+def _survival_from_functions(
+    functions: Sequence[Callable[[float], float]],
+    times: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """Evaluate native survival functions without interpolating a coarse grid."""
+    out = np.empty(len(functions), dtype=float)
+    for row, (function, time) in enumerate(zip(functions, np.asarray(times, float))):
+        support = getattr(function, "x", None)
+        if support is not None and len(support):
+            if time < support[0]:
+                out[row] = 1.0
+            else:
+                out[row] = float(function(min(float(time), float(support[-1]))))
+        else:
+            out[row] = float(function(float(time)))
+    return np.clip(out, 0.0, 1.0)
+
+
 def expected_mortality(
     predicted: NDArray[np.float64], grid: NDArray[np.float64]
 ) -> NDArray[np.float64]:
@@ -435,6 +515,7 @@ def d_calibration(
     time: NDArray[np.float64],
     event: NDArray[np.bool_],
     n_bins: int = 10,
+    survival_functions: Sequence[Callable[[float], float]] | None = None,
 ) -> dict[str, float]:
     """Distributional calibration, after Haider et al. (2020).
 
@@ -492,7 +573,10 @@ def d_calibration(
     observed = np.where(beyond, horizon, observed)
     had_event = had_event & ~beyond
 
-    survival_at_observed = _survival_at(predicted, grid, observed)
+    if survival_functions is None:
+        survival_at_observed = _survival_at(predicted, grid, observed)
+    else:
+        survival_at_observed = _survival_from_functions(survival_functions, observed)
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     counts = np.zeros(n_bins, dtype=float)
 
@@ -537,6 +621,7 @@ def antolini_concordance(
     event: NDArray[np.bool_],
     max_events: int = 800,
     seed: int = 0,
+    survival_functions: Sequence[Callable[[float], float]] | None = None,
 ) -> dict[str, float]:
     r"""Time-dependent concordance, after Antolini et al. (2005), Equation 11.
 
@@ -611,7 +696,12 @@ def antolini_concordance(
         if not later.any():
             continue
         event_time = float(observed[subject])
-        at_event = _survival_at_common_time(predicted, grid, event_time, step_like)
+        if survival_functions is None:
+            at_event = _survival_at_common_time(predicted, grid, event_time, step_like)
+        else:
+            at_event = _survival_from_functions(
+                survival_functions, np.full(observed.shape, event_time)
+            )
         own = at_event[subject]
         others = at_event[later]
         comparable += float(others.size)
@@ -643,6 +733,8 @@ def evaluate_all(
     train_event: NDArray[np.bool_],
     eval_time: NDArray[np.float64],
     eval_event: NDArray[np.bool_],
+    prediction_error_times: NDArray[np.float64] | None = None,
+    survival_functions: Sequence[Callable[[float], float]] | None = None,
 ) -> dict[str, Any]:
     """Every metric for one fitted model, on an **independent** evaluation sample.
 
@@ -684,7 +776,14 @@ def evaluate_all(
     )
     results.update(
         prediction_error(
-            predicted, grid, train_time, train_event, eval_time, eval_event, tau
+            predicted,
+            grid,
+            train_time,
+            train_event,
+            eval_time,
+            eval_event,
+            tau,
+            evaluation_times=prediction_error_times,
         )
     )
 
@@ -700,8 +799,24 @@ def evaluate_all(
     # distributions, so the calibration and discrimination measures it reports
     # should be the ones defined for distributions -- not only those defined at
     # a single horizon or on a static risk ranking.
-    results.update(d_calibration(predicted, grid, eval_time, eval_event))
-    results.update(antolini_concordance(predicted, grid, eval_time, eval_event))
+    results.update(
+        d_calibration(
+            predicted,
+            grid,
+            eval_time,
+            eval_event,
+            survival_functions=survival_functions,
+        )
+    )
+    results.update(
+        antolini_concordance(
+            predicted,
+            grid,
+            eval_time,
+            eval_event,
+            survival_functions=survival_functions,
+        )
+    )
 
     # The same ranking taken from survival at tau alone rather than from the
     # whole curve. Under proportional hazards it agrees with the measures above;

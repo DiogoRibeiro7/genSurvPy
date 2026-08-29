@@ -11,6 +11,8 @@ time_grid_quantiles:
 - 0.9
 metrics:
 - mise
+- normalised_mise
+- root_mean_integrated_squared_error
 - miae
 - mean_absolute_survival_error
 - c_index_harrell

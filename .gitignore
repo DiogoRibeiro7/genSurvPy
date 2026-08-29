@@ -73,3 +73,13 @@ papers/
 research/*/results/raw/pilot.parquet
 research/*/results/processed/
 research/*/results/figures/
+
+# LaTeX build byproducts from research manuscripts.
+research/*/paper/*.aux
+research/*/paper/*.bbl
+research/*/paper/*.blg
+research/*/paper/*.fdb_latexmk
+research/*/paper/*.fls
+research/*/paper/*.out
+research/*/paper/*.pdf
+research/*/paper/*.synctex.gz

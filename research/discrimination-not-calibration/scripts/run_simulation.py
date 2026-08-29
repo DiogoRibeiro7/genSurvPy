@@ -27,13 +27,19 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
 
 from survival_misspec.aggregation import (  # noqa: E402
+    compact_raw,
     completed_cells,
     write_raw,
 )
 from survival_misspec.config import load_study  # noqa: E402
-from survival_misspec.experiments import prepare_scenario, run_cell  # noqa: E402
+from survival_misspec.experiments import (  # noqa: E402
+    prepare_scenario,
+    prepared_scenario_from_record,
+    run_cell,
+)
 from survival_misspec.validation import (  # noqa: E402
     capture_provenance,
+    read_lock,
     verify_lock,
 )
 
@@ -66,6 +72,11 @@ def main() -> int:
     )
     parser.add_argument("--calibration-n", type=int, default=20000)
     parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="write one deterministic compact Parquet file after the run",
+    )
+    parser.add_argument(
         "--workers",
         type=int,
         default=1,
@@ -96,27 +107,46 @@ def main() -> int:
             for problem in problems:
                 print(f"  - {problem}")
             return 1
-        print(f"lock          verified against {arguments.lock}")
+        lock = read_lock(arguments.lock)
+        lock_hash = str(lock["lock_hash"])
+        print(f"lock          verified against {arguments.lock} ({lock_hash})")
     else:
+        lock = None
+        lock_hash = None
         print("lock          NONE (exploratory run; not a production result)")
 
     out = Path(arguments.out)
-    done = completed_cells(out)
+    done = completed_cells(out, lock_hash=lock_hash)
     if done:
         print(f"resuming      {len(done):,} cells already present in {out}")
 
-    print("\npreparing scenarios (calibrating censoring, fixing tau)...")
     prepared = []
     infeasible = []
-    for scenario in study.scenarios:
-        ready = prepare_scenario(
-            scenario, study.metrics, calibration_n=arguments.calibration_n
-        )
-        if ready.feasible:
-            prepared.append(ready)
-        else:
-            infeasible.append(ready)
-            print(f"  SKIP {ready.scenario_id}: {ready.reason}")
+    if lock is not None:
+        print("\nloading prepared scenarios from the experiment lock...")
+        records = {record["scenario_id"]: record for record in lock["scenarios"]}
+        for scenario in study.scenarios:
+            ready = prepared_scenario_from_record(
+                scenario, records[scenario.scenario_id]
+            )
+            if ready.feasible:
+                prepared.append(ready)
+            else:
+                infeasible.append(ready)
+                print(f"  SKIP {ready.scenario_id}: {ready.reason}")
+        if arguments.calibration_n != 20000:
+            print("  --calibration-n ignored for locked production runs")
+    else:
+        print("\npreparing scenarios (calibrating censoring, fixing tau)...")
+        for scenario in study.scenarios:
+            ready = prepare_scenario(
+                scenario, study.metrics, calibration_n=arguments.calibration_n
+            )
+            if ready.feasible:
+                prepared.append(ready)
+            else:
+                infeasible.append(ready)
+                print(f"  SKIP {ready.scenario_id}: {ready.reason}")
 
     print(f"  {len(prepared)} feasible, {len(infeasible)} infeasible")
     if not prepared:
@@ -146,6 +176,7 @@ def main() -> int:
         row["git_commit"] = provenance.git_commit
         row["gen_surv_version"] = provenance.gen_surv_version
         row["is_production"] = bool(arguments.lock)
+        row["lock_hash"] = lock_hash
         buffer.append(row)
         ran += 1
         if len(buffer) >= FLUSH_EVERY:
@@ -193,6 +224,9 @@ def main() -> int:
 
     elapsed = time.perf_counter() - started
     print(f"\ndone: ran {ran:,} cells in {elapsed / 60:.1f} min -> {out}")
+    if arguments.compact:
+        compacted = compact_raw(out)
+        print(f"compacted     {compacted}")
     return 0
 
 

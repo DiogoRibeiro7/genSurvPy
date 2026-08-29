@@ -109,10 +109,14 @@ def main() -> int:
         )
 
     # ------------------------------------------------------------ what matters
-    section("Which factors move the primary loss (MISE)")
+    section("Which factors move the primary loss (RMISE)")
     scored = raw[raw["scored"].fillna(False)]
     for factor in ("dgp", "n", "target_censoring", "estimator_id"):
-        grouped = scored.groupby(factor)["mise"].mean().sort_values()
+        grouped = (
+            scored.groupby(factor)["root_mean_integrated_squared_error"]
+            .mean()
+            .sort_values()
+        )
         spread = grouped.max() / grouped.min() if grouped.min() > 0 else float("inf")
         print(f"\n  by {factor}  (max/min = {spread:.1f}x)")
         for key, value in grouped.items():
@@ -127,24 +131,31 @@ def main() -> int:
             "dgp",
             "estimator_id",
             "c_index_harrell_mean",
-            "mise_mean",
+            "root_mean_integrated_squared_error_mean",
             "mean_absolute_survival_error_mean",
             "calibration_error_mean",
         ]
     ]
     view = view.dropna(subset=["c_index_harrell_mean"])
     print(
-        f"\n  {'dgp':24} {'estimator':24} {'C':>7} {'MISE':>10} {'MAE_S':>8} {'calib':>8}"
+        f"\n  {'dgp':24} {'estimator':24} {'C':>7} {'RMISE':>10} {'MAE_S':>8} {'calib':>8}"
     )
-    for row in view.sort_values(["dgp", "mise_mean"]).itertuples():
+    for row in view.sort_values(
+        ["dgp", "root_mean_integrated_squared_error_mean"]
+    ).itertuples():
         print(
             f"  {row.dgp:24} {row.estimator_id:24} {row.c_index_harrell_mean:7.4f} "
-            f"{row.mise_mean:10.6f} {row.mean_absolute_survival_error_mean:8.4f} "
+            f"{row.root_mean_integrated_squared_error_mean:10.6f} "
+            f"{row.mean_absolute_survival_error_mean:8.4f} "
             f"{row.calibration_error_mean:8.4f}"
         )
 
-    correlation = view[["c_index_harrell_mean", "mise_mean"]].corr().iloc[0, 1]
-    print(f"\n  correlation(C-index, MISE) across cells = {correlation:+.3f}")
+    correlation = (
+        view[["c_index_harrell_mean", "root_mean_integrated_squared_error_mean"]]
+        .corr()
+        .iloc[0, 1]
+    )
+    print(f"\n  correlation(C-index, RMISE) across cells = {correlation:+.3f}")
     print("  A weak or positive correlation is the paper's phenomenon: ranking")
     print("  well and predicting probabilities well are not the same thing.")
 
