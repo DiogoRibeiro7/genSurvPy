@@ -71,8 +71,11 @@ papers/
 # scripts/run_pilot.py refuses to read a file containing production rows for
 # the same reason. Production results are tracked; these are not.
 research/*/results/raw/pilot.parquet
+research/*/results/raw/production.parquet
+research/*/results/raw/*.parts/
 research/*/results/processed/
 research/*/results/figures/
+research/*/protocol/experiment_lock.json
 
 # LaTeX build byproducts from research manuscripts.
 research/*/paper/*.aux
