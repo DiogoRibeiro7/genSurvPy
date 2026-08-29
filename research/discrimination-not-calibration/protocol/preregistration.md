@@ -213,13 +213,14 @@ run with eight workers is the same experiment as a run with one. Verified: a
 4-worker and a 1-worker run of the same cells produced bit-identical seeds,
 MISE, concordance, integrated Brier and calibration error.
 
-Before the production run, `scripts/freeze_experiment.py` writes
-`protocol/experiment_lock.json`, freezing the design, the prepared scenario
-values, the commit and the environment. The runner loads prepared scenarios
-from the lock and every production row carries the lock hash; resumption
-refuses rows with a missing or different lock hash. If package code affecting
-simulation changes after the freeze, that is a new experiment version, not a
-continuation.
+Before the production run, `scripts/freeze_experiment.py` writes the local
+artifact `protocol/experiment_lock.json`, freezing the design, the prepared
+scenario values, the commit and the environment. The lock file is not committed:
+it records the source commit that produced it, and committing it would change
+that commit. The runner loads prepared scenarios from the lock and every
+production row carries the lock hash; resumption refuses rows with a missing or
+different lock hash. If package code affecting simulation changes after the
+freeze, that is a new experiment version, not a continuation.
 
 **The freeze has not happened, and no production run has been executed.**
 
