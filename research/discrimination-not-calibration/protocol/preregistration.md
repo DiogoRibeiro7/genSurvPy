@@ -57,19 +57,23 @@ and H4 concern where it bites and how far it goes.
 
 **H1.** Concordance and recovery of the true survival function are weakly
 related across misspecified scenarios. Formally, the correlation between the
-C-index and MISE across cells is small in magnitude.
+C-index and RMISE across cells has absolute Spearman rank correlation below
+0.30. Pearson correlation is reported as a sensitivity summary, not as the
+decision rule.
 
 **H2.** There exist scenarios in which an estimator's concordance is at or above
-that of a correctly specified reference while its MISE is larger by an order of
+that of a correctly specified reference while its nMISE is larger by an order of
 magnitude.
 
 **H3.** Mechanisms that break proportional hazards structurally — a
 non-monotone hazard, and a survival plateau from a cured fraction — produce
-larger MISE for proportional-hazards estimators than mechanisms that only
+larger RMISE for proportional-hazards estimators than mechanisms that only
 change the baseline's shape.
 
 **H4.** Censoring degrades absolute probability recovery more than it degrades
-ranking.
+ranking. Operationally, the contrast between 70% and 10% target censoring is
+larger on mean RMISE than on mean Harrell C-index after each metric is
+standardised by its across-cell standard deviation.
 
 These are directional statements, and the study may refute any of them. The
 pilot is consistent with H1 and H2 (see §7); that is a reason to run the
@@ -114,8 +118,11 @@ there described as indistinguishable rather than as findings.
 
 **Primary:** MISE, the integrated squared error between the predicted and the
 true conditional survival function over $[0, \tau]$, on an independent
-evaluation sample. Under the contribution stated in §1 this is not one metric
-among several: it is the reference against which the conventional metrics are
+evaluation sample. Raw MISE is used for within-scenario comparisons; nMISE and
+RMISE are used for cross-mechanism figures, adequacy summaries and headline
+claims so that different values of $\tau$ do not change the scale of the
+estimand. Under the contribution stated in §1 this is not one metric among
+several: it is the reference against which the conventional metrics are
 assessed.
 
 **Secondary:** MIAE and its horizon-normalised form; Harrell and Uno
@@ -142,6 +149,12 @@ study claims to detect.
 Recalibrating per replicate would make the mechanism random, so replicates
 would not be draws from one scenario.
 
+**The IPCW interval is resolved once per scenario and frozen.** Brier and
+time-dependent AUC implementations require evaluation times inside observed
+follow-up support. The production run uses the prespecified scenario-level
+grid; a replication that cannot support it records IBS and mean AUC as
+unavailable rather than shortening the interval after seeing that replication.
+
 **Cured subjects are excluded from the $\tau$ quantile.** `gen_mixture_cure`
 records a cured subject's event time as `max_time * 100`, a finite sentinel
 meaning "never fails". Counting it put $\tau$ at 1000 for `mixture_cure` where
@@ -165,6 +178,11 @@ at a single threshold. $\epsilon$ is not presented as a universal constant; its
 interpretation is conditional on the loss, the mechanism, the horizon and the
 application.
 
+The headline number is the 90th percentile of RMISE conditional on bins of a
+conventional metric, primarily Harrell's C-index. This answers the operational
+question "how large can truth-error be among rows with similar conventional
+metric values?" without turning a correlation coefficient into the claim.
+
 No inferential test is used to declare an estimator superior. Conclusions are
 conditional on the mechanisms studied, and no claim of general superiority will
 be made.
@@ -180,7 +198,8 @@ production rows.
 - Spread in MISE: estimator 6.4×, mechanism 6.1×, censoring 3.2×, $n$ 1.7×. No
   factor is redundant, which is why none was dropped; two interior *levels*
   were.
-- **correlation(C-index, MISE) $= -0.116$** across cells.
+- **correlation(C-index, MISE) $= -0.116$** across cells. This is retained as a
+  pilot diagnostic; production H1 is defined on RMISE as above.
 - On `aft_ln`, Cox at $C = 0.712$ had MISE 0.0408 while Cox at $C = 0.672$ had
   MISE 0.0025.
 
@@ -194,10 +213,13 @@ run with eight workers is the same experiment as a run with one. Verified: a
 4-worker and a 1-worker run of the same cells produced bit-identical seeds,
 MISE, concordance, integrated Brier and calibration error.
 
-Before the production run, `protocol/experiment_lock.json` will freeze the
-design, the commit and the environment. The runner refuses to start against a
-mismatched lock. If package code affecting simulation changes after the freeze,
-that is a new experiment version, not a continuation.
+Before the production run, `scripts/freeze_experiment.py` writes
+`protocol/experiment_lock.json`, freezing the design, the prepared scenario
+values, the commit and the environment. The runner loads prepared scenarios
+from the lock and every production row carries the lock hash; resumption
+refuses rows with a missing or different lock hash. If package code affecting
+simulation changes after the freeze, that is a new experiment version, not a
+continuation.
 
 **The freeze has not happened, and no production run has been executed.**
 

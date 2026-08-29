@@ -61,7 +61,7 @@ DGP_BUILDERS = {
     },
     "mixture_cure": lambda b: {
         "betas_survival": [b, -b / 2],
-        "betas_cure": [b / 2, 0.1],
+        "betas_cure": [b / 2, b / 5],
         "cure_fraction": 0.3,
         "baseline_hazard": 0.7,
         "model_cens": "uniform",
@@ -182,6 +182,8 @@ METRICS = {
     "time_grid_quantiles": [0.1, 0.25, 0.5, 0.75, 0.9],
     "metrics": [
         "mise",
+        "normalised_mise",
+        "root_mean_integrated_squared_error",
         "miae",
         "mean_absolute_survival_error",
         "c_index_harrell",

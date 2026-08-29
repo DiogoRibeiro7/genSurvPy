@@ -44,6 +44,7 @@ from .truth import true_survival
 __all__ = [
     "PreparedScenario",
     "prepare_scenario",
+    "prepared_scenario_from_record",
     "PARAMETER_CORRESPONDENCE",
     "parameter_recovery",
     "run_cell",
@@ -68,6 +69,7 @@ class PreparedScenario:
     params: Mapping[str, Any]
     tau: float
     time_grid: tuple[float, ...]
+    ipcw_time_grid: tuple[float, ...]
     censoring_achieved: float
     feasible: bool
     reason: str = ""
@@ -88,6 +90,8 @@ class PreparedScenario:
             "misspecification": self.config.misspecification,
             "tau": self.tau,
             "n_time_points": len(self.time_grid),
+            "time_grid": list(self.time_grid),
+            "ipcw_time_grid": list(self.ipcw_time_grid),
             "params": dict(self.params),
             "feasible": self.feasible,
             "reason": self.reason,
@@ -134,6 +138,7 @@ def prepare_scenario(
             params=params,
             tau=float("nan"),
             time_grid=(),
+            ipcw_time_grid=(),
             censoring_achieved=calibration.achieved,
             feasible=False,
             reason="no finite latent event times; tau is undefined",
@@ -151,6 +156,7 @@ def prepare_scenario(
             params=params,
             tau=tau,
             time_grid=(),
+            ipcw_time_grid=(),
             censoring_achieved=calibration.achieved,
             feasible=False,
             reason=(
@@ -161,15 +167,64 @@ def prepare_scenario(
         )
 
     grid = tuple(np.linspace(0.0, tau, metrics.n_time_points).tolist())
+    observed = reference.data["time"].to_numpy(dtype=float)
+    lower = float(np.min(observed))
+    support_upper = float(np.max(observed))
+    ipcw_grid = tuple(
+        value
+        for value in grid
+        if value > lower and value <= tau and value < support_upper
+    )
 
     return PreparedScenario(
         config=scenario,
         params=params,
         tau=tau,
         time_grid=grid,
+        ipcw_time_grid=ipcw_grid,
         censoring_achieved=calibration.achieved,
         feasible=calibration.feasible,
         reason=calibration.reason,
+    )
+
+
+def prepared_scenario_from_record(
+    scenario: ScenarioConfig, record: Mapping[str, Any]
+) -> PreparedScenario:
+    """Rehydrate a prepared scenario from the experiment lock.
+
+    Production runs must not recalibrate censoring or recompute tau when they
+    resume. The lock contains the prepared values; this function turns them back
+    into the object `run_cell` expects and refuses stale or incomplete locks.
+    """
+    if record.get("scenario_id") != scenario.scenario_id:
+        raise ValueError(
+            f"lock record for {record.get('scenario_id')!r} cannot prepare "
+            f"scenario {scenario.scenario_id!r}"
+        )
+    if record.get("scenario_hash") != scenario.hash:
+        raise ValueError(
+            f"scenario {scenario.scenario_id!r} has changed since the lock was written"
+        )
+
+    required = ("params", "tau", "time_grid", "ipcw_time_grid", "feasible")
+    missing = [name for name in required if name not in record]
+    if missing:
+        raise ValueError(
+            f"prepared scenario {scenario.scenario_id!r} is missing {missing}"
+        )
+
+    return PreparedScenario(
+        config=scenario,
+        params=dict(record["params"]),
+        tau=float(record["tau"]),
+        time_grid=tuple(float(value) for value in record["time_grid"]),
+        ipcw_time_grid=tuple(float(value) for value in record["ipcw_time_grid"]),
+        censoring_achieved=float(
+            record.get("achieved_censoring", record.get("censoring_achieved", np.nan))
+        ),
+        feasible=bool(record["feasible"]),
+        reason=str(record.get("reason", "")),
     )
 
 
@@ -324,6 +379,10 @@ def run_cell(
         truth_surface = true_survival(
             scenario.dgp, grid, evaluation.truth, prepared.params
         )
+        survival_functions = None
+        predictor = getattr(fitted.model, "predict_survival_functions", None)
+        if predictor is not None:
+            survival_functions = predictor(evaluation.covariates)
 
         row.update(
             evaluate_all(
@@ -336,6 +395,8 @@ def run_cell(
                 train_event=train.event,
                 eval_time=evaluation.observed_time,
                 eval_event=evaluation.event,
+                prediction_error_times=np.asarray(prepared.ipcw_time_grid, dtype=float),
+                survival_functions=survival_functions,
             )
         )
         row["scored"] = True

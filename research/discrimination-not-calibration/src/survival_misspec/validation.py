@@ -24,10 +24,11 @@ import json
 import platform
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from .config import StudyConfig, content_hash
 
@@ -176,6 +177,9 @@ class ExperimentLock:
             "study_hash": self.study_hash,
             "master_seed": self.master_seed,
             "n_replications": self.n_replications,
+            "scenarios": self.scenarios,
+            "estimators": self.estimators,
+            "metrics": self.metrics,
             "git_commit": self.provenance.get("git_commit"),
             "gen_surv_version": self.provenance.get("gen_surv_version"),
         }
@@ -242,6 +246,22 @@ def read_lock(path: Path | str) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def _expected_lock_hash(lock: Mapping[str, Any]) -> str:
+    payload = {
+        "paper_id": lock.get("paper_id"),
+        "protocol_version": lock.get("protocol_version"),
+        "study_hash": lock.get("study_hash"),
+        "master_seed": lock.get("master_seed"),
+        "n_replications": lock.get("n_replications"),
+        "scenarios": lock.get("scenarios", ()),
+        "estimators": lock.get("estimators", ()),
+        "metrics": lock.get("metrics", {}),
+        "git_commit": lock.get("provenance", {}).get("git_commit"),
+        "gen_surv_version": lock.get("provenance", {}).get("gen_surv_version"),
+    }
+    return content_hash(payload)
+
+
 def verify_lock(
     path: Path | str, study: StudyConfig, *, strict_commit: bool = True
 ) -> list[str]:
@@ -260,6 +280,14 @@ def verify_lock(
     current = capture_provenance()
     problems: list[str] = []
 
+    stored_hash = lock.get("lock_hash")
+    expected_hash = _expected_lock_hash(lock)
+    if stored_hash != expected_hash:
+        problems.append(
+            f"lock hash changed: lock records {stored_hash or '<missing>'} "
+            f"but its contents hash to {expected_hash}"
+        )
+
     if lock.get("study_hash") != study.hash:
         problems.append(
             f"design changed: lock study_hash={lock.get('study_hash')} "
@@ -271,6 +299,44 @@ def verify_lock(
         problems.append(
             f"master seed changed: {lock.get('master_seed')} -> {study.master_seed}"
         )
+
+    locked_scenarios = lock.get("scenarios", [])
+    if not isinstance(locked_scenarios, list) or not locked_scenarios:
+        problems.append("lock does not contain prepared scenarios")
+    else:
+        current_hashes = {
+            scenario.scenario_id: scenario.hash for scenario in study.scenarios
+        }
+        locked_hashes = {
+            str(record.get("scenario_id")): record.get("scenario_hash")
+            for record in locked_scenarios
+            if isinstance(record, Mapping)
+        }
+        missing = sorted(set(current_hashes) - set(locked_hashes))
+        extra = sorted(set(locked_hashes) - set(current_hashes))
+        if missing:
+            problems.append(f"lock is missing prepared scenarios: {missing[:10]}")
+        if extra:
+            problems.append(f"lock contains unknown prepared scenarios: {extra[:10]}")
+        for scenario_id, current_hash in current_hashes.items():
+            locked_hash = locked_hashes.get(scenario_id)
+            if locked_hash is not None and locked_hash != current_hash:
+                problems.append(
+                    f"scenario {scenario_id} changed: lock scenario_hash="
+                    f"{locked_hash} but current={current_hash}"
+                )
+
+        required_fields = {"params", "tau", "time_grid", "ipcw_time_grid", "feasible"}
+        for record in locked_scenarios:
+            if not isinstance(record, Mapping):
+                problems.append("lock contains a non-mapping prepared scenario")
+                continue
+            missing_fields = sorted(required_fields - set(record))
+            if missing_fields:
+                problems.append(
+                    f"prepared scenario {record.get('scenario_id', '?')} is missing "
+                    f"{missing_fields}"
+                )
 
     locked_provenance = lock.get("provenance", {})
 

@@ -20,11 +20,23 @@ from survival_misspec.metrics import (
     antolini_concordance,
     d_calibration,
     prediction_error,
+    truth_recovery,
 )
 
 
 def _exponential_surface(rates: np.ndarray, grid: np.ndarray) -> np.ndarray:
     return np.exp(-np.outer(rates, grid))
+
+
+class _FakeStep:
+    def __init__(self, x: list[float], y: list[float]) -> None:
+        self.x = np.asarray(x, dtype=float)
+        self.y = np.asarray(y, dtype=float)
+
+    def __call__(self, time: float) -> float:
+        index = int(np.searchsorted(self.x, time, side="left"))
+        index = min(max(index, 0), len(self.y) - 1)
+        return float(self.y[index])
 
 
 def test_d_calibration_does_not_reject_a_correct_model() -> None:
@@ -109,6 +121,27 @@ def test_d_calibration_uses_step_values_not_linear_interpolation() -> None:
 
     # Right-continuous step lookup uses S(1.0) = 0.8. Linear interpolation would
     # use 0.9 and place the event in the top bin.
+    expected = np.zeros(10)
+    expected[8] = 1.0
+    uniform = np.full(10, 0.1)
+    statistic = float(((expected - uniform) ** 2 / uniform).sum())
+    assert outcome["d_calibration_statistic"] == pytest.approx(statistic)
+
+
+def test_d_calibration_can_use_native_step_functions() -> None:
+    grid = np.array([0.0, 1.0, 2.0])
+    predicted = np.array([[1.0, 0.2, 0.2]])
+    observed = np.array([0.5])
+    functions = [_FakeStep([0.0, 0.5, 2.0], [1.0, 0.8, 0.2])]
+
+    outcome = d_calibration(
+        predicted,
+        grid,
+        observed,
+        np.ones(1, dtype=bool),
+        survival_functions=functions,
+    )
+
     expected = np.zeros(10)
     expected[8] = 1.0
     uniform = np.full(10, 0.1)
@@ -216,6 +249,43 @@ def test_antolini_uses_the_next_step_at_event_time() -> None:
     assert outcome["c_index_antolini"] == pytest.approx(1.0)
 
 
+def test_antolini_can_use_native_step_functions() -> None:
+    grid = np.array([0.0, 1.0, 2.0])
+    predicted = np.array(
+        [
+            [1.0, 0.9, 0.9],
+            [1.0, 0.1, 0.1],
+        ]
+    )
+    functions = [
+        _FakeStep([0.0, 0.5, 2.0], [1.0, 0.2, 0.2]),
+        _FakeStep([0.0, 0.5, 2.0], [1.0, 0.8, 0.8]),
+    ]
+
+    outcome = antolini_concordance(
+        predicted,
+        grid,
+        np.array([0.5, 1.5]),
+        np.array([True, True]),
+        survival_functions=functions,
+    )
+
+    assert outcome["antolini_pairs"] == 1
+    assert outcome["c_index_antolini"] == pytest.approx(1.0)
+
+
+def test_truth_recovery_reports_horizon_normalised_squared_loss() -> None:
+    grid = np.linspace(0.0, 2.0, 21)
+    truth = np.tile(np.exp(-grid), (1, 1))
+    predicted = truth + 0.2
+
+    outcome = truth_recovery(predicted, truth, grid, tau=2.0)
+
+    assert outcome["mise"] == pytest.approx(0.08)
+    assert outcome["normalised_mise"] == pytest.approx(0.04)
+    assert outcome["root_mean_integrated_squared_error"] == pytest.approx(0.2)
+
+
 def test_prediction_error_only_labels_a_point_metric_when_it_is_at_tau() -> None:
     grid = np.array([0.0, 0.5, 1.0])
     predicted = np.tile(np.exp(-grid), (20, 1))
@@ -240,6 +310,28 @@ def test_prediction_error_reports_tau_when_tau_is_inside_support() -> None:
     assert outcome["brier_at_tau_time"] == pytest.approx(1.0)
     assert outcome["auc_at_tau_time"] == pytest.approx(1.0)
     assert np.isfinite(outcome["brier_at_tau"])
+
+
+def test_prediction_error_does_not_shorten_a_fixed_interval() -> None:
+    grid = np.array([0.0, 0.5, 1.0])
+    predicted = np.tile(np.exp(-grid), (20, 1))
+    time = np.linspace(0.1, 0.8, 20)
+    event = np.ones(20, dtype=bool)
+
+    outcome = prediction_error(
+        predicted,
+        grid,
+        time,
+        event,
+        time,
+        event,
+        tau=1.0,
+        evaluation_times=np.array([0.5, 1.0]),
+    )
+
+    assert np.isnan(outcome["integrated_brier_score"])
+    assert np.isnan(outcome["auc_mean"])
+    assert "fixed IPCW interval" in outcome["prediction_error_note"]
 
 
 def test_antolini_handles_a_sample_with_no_events() -> None:
