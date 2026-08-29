@@ -1,6 +1,6 @@
 [project]
 name = "gen_surv"
-version = "3.1.0"
+version = "3.1.1"
 description = "Simulate survival data with a known truth: twelve models spanning proportional hazards, accelerated failure time, competing risks, cure fractions, recurrent events and multi-state processes"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -24,7 +24,7 @@ keywords = [
     "statistics",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Healthcare Industry",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
@@ -37,12 +37,12 @@ classifiers = [
 dependencies = [
     "numpy (>=2.3.3,<3.0.0)",
     "pandas (>=2.3.3,<3.0.0)",
-    "scipy (>=1.16.1,<2.0.0)",
+    "scipy (>=1.17.1,<2.0.0)",
     "typer (>=0.19.2,<0.20.0)",
     "click (>=8.3.0,<9.0.0)",
     "matplotlib (>=3.10.7,<4.0.0)",
     "lifelines (>=0.30.3,<0.31.0)",
-    "pyarrow (>=23.0.1,<26)",
+    "pyarrow (>=25.0.1,<26)",
     "pyreadr (>=0.5.3,<0.6.0)",
 ]
 
@@ -60,23 +60,38 @@ gen_surv = "gen_surv.cli:app"
 packages = [{ include = "gen_surv" }]
 
 [tool.poetry.group.dev.dependencies]
-pytest = ">=9.0.3,<10.0.0"
+pytest = ">=9.1.1,<10.0.0"
 pytest-cov = "^7.0.0"
-pytest-benchmark = "^5.1.0"
+pytest-benchmark = "^5.3.0"
 mypy = "^1.18.2"
-invoke = ">=2.2.1,<4.0.0"
+invoke = ">=3.0.3,<4.0.0"
 hypothesis = "^6.142.1"
 tomli = "^2.3.0"
-black = ">=26.3.1,<27.0"
-isort = ">=7,<9"
+black = ">=26.5.1,<27.0"
+isort = ">=8.0.1,<9"
 flake8 = ">=6.1,<8.0"
+scikit-survival = ">=0.28.0,<0.29"
+pre-commit = "^4.6.2"
+
+# Dependencies of the research studies under research/, not of the package.
+# The published gen-surv wheel must not acquire these merely because a paper
+# uses them, so they live in their own group rather than in the runtime list.
+#
+# PyYAML was previously undeclared: the research configuration loader imports
+# it, but it was only present transitively through mkdocs and pre-commit, so a
+# clean install without the docs group would have failed at load_study.
+#
+# scikit-survival is also in the dev group, where the package's own sksurv
+# adapter tests need it. It is repeated here so a research-only install works
+# without pulling the whole development toolchain.
+[tool.poetry.group.research.dependencies]
+pyyaml = "^6.0"
 scikit-survival = ">=0.25,<0.29"
-pre-commit = "^4.3.0"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = ">=1.6,<2.0"
 mkdocs-material = ">=9.5,<10.0"
-mkdocstrings = { extras = ["python"], version = ">=0.26,<1.0" }
+mkdocstrings = { extras = ["python"], version = ">=1.0.6,<2.0" }
 
 [tool.pytest.ini_options]
 markers = [

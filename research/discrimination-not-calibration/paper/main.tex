@@ -1,0 +1,70 @@
+% The Distance Behind the C-index
+%
+% WORKING TITLE. See ../literature/positioning.md: the claim that
+% discrimination and calibration can disagree is established prior work, so a
+% title asserting it names someone else's result. A title naming the
+% measurement this paper contributes would fit better. Author's decision.
+%
+% Build:
+%   pdflatex main && bibtex main && pdflatex main && pdflatex main
+%
+% Every table and figure is generated. Nothing numeric is typed into this file
+% or into the section files: tables come from ../results/tables/ via
+% scripts/aggregate_results.py, figures from ../results/figures/ via
+% scripts/make_figures.py. If a number appears in prose it must be \input from
+% a generated macro file, never transcribed.
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\graphicspath{{../results/figures/}{figures/}}
+
+% ---------------------------------------------------------------------------
+% Draft banner. Remove only when the production run is complete and the
+% experiment lock has been verified against the results being reported.
+% ---------------------------------------------------------------------------
+\newcommand{\draftbanner}{%
+  \begin{center}\fcolorbox{red}{red!5}{\parbox{0.92\textwidth}{%
+  \textbf{DRAFT --- no production results.} The experiment has not been frozen
+  and the production Monte Carlo run has not been executed. Any numbers
+  appearing below come from an exploratory pilot and must not be read as
+  results. The related-work section remains incomplete: only sources marked as
+  read in the positioning notes may be cited as read.}}\end{center}\vspace{1em}}
+
+\title{The Distance Behind the C-index:\\
+       Truth-Based Evaluation of Survival Distribution Predictions}
+\author{Diogo Ribeiro}
+\date{\today}
+
+\begin{document}
+\maketitle
+\draftbanner
+
+\begin{abstract}
+% TO BE WRITTEN AFTER PRODUCTION. The abstract must state the measurement the
+% paper contributes, not the phenomenon it reproduces. See
+% ../literature/positioning.md.
+\end{abstract}
+
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/methods}
+\input{sections/results}
+\input{sections/discussion}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+\input{sections/appendix_reproducibility}
+
+\end{document}

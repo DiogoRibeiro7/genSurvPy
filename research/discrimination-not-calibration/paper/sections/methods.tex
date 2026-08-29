@@ -1,0 +1,44 @@
+\section{Methods}
+\label{sec:methods}
+
+% STRUCTURE ONLY. Much of this is already written precisely in
+% ../protocol/estimands.md and ../protocol/preregistration.md; this section
+% should follow them rather than restate them loosely.
+%
+% \subsection{Data-generating mechanisms}
+%   Six, from \texttt{gen\_surv}: the reference proportional-hazards case, two
+%   further PH cases with harder baselines, two non-PH cases, and a cure
+%   fraction. Table 1 is generated. State the exclusion of \texttt{tdcm} and
+%   the reason: its covariate changes during follow-up, so S(t | X) given
+%   baseline covariates requires marginalising over a latent crossover.
+%
+% \subsection{The known truth}
+%   S(t | x) in closed form per mechanism. State that each was validated by
+%   probability integral transform -- if S_i is correct then S_i(T_i) is
+%   Uniform(0,1) -- and give the test. This is the foundation of the paper and
+%   deserves the space.
+%
+% \subsection{Estimators}
+%   Table 2 is generated from the configuration, including the assumptions
+%   column. \citet{cox1972regression}, \citet{royston2002flexible},
+%   \citet{ishwaran2008random}, \citet{hothorn2006survival}.
+%
+% \subsection{Evaluation}
+%   The four target classes, kept apart: recovery of the truth, discrimination,
+%   prediction error and calibration, and parameter recovery. Definitions are
+%   in ../protocol/estimands.md.
+%
+% \subsection{Design and Monte Carlo procedure}
+%   Factors and levels; how the grid was pruned on pilot evidence; how R was
+%   chosen by inverting MCSE = s / sqrt(R) rather than by convention; which
+%   cells remain underpowered and are reported as such.
+%
+% \subsection{Two decisions that change what the numbers mean}
+%   (a) Fitting and evaluation use independent samples. The reason: in sample,
+%       a random survival forest scored a concordance of 0.78 against Cox at
+%       0.65 on a correctly specified Cox mechanism, and 0.578 against 0.619
+%       out of sample. Overfitting would otherwise masquerade as the effect
+%       under study.
+%   (b) tau is fixed from the latent event times before any results are seen,
+%       so it does not move with the censoring level and was not chosen to
+%       suit an outcome.
