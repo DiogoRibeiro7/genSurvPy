@@ -210,9 +210,11 @@ horizon $\tau$ and the loss. What counts as an adequate approximation is an
 application's judgement, not a statistical constant.
 
 The headline quantity is the 90th percentile of RMISE conditional on bins of a
-conventional metric, primarily Harrell's C-index. This reports the upper tail of
-truth-error compatible with similar conventional metric values, which is the
-measurement question of the study.
+conventional metric, primarily Harrell's C-index, computed over
+scenario-estimator cell means. This reports the upper tail of truth-error
+compatible with similar conventional metric values, which is the measurement
+question of the study. Its uncertainty is propagated from the cell MCSEs with
+fixed-bin parametric bootstrap draws.
 
 ---
 

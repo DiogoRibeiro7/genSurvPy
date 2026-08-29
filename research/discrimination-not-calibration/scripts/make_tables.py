@@ -8,8 +8,8 @@ manuscript by hand.** Each file carries a generated-by header, and
 which is what stops a number being pasted in and then quietly diverging from
 the results it came from.
 
-Tables 1 and 2 describe the design and can be produced before any run. Tables
-3 to 5 need results and are skipped with a message when they are absent, rather
+Tables 1 and 2 describe the design and can be produced before any run. Later
+tables need results and are skipped with a message when they are absent, rather
 than emitting an empty table that looks finished.
 """
 
@@ -321,6 +321,37 @@ def table_failures(failures: pd.DataFrame, out: Path) -> None:
     )
 
 
+def table_hypotheses(hypotheses: pd.DataFrame, out: Path) -> None:
+    """The executable H1--H4 definitions and their support status."""
+    if hypotheses.empty:
+        print("  table6: skipped, no hypotheses table")
+        return
+
+    body = [
+        r"\begin{table}[t]",
+        r"\centering\small",
+        r"\caption{Preregistered hypothesis estimands, computed by "
+        r"\texttt{scripts/analyze\_hypotheses.py}.}",
+        r"\label{tab:hypotheses}",
+        r"\begin{tabular}{llrl}",
+        r"\toprule",
+        r"Hypothesis & Estimand & Estimate & Criterion \\",
+        r"\midrule",
+    ]
+    for row in hypotheses.itertuples():
+        decision = "supports" if row.supports_hypothesis else "does not support"
+        body.append(
+            f"{_escape(str(row.hypothesis))} & {_escape(str(row.estimand))} & "
+            f"{row.estimate:.4f} & {_escape(str(row.criterion))}; {decision} \\\\"
+        )
+    body += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
+    _write(
+        out / "table6_hypotheses.tex",
+        "\n".join(body),
+        "results/processed/hypotheses.parquet",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(HERE.parent / "config"))
@@ -349,11 +380,17 @@ def main() -> int:
         if (processed / "failures.parquet").exists()
         else pd.DataFrame()
     )
+    hypotheses = (
+        pd.read_parquet(processed / "hypotheses.parquet")
+        if (processed / "hypotheses.parquet").exists()
+        else pd.DataFrame()
+    )
 
     print("result tables:")
     table_main_results(summary, out)
     table_parameter_recovery(summary, out)
     table_failures(failures, out)
+    table_hypotheses(hypotheses, out)
 
     print(f"\nwritten to {out}")
     return 0

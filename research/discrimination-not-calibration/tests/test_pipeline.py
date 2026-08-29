@@ -512,18 +512,22 @@ def test_compact_raw_writes_one_deterministic_file(tmp_path) -> None:
 
 
 def test_headline_metric_gap_operationalises_the_primary_claim() -> None:
-    raw = pd.DataFrame(
+    summary = pd.DataFrame(
         {
-            "scored": [True, True, True, True],
-            "c_index_harrell": [0.6, 0.61, 0.7, 0.71],
-            "root_mean_integrated_squared_error": [0.05, 0.20, 0.04, 0.30],
+            "c_index_harrell_mean": [0.6, 0.61, 0.7, 0.71],
+            "root_mean_integrated_squared_error_mean": [0.05, 0.20, 0.04, 0.30],
+            "root_mean_integrated_squared_error_mcse": [0.001] * 4,
         }
     )
 
-    headline = headline_metric_gap(raw, bins=2, quantile=0.9)
+    headline = headline_metric_gap(summary, bins=2, quantile=0.9)
 
-    assert list(headline["metric"]) == ["c_index_harrell", "c_index_harrell"]
+    assert list(headline["metric"]) == [
+        "c_index_harrell_mean",
+        "c_index_harrell_mean",
+    ]
     assert headline["loss_quantile"].max() == pytest.approx(0.274)
+    assert "loss_quantile_mcse" in headline.columns
 
 
 # ---------------------------------------------------------------------------

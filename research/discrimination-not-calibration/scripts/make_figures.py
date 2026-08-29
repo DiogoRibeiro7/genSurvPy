@@ -164,9 +164,9 @@ def figure_discrimination_vs_truth(
 
     finite = summary[["c_index_harrell_mean", TRUTH_LOSS_MEAN]].dropna()
     if len(finite) > 2:
-        correlation = finite.corr().iloc[0, 1]
+        correlation = finite.corr(method="spearman").iloc[0, 1]
         axis.annotate(
-            f"r = {correlation:+.3f}",
+            f"Spearman rho = {correlation:+.3f}",
             xy=(0.03, 0.03),
             xycoords="axes fraction",
             fontsize=8,
