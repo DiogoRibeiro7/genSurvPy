@@ -4,8 +4,7 @@
 
 The production config uses 51 time points. This diagnostic reruns matched cells
 at 51, 201 and 801 points and compares each with the 801-point value. The
-default acceptance threshold is 0.005 RMISE, half a percentage point on the
-survival-probability scale.
+default acceptance threshold is 0.002 RMISE on the survival-probability scale.
 """
 
 from __future__ import annotations
@@ -24,6 +23,24 @@ from survival_misspec.config import load_study  # noqa: E402
 from survival_misspec.experiments import prepare_scenario, run_cell  # noqa: E402
 
 
+def maximum_rmise_difference(frame: pd.DataFrame, reference_grid: int) -> float:
+    """Maximum absolute RMISE difference among non-reference grids."""
+    comparisons = frame[frame["n_time_points"] != reference_grid]
+    if comparisons.empty:
+        return float("nan")
+    return float(
+        pd.to_numeric(comparisons["rmise_absolute_difference"], errors="coerce").max()
+    )
+
+
+def grid_convergence_passes(
+    frame: pd.DataFrame, *, reference_grid: int, rmise_epsilon: float
+) -> bool:
+    """Return whether the pre-freeze grid-convergence criterion passes."""
+    maximum = maximum_rmise_difference(frame, reference_grid)
+    return bool(pd.notna(maximum) and maximum <= rmise_epsilon)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(HERE.parent / "config"))
@@ -32,13 +49,13 @@ def main() -> int:
     )
     parser.add_argument("--grid-points", type=int, nargs="+", default=[51, 201, 801])
     parser.add_argument("--calibration-n", type=int, default=20000)
-    parser.add_argument("--replications", type=int, default=3)
+    parser.add_argument("--replications", type=int, default=10)
     parser.add_argument("--max-scenarios", type=int, default=None)
     parser.add_argument("--estimators", nargs="*", default=None)
     parser.add_argument(
         "--rmise-epsilon",
         type=float,
-        default=0.005,
+        default=0.002,
         help="maximum acceptable absolute RMISE difference versus the finest grid",
     )
     arguments = parser.parse_args()
@@ -128,8 +145,10 @@ def main() -> int:
         .max()
     )
     print(summary.to_string())
-    maximum = float(summary["rmise_absolute_difference"].max())
-    if maximum <= arguments.rmise_epsilon:
+    maximum = maximum_rmise_difference(frame, reference_grid)
+    if grid_convergence_passes(
+        frame, reference_grid=reference_grid, rmise_epsilon=arguments.rmise_epsilon
+    ):
         print(
             f"criterion pass: max |RMISE - RMISE_{reference_grid}| "
             f"{maximum:.6f} <= {arguments.rmise_epsilon:.6f}"

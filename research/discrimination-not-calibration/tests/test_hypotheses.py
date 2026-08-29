@@ -59,6 +59,36 @@ def test_h2_uses_only_dgps_with_mapped_correct_references() -> None:
     assert bool(h2["supports_hypothesis"])
 
 
+def test_h1_uses_spearman_not_pearson() -> None:
+    summary = pd.DataFrame(
+        {
+            "scenario_id": [f"s{i}" for i in range(4)],
+            "dgp": ["aft_ln"] * 4,
+            "n": [250] * 4,
+            "target_censoring": [0.5] * 4,
+            "effect_size": [0.5] * 4,
+            "estimator_id": ["cox_ph"] * 4,
+            "misspecification": ["non-proportional hazards"] * 4,
+            "c_index_harrell_mean": [0.60, 0.90, 0.70, 0.80],
+            "normalised_mise_mean": [0.01, 0.0121, 0.0144, 0.25],
+            "root_mean_integrated_squared_error_mean": [0.10, 0.11, 0.12, 0.50],
+        }
+    )
+
+    h1 = analyse_hypotheses(summary).set_index("hypothesis").loc["H1"]
+
+    assert h1["estimate"] == pytest.approx(
+        summary["c_index_harrell_mean"].corr(
+            summary["root_mean_integrated_squared_error_mean"], method="spearman"
+        )
+    )
+    assert h1["estimate"] != pytest.approx(
+        summary["c_index_harrell_mean"].corr(
+            summary["root_mean_integrated_squared_error_mean"], method="pearson"
+        )
+    )
+
+
 def test_h3_and_h4_use_common_support() -> None:
     hypotheses = analyse_hypotheses(_summary()).set_index("hypothesis")
 
@@ -66,3 +96,11 @@ def test_h3_and_h4_use_common_support() -> None:
     assert hypotheses.loc["H4", "n"] == 12
     assert "common_support" in hypotheses.loc["H3", "estimand"]
     assert "common_support" in hypotheses.loc["H4", "estimand"]
+
+
+def test_h4_excludes_mixture_cure_without_10_percent_support() -> None:
+    h4 = analyse_hypotheses(_summary()).set_index("hypothesis").loc["H4"]
+
+    expected_pairs_without_cure = 4 * 3
+    assert h4["n"] == expected_pairs_without_cure
+    assert "missing 10% cure cells drop out" in h4["note"]
