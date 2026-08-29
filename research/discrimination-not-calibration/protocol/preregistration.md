@@ -186,22 +186,24 @@ computed over scenario-estimator cell means, and its Monte Carlo uncertainty is
 propagated from the cell MCSEs with fixed-bin parametric bootstrap draws.
 
 The executable hypothesis analysis is `scripts/analyze_hypotheses.py`, which
-writes `results/processed/hypotheses.parquet` and `.json`. H2's correctly
-specified reference is `cox_ph` for `cphm`, `aft_weibull` and
-`piecewise_exponential`; no exact comparator is claimed for `aft_ln`,
-`aft_log_logistic` or `mixture_cure`. H3's proportional-hazards estimators are
-`cox_ph` and `gradient_boosted`; its structural-violation DGPs are `aft_ln`,
-`aft_log_logistic` and `mixture_cure`, compared with the PH/baseline group
-`cphm`, `aft_weibull` and `piecewise_exponential` on common
+writes `results/processed/hypotheses.parquet`, `.json` and generated manuscript
+macros. H2's correctly specified reference is `cox_ph` for `cphm`,
+`aft_weibull` and `piecewise_exponential`; no exact comparator is claimed for
+`aft_ln`, `aft_log_logistic` or `mixture_cure`. H3's proportional-hazards
+estimators are `cox_ph` and `gradient_boosted`; its structural-violation DGPs
+are `aft_ln`, `aft_log_logistic` and `mixture_cure`, compared with the
+PH/baseline group `cphm`, `aft_weibull` and `piecewise_exponential` on common
 $(n,\text{censoring},\beta,\text{estimator})$ support. H4 is paired on common
 $(\text{DGP},n,\beta,\text{estimator})$ support for 10% versus 70% censoring;
 `mixture_cure` drops out of that contrast because it has no 10% support.
 
-Before freezing, `scripts/audit_ipcw_availability.py` must pass with a minimum
-availability rate of 0.95 among feasible scenarios. `scripts/check_grid_convergence.py`
-must pass with
-$|\mathrm{RMISE}_{51}-\mathrm{RMISE}_{801}| \le 0.005$, half a percentage point
-on the survival-probability scale, for the audited matched cells.
+Before freezing, `scripts/check_ipcw_availability.py` must pass with a minimum
+availability rate of 0.95 among feasible scenarios. The implementation lives in
+`scripts/audit_ipcw_availability.py`, which records the scenario-level audit.
+`scripts/check_grid_convergence.py` must pass with
+$|\mathrm{RMISE}_{51}-\mathrm{RMISE}_{801}| \le 0.002$ on the
+survival-probability scale, using at least 10 matched replications for the
+audited cells.
 
 No inferential test is used to declare an estimator superior. Conclusions are
 conditional on the mechanisms studied, and no claim of general superiority will

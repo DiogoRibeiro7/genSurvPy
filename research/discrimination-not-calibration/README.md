@@ -65,14 +65,14 @@ without matching it:
 ```bash
 python scripts/make_config.py --production
 python scripts/freeze_experiment.py --out protocol/experiment_lock.json
-python scripts/audit_ipcw_availability.py
-python scripts/check_grid_convergence.py
+python scripts/check_ipcw_availability.py --minimum-availability 0.95
+python scripts/check_grid_convergence.py --replications 10 --rmise-epsilon 0.002
 python scripts/run_simulation.py \
     --out results/raw/production.parquet \
     --lock protocol/experiment_lock.json \
     --compact
 python scripts/aggregate_results.py --raw results/raw/production.parquet
-python scripts/analyze_hypotheses.py
+python scripts/analyze_hypotheses.py --macros paper/macros/hypotheses.tex
 ```
 
 `protocol/experiment_lock.json` is a local execution artifact, not a committed

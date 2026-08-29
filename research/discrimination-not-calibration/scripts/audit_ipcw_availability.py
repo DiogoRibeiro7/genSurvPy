@@ -33,6 +33,22 @@ def _supported(grid: np.ndarray, train_time: np.ndarray, eval_time: np.ndarray) 
     return bool(np.all((grid > lower) & (grid < upper)))
 
 
+def availability_failures(
+    frame: pd.DataFrame, *, minimum_availability: float
+) -> pd.DataFrame:
+    """Feasible scenarios below the pre-freeze IPCW availability threshold."""
+    feasible = frame[frame["feasible"]].copy()
+    if feasible.empty:
+        return feasible
+    availability = pd.to_numeric(feasible["availability"], errors="coerce")
+    return feasible[availability.isna() | (availability < minimum_availability)]
+
+
+def availability_passes(frame: pd.DataFrame, *, minimum_availability: float) -> bool:
+    """Return whether all feasible scenarios meet the IPCW availability gate."""
+    return availability_failures(frame, minimum_availability=minimum_availability).empty
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(HERE.parent / "config"))
@@ -125,7 +141,9 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     frame.to_parquet(out, index=False)
     feasible = frame[frame["feasible"]]
-    failures = feasible[~feasible["passes"]]
+    failures = availability_failures(
+        frame, minimum_availability=arguments.minimum_availability
+    )
     print(f"written        {len(frame)} scenarios -> {out}")
     if not feasible.empty:
         print(f"minimum        {feasible['availability'].min():.3f}")
