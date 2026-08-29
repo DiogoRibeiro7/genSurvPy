@@ -9,6 +9,12 @@ import numpy as np
 import pandas as pd
 import pytest
 from survival_misspec.aggregation import headline_metric_gap
+from survival_misspec.config import (
+    EstimatorConfig,
+    MetricsConfig,
+    ScenarioConfig,
+    StudyConfig,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -81,6 +87,36 @@ def test_grid_convergence_pass_fail_uses_preregistered_rmise_tolerance() -> None
     )
     assert grid.grid_convergence_passes(frame, reference_grid=801, rmise_epsilon=0.003)
     assert grid.maximum_rmise_difference(frame, 801) == pytest.approx(0.0021)
+
+
+def test_grid_convergence_selects_worst_cells_from_summary() -> None:
+    grid = _load_script("check_grid_convergence.py")
+    study = StudyConfig(
+        paper_id="p",
+        master_seed=1,
+        n_replications=1,
+        scenarios=(
+            ScenarioConfig("s1", "cphm", 100, 0.3, 0.5, {}),
+            ScenarioConfig("s2", "cphm", 100, 0.3, 0.5, {}),
+        ),
+        estimators=(
+            EstimatorConfig("cox_ph", "cox_ph"),
+            EstimatorConfig("weibull_aft", "weibull_aft"),
+        ),
+        metrics=MetricsConfig(0.8, 11, (0.5,), ("mise",)),
+    )
+    summary = pd.DataFrame(
+        {
+            "scenario_id": ["s1", "s1", "s2", "outside"],
+            "estimator_id": ["cox_ph", "weibull_aft", "cox_ph", "cox_ph"],
+            "root_mean_integrated_squared_error_mean": [0.1, 0.4, 0.2, 99.0],
+            "mise_mean": [0.5, 0.1, 0.9, 100.0],
+        }
+    )
+
+    selected = grid.select_audit_cells(study, summary=summary, top_cells=2)
+
+    assert selected == {("s1", "weibull_aft"), ("s2", "cox_ph")}
 
 
 def test_hypothesis_analysis_writes_manuscript_macros(tmp_path) -> None:

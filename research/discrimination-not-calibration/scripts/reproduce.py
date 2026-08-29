@@ -90,6 +90,10 @@ def main() -> int:
             [
                 python,
                 "scripts/check_grid_convergence.py",
+                "--summary",
+                "results/processed/summary.parquet",
+                "--top-cells",
+                "10",
                 "--replications",
                 "10",
                 "--rmise-epsilon",
