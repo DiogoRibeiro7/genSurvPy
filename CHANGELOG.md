@@ -2,8 +2,35 @@
 
 ## Unreleased
 
+## v3.1.1 (2026-08-29)
+
 R parity fixtures, and the maturity classifier returned to
 `5 - Production/Stable`.
+
+### Bug Fixes
+
+- **Multi-state generators now reject underflowed observed transitions.** A
+  transition with `start == stop` is a zero-exposure counting-process interval,
+  so it is rejected instead of emitted.
+
+### Research
+
+- Added the truth-based survival-distribution evaluation study under
+  `research/discrimination-not-calibration/`, with deterministic paired
+  simulations, known-truth metrics, provenance capture, pre-freeze safeguards
+  and manuscript-generation scripts.
+- Corrected pre-freeze study issues found during review: native-time
+  distribution metric evaluation for step-function predictions, exact
+  log-logistic truth for the generator's clipped law, paired Monte Carlo
+  contrasts, corrected second-stage MCSE propagation, append-only raw result
+  shards, bounded parallel submission and removal of tracked pilot result
+  tables.
+
+### Dependencies
+
+- Raised dependency floors for `scipy`, `pyarrow`, `scikit-survival`, `pytest`,
+  `pytest-benchmark`, `black`, `isort`, `invoke`, `pre-commit` and
+  `mkdocstrings`.
 
 ### Tests
 
