@@ -11,7 +11,6 @@
 | Birolo et al. (2025) | **yes** — Abstract, Sections 3.1–3.3 |
 | Sonabend et al. (2022) | **yes** — Abstract, Sections 1–3.1 |
 | Austin et al. (2020) | not yet |
-| Sonabend et al. (2022) | not yet |
 | Burk et al. (2026) | not yet |
 | Cox (1972), Grambsch & Therneau (1994), | |
 | Schemper et al. (2009), Harrell et al. (1982), | deposited, not yet read |

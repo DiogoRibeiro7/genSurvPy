@@ -3,8 +3,9 @@
     python scripts/check_grid_convergence.py --config config --out results/grid_convergence.parquet
 
 The production config uses 51 time points. This diagnostic reruns matched cells
-at 51, 201 and 801 points and reports the difference from the 801-point value,
-so the freeze can document whether the production grid is adequate.
+at 51, 201 and 801 points and compares each with the 801-point value. The
+default acceptance threshold is 0.005 RMISE, half a percentage point on the
+survival-probability scale.
 """
 
 from __future__ import annotations
@@ -31,9 +32,15 @@ def main() -> int:
     )
     parser.add_argument("--grid-points", type=int, nargs="+", default=[51, 201, 801])
     parser.add_argument("--calibration-n", type=int, default=20000)
-    parser.add_argument("--replications", type=int, default=1)
+    parser.add_argument("--replications", type=int, default=3)
     parser.add_argument("--max-scenarios", type=int, default=None)
     parser.add_argument("--estimators", nargs="*", default=None)
+    parser.add_argument(
+        "--rmise-epsilon",
+        type=float,
+        default=0.005,
+        help="maximum acceptable absolute RMISE difference versus the finest grid",
+    )
     arguments = parser.parse_args()
 
     study = load_study(arguments.config)
@@ -121,7 +128,18 @@ def main() -> int:
         .max()
     )
     print(summary.to_string())
-    return 0
+    maximum = float(summary["rmise_absolute_difference"].max())
+    if maximum <= arguments.rmise_epsilon:
+        print(
+            f"criterion pass: max |RMISE - RMISE_{reference_grid}| "
+            f"{maximum:.6f} <= {arguments.rmise_epsilon:.6f}"
+        )
+        return 0
+    print(
+        f"criterion fail: max |RMISE - RMISE_{reference_grid}| "
+        f"{maximum:.6f} > {arguments.rmise_epsilon:.6f}"
+    )
+    return 2
 
 
 if __name__ == "__main__":

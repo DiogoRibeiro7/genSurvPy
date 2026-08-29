@@ -21,8 +21,8 @@ Writes to ``results/processed/``:
     epsilon, for the adequacy region, with paired MCSEs.
 
 ``headline.parquet``
-    Conditional upper-tail normalised truth loss among rows with comparable
-    conventional metric values.
+    Conditional upper-tail normalised truth loss among cells with comparable
+    conventional metric values, with MCSEs propagated from cell means.
 
 Nothing here decides anything. It aggregates and reports uncertainty; the
 interpretation belongs in the paper, conditional on the DGPs studied.
@@ -109,7 +109,7 @@ def main() -> int:
         print(f"adequacy        {len(adequacy)} rows over {len(EPSILONS)} epsilons")
 
     try:
-        headline = headline_metric_gap(raw)
+        headline = headline_metric_gap(summary)
     except ValueError as error:
         print(f"headline        skipped: {error}")
     else:

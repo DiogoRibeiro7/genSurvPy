@@ -92,15 +92,19 @@ def main() -> int:
         "3. Aggregate, with Monte Carlo standard errors",
         [python, "scripts/aggregate_results.py", "--raw", raw],
     )
-    step("4. Generate the tables", [python, "scripts/make_tables.py"])
     step(
-        "5. Generate the figures",
+        "4. Analyse the preregistered hypotheses",
+        [python, "scripts/analyze_hypotheses.py"],
+    )
+    step("5. Generate the tables", [python, "scripts/make_tables.py"])
+    step(
+        "6. Generate the figures",
         [python, "scripts/make_figures.py", "--raw", raw],
     )
 
     if arguments.pilot:
         step(
-            "6. Report the pilot design analysis",
+            "7. Report the pilot design analysis",
             [python, "scripts/run_pilot.py", "--raw", raw],
         )
 

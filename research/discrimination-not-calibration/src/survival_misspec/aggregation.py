@@ -236,43 +236,61 @@ def paired_differences(
 
 
 def headline_metric_gap(
-    raw: pd.DataFrame,
+    summary: pd.DataFrame,
     *,
-    conventional_metric: str = "c_index_harrell",
-    loss: str = "root_mean_integrated_squared_error",
+    conventional_metric: str = "c_index_harrell_mean",
+    loss: str = "root_mean_integrated_squared_error_mean",
     bins: int = 10,
     quantile: float = 0.90,
+    uncertainty_draws: int = 1000,
+    seed: int = 20260829,
 ) -> pd.DataFrame:
     """Conditional upper-tail truth loss at comparable conventional metrics.
 
     This is the operational headline for "how much truth-error is consistent
-    with a conventional metric": bin cells by the conventional metric and
-    report a high conditional quantile of the normalised truth loss.
+    with a conventional metric": bin scenario-estimator cell means by the
+    conventional metric and report a high conditional quantile of the
+    normalised truth loss. Uncertainty is the Monte Carlo uncertainty induced by
+    the cell mean estimates, propagated by a fixed-bin parametric bootstrap.
     """
-    needed = {conventional_metric, loss, "scored"}
-    missing = sorted(needed - set(raw.columns))
+    needed = {conventional_metric, loss}
+    missing = sorted(needed - set(summary.columns))
     if missing:
         raise ValueError(f"headline table missing columns: {missing}")
 
-    scored = raw[raw["scored"].fillna(False)].copy()
-    scored[conventional_metric] = pd.to_numeric(
-        scored[conventional_metric], errors="coerce"
+    frame = summary.copy()
+    frame[conventional_metric] = pd.to_numeric(
+        frame[conventional_metric], errors="coerce"
     )
-    scored[loss] = pd.to_numeric(scored[loss], errors="coerce")
-    scored = scored.dropna(subset=[conventional_metric, loss])
-    if scored.empty:
+    frame[loss] = pd.to_numeric(frame[loss], errors="coerce")
+    frame = frame.dropna(subset=[conventional_metric, loss])
+    if frame.empty:
         return pd.DataFrame()
 
     try:
-        scored["_metric_bin"] = pd.qcut(
-            scored[conventional_metric], q=bins, duplicates="drop"
+        frame["_metric_bin"] = pd.qcut(
+            frame[conventional_metric], q=bins, duplicates="drop"
         )
     except ValueError:
-        scored["_metric_bin"] = pd.cut(scored[conventional_metric], bins=bins)
+        frame["_metric_bin"] = pd.cut(frame[conventional_metric], bins=bins)
+
+    loss_mcse_column = loss.removesuffix("_mean") + "_mcse"
+    rng = np.random.default_rng(seed)
 
     records: list[dict[str, object]] = []
-    for interval, block in scored.groupby("_metric_bin", observed=True):
+    for interval, block in frame.groupby("_metric_bin", observed=True):
         values = block[loss].to_numpy(dtype=float)
+        loss_mcse = (
+            pd.to_numeric(block[loss_mcse_column], errors="coerce")
+            .fillna(0.0)
+            .to_numpy(dtype=float)
+            if loss_mcse_column in block.columns
+            else np.zeros_like(values)
+        )
+        draws = np.empty(uncertainty_draws, dtype=float)
+        for draw in range(uncertainty_draws):
+            sampled = rng.normal(values, loss_mcse)
+            draws[draw] = float(np.quantile(sampled, quantile))
         records.append(
             {
                 "metric": conventional_metric,
@@ -282,6 +300,9 @@ def headline_metric_gap(
                 "metric_min": float(block[conventional_metric].min()),
                 "metric_max": float(block[conventional_metric].max()),
                 "loss_quantile": float(np.quantile(values, quantile)),
+                "loss_quantile_mcse": mcse(draws),
+                "loss_quantile_ci_low": float(np.quantile(draws, 0.025)),
+                "loss_quantile_ci_high": float(np.quantile(draws, 0.975)),
                 "loss_median": float(np.median(values)),
                 "n": int(values.size),
             }

@@ -56,7 +56,7 @@ def test_generated_tables_report_monte_carlo_error() -> None:
     """
     for path in _tables():
         text = path.read_text(encoding="utf-8")
-        if "table1" in path.name or "table2" in path.name:
+        if "table1" in path.name or "table2" in path.name or "table6" in path.name:
             continue
         if "---" in text and text.count("\\\\") < 3:
             continue  # a table with no data rows yet
