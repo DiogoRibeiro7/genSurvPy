@@ -598,6 +598,36 @@ def test_prepared_scenario_rehydrates_from_lock_record() -> None:
     assert loaded.ipcw_time_grid == prepared.ipcw_time_grid
 
 
+def test_ipcw_grid_uses_preparation_support_envelope(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from survival_misspec import experiments
+    from survival_misspec.config import ScenarioConfig
+
+    def fake_draw_replicate(*args, **kwargs):
+        return SimpleNamespace(observed_time=np.array([1.5, 5.5]))
+
+    monkeypatch.setattr(experiments, "draw_replicate", fake_draw_replicate)
+    scenario = ScenarioConfig(
+        scenario_id="ipcw",
+        dgp="cphm",
+        n=100,
+        target_censoring=0.3,
+        effect_size=0.5,
+        params={},
+    )
+
+    grid = experiments.ipcw_support_grid(
+        scenario,
+        {"cens_par": 1.0},
+        (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0),
+        support_replications=3,
+        support_target=0.95,
+    )
+
+    assert grid == (3.0, 4.0)
+
+
 def test_cells_are_independent_of_the_order_they_are_run_in() -> None:
     """The property that makes parallel execution the same experiment.
 

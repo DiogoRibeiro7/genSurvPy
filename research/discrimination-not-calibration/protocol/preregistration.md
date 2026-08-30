@@ -152,7 +152,11 @@ would not be draws from one scenario.
 **The IPCW interval is resolved once per scenario and frozen.** Brier and
 time-dependent AUC implementations require evaluation times inside observed
 follow-up support. The production run uses the prespecified scenario-level
-grid; a replication that cannot support it records IBS and mean AUC as
+subgrid chosen from preparation-only matched train/evaluation support draws:
+the lower bound is the maximum matched lower support and the upper bound is the
+minimum matched upper support across the preparation draws; when possible, one
+additional grid point is dropped from each end of that interval. A replication
+that still cannot support this fixed interval records IBS and mean AUC as
 unavailable rather than shortening the interval after seeing that replication.
 
 **Cured subjects are excluded from the $\tau$ quantile.** `gen_mixture_cure`
@@ -200,10 +204,11 @@ $(\text{DGP},n,\beta,\text{estimator})$ support for 10% versus 70% censoring;
 Before freezing, `scripts/check_ipcw_availability.py` must pass with a minimum
 availability rate of 0.95 among feasible scenarios. The implementation lives in
 `scripts/audit_ipcw_availability.py`, which records the scenario-level audit.
-`scripts/check_grid_convergence.py` must pass with
+`scripts/check_grid_convergence.py` must pass on the 10 worst
+scenario-estimator cells by the latest processed cell-level loss summary, using
+at least 10 matched replications, with
 $|\mathrm{RMISE}_{51}-\mathrm{RMISE}_{801}| \le 0.002$ on the
-survival-probability scale, using at least 10 matched replications for the
-audited cells.
+survival-probability scale.
 
 No inferential test is used to declare an estimator superior. Conclusions are
 conditional on the mechanisms studied, and no claim of general superiority will
