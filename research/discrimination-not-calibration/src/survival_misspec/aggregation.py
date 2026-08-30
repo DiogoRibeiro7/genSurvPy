@@ -291,6 +291,9 @@ def headline_metric_gap(
         for draw in range(uncertainty_draws):
             sampled = rng.normal(values, loss_mcse)
             draws[draw] = float(np.quantile(sampled, quantile))
+        loss_quantile_se = (
+            float(np.std(draws, ddof=1)) if draws.size > 1 else float("nan")
+        )
         records.append(
             {
                 "metric": conventional_metric,
@@ -300,9 +303,10 @@ def headline_metric_gap(
                 "metric_min": float(block[conventional_metric].min()),
                 "metric_max": float(block[conventional_metric].max()),
                 "loss_quantile": float(np.quantile(values, quantile)),
-                "loss_quantile_mcse": mcse(draws),
+                "loss_quantile_se": loss_quantile_se,
                 "loss_quantile_ci_low": float(np.quantile(draws, 0.025)),
                 "loss_quantile_ci_high": float(np.quantile(draws, 0.975)),
+                "bootstrap_mc_error": mcse(draws),
                 "loss_median": float(np.median(values)),
                 "n": int(values.size),
             }

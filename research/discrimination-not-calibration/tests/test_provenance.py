@@ -140,6 +140,19 @@ def test_a_different_commit_is_detected_under_strict_verification(tmp_path) -> N
     assert any("git commit changed" in problem for problem in problems)
 
 
+def test_strict_verification_rejects_a_dirty_source_lock(tmp_path) -> None:
+    study = _study()
+    path = tmp_path / "experiment_lock.json"
+    _write(tmp_path, study)
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["provenance"]["git_tree_clean"] = False
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    problems = verify_lock(path, study, strict_commit=True)
+    assert any("dirty working tree" in problem for problem in problems)
+
+
 def test_a_changed_dependency_version_is_detected(tmp_path) -> None:
     study = _study()
     path = tmp_path / "experiment_lock.json"
@@ -151,6 +164,19 @@ def test_a_changed_dependency_version_is_detected(tmp_path) -> None:
 
     problems = verify_lock(path, study, strict_commit=False)
     assert any("numpy" in problem for problem in problems)
+
+
+def test_lock_hash_includes_environment_metadata(tmp_path) -> None:
+    study = _study()
+    path = tmp_path / "experiment_lock.json"
+    _write(tmp_path, study)
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["provenance"]["python_version"] = "0.0.not-real"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    problems = verify_lock(path, study, strict_commit=False)
+    assert any("lock hash changed" in problem for problem in problems)
 
 
 def test_freezing_from_a_dirty_tree_is_refused(tmp_path) -> None:
@@ -210,6 +236,39 @@ def test_lock_hash_includes_prepared_scenarios(tmp_path) -> None:
         ],
         protocol_version="0.1.0",
         allow_dirty_tree=True,
+    )
+
+    assert first.lock_hash != second.lock_hash
+
+
+def test_lock_hash_includes_gate_evidence(tmp_path) -> None:
+    study = _study()
+    prepared = [
+        {
+            "scenario_id": "s1",
+            "scenario_hash": study.scenarios[0].hash,
+            "params": {"beta": 0.5, "cens_par": 2.0},
+            "tau": 1.0,
+            "time_grid": [0.0, 0.5, 1.0],
+            "ipcw_time_grid": [0.5, 1.0],
+            "feasible": True,
+        }
+    ]
+    first = write_lock(
+        tmp_path / "a" / "lock.json",
+        study,
+        prepared,
+        protocol_version="0.1.0",
+        allow_dirty_tree=True,
+        gate_evidence={"ipcw_availability": {"sha256": "a", "status": "PASS"}},
+    )
+    second = write_lock(
+        tmp_path / "b" / "lock.json",
+        study,
+        prepared,
+        protocol_version="0.1.0",
+        allow_dirty_tree=True,
+        gate_evidence={"ipcw_availability": {"sha256": "b", "status": "PASS"}},
     )
 
     assert first.lock_hash != second.lock_hash

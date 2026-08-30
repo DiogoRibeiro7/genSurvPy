@@ -21,7 +21,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
 
 from survival_misspec.config import load_study  # noqa: E402
-from survival_misspec.experiments import prepare_scenario  # noqa: E402
+from survival_misspec.experiments import EVALUATION_N, prepare_scenario  # noqa: E402
 from survival_misspec.simulation import draw_replicate  # noqa: E402
 
 
@@ -47,6 +47,41 @@ def availability_failures(
 def availability_passes(frame: pd.DataFrame, *, minimum_availability: float) -> bool:
     """Return whether all feasible scenarios meet the IPCW availability gate."""
     return availability_failures(frame, minimum_availability=minimum_availability).empty
+
+
+def estimate_availability(
+    scenario,
+    prepared,
+    *,
+    master_seed: int,
+    replications: int,
+) -> tuple[int, float]:
+    """Estimate support for the frozen IPCW grid under production scoring."""
+    grid = np.asarray(prepared.ipcw_time_grid, dtype=float)
+    supported = 0
+    for replication_id in range(replications):
+        train = draw_replicate(
+            scenario.dgp,
+            prepared.params,
+            scenario.n,
+            scenario.scenario_id,
+            replication_id,
+            master_seed,
+            stream="train",
+        )
+        evaluation = draw_replicate(
+            scenario.dgp,
+            prepared.params,
+            EVALUATION_N,
+            scenario.scenario_id,
+            replication_id,
+            master_seed,
+            stream="eval",
+        )
+        supported += int(
+            _supported(grid, train.observed_time, evaluation.observed_time)
+        )
+    return supported, supported / replications
 
 
 def main() -> int:
@@ -94,32 +129,12 @@ def main() -> int:
             )
             continue
 
-        grid = np.asarray(prepared.ipcw_time_grid, dtype=float)
-        supported = 0
-        for replication_id in range(arguments.replications):
-            train = draw_replicate(
-                scenario.dgp,
-                prepared.params,
-                scenario.n,
-                scenario.scenario_id,
-                replication_id,
-                study.master_seed,
-                stream="train",
-            )
-            evaluation = draw_replicate(
-                scenario.dgp,
-                prepared.params,
-                scenario.n,
-                scenario.scenario_id,
-                replication_id,
-                study.master_seed,
-                stream="eval",
-            )
-            supported += int(
-                _supported(grid, train.observed_time, evaluation.observed_time)
-            )
-
-        availability = supported / arguments.replications
+        supported, availability = estimate_availability(
+            scenario,
+            prepared,
+            master_seed=study.master_seed,
+            replications=arguments.replications,
+        )
         rows.append(
             {
                 "scenario_id": scenario.scenario_id,

@@ -527,7 +527,8 @@ def test_headline_metric_gap_operationalises_the_primary_claim() -> None:
         "c_index_harrell_mean",
     ]
     assert headline["loss_quantile"].max() == pytest.approx(0.274)
-    assert "loss_quantile_mcse" in headline.columns
+    assert "loss_quantile_se" in headline.columns
+    assert "bootstrap_mc_error" in headline.columns
 
 
 # ---------------------------------------------------------------------------

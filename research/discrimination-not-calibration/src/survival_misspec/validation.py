@@ -164,6 +164,7 @@ class ExperimentLock:
     estimators: tuple[Mapping[str, Any], ...]
     metrics: Mapping[str, Any]
     provenance: Mapping[str, Any]
+    gate_evidence: Mapping[str, Any]
     frozen_at: str
     notes: str = ""
     _lock_hash: str = field(default="", compare=False)
@@ -180,8 +181,13 @@ class ExperimentLock:
             "scenarios": self.scenarios,
             "estimators": self.estimators,
             "metrics": self.metrics,
+            "gate_evidence": self.gate_evidence,
             "git_commit": self.provenance.get("git_commit"),
+            "git_tree_clean": self.provenance.get("git_tree_clean"),
             "gen_surv_version": self.provenance.get("gen_surv_version"),
+            "python_version": self.provenance.get("python_version"),
+            "platform": self.provenance.get("platform"),
+            "dependencies": self.provenance.get("dependencies", {}),
         }
         return content_hash(payload)
 
@@ -194,6 +200,7 @@ def write_lock(
     *,
     notes: str = "",
     allow_dirty_tree: bool = False,
+    gate_evidence: Mapping[str, Any] | None = None,
 ) -> ExperimentLock:
     """Freeze the experiment. Refuses a dirty tree unless told otherwise.
 
@@ -228,6 +235,7 @@ def write_lock(
         estimators=tuple(asdict(e) for e in study.estimators),
         metrics=asdict(study.metrics),
         provenance=provenance.as_dict(),
+        gate_evidence=gate_evidence or {},
         frozen_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         notes=notes,
     )
@@ -256,8 +264,13 @@ def _expected_lock_hash(lock: Mapping[str, Any]) -> str:
         "scenarios": lock.get("scenarios", ()),
         "estimators": lock.get("estimators", ()),
         "metrics": lock.get("metrics", {}),
+        "gate_evidence": lock.get("gate_evidence", {}),
         "git_commit": lock.get("provenance", {}).get("git_commit"),
+        "git_tree_clean": lock.get("provenance", {}).get("git_tree_clean"),
         "gen_surv_version": lock.get("provenance", {}).get("gen_surv_version"),
+        "python_version": lock.get("provenance", {}).get("python_version"),
+        "platform": lock.get("provenance", {}).get("platform"),
+        "dependencies": lock.get("provenance", {}).get("dependencies", {}),
     }
     return content_hash(payload)
 
@@ -349,6 +362,9 @@ def verify_lock(
             f"engine. Treat this as a new experiment version."
         )
 
+    if strict_commit and not locked_provenance.get("git_tree_clean", False):
+        problems.append("experiment lock was created from a dirty working tree")
+
     if strict_commit and not current.git_tree_clean:
         problems.append(
             "working tree is dirty, so this run is not reproducible from any "
@@ -367,5 +383,17 @@ def verify_lock(
         actual = current.dependencies.get(name, "not installed")
         if actual != locked_version:
             problems.append(f"{name}: locked {locked_version}, found {actual}")
+
+    if locked_provenance.get("python_version") != current.python_version:
+        problems.append(
+            f"python: locked {locked_provenance.get('python_version', '?')}, "
+            f"found {current.python_version}"
+        )
+
+    if locked_provenance.get("platform") != current.platform:
+        problems.append(
+            f"platform: locked {locked_provenance.get('platform', '?')}, "
+            f"found {current.platform}"
+        )
 
     return problems

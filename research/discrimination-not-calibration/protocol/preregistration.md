@@ -57,9 +57,10 @@ and H4 concern where it bites and how far it goes.
 
 **H1.** Concordance and recovery of the true survival function are weakly
 related across misspecified scenarios. Formally, the correlation between the
-C-index and RMISE across cells has absolute Spearman rank correlation below
-0.30. Pearson correlation is reported as a sensitivity summary, not as the
-decision rule.
+C-index and RMISE across non-null misspecified cells has absolute Spearman rank
+correlation below 0.30. Pearson correlation is reported as a sensitivity
+summary, not as the decision rule. The $\beta=0$ cells are a negative-control
+arm rather than primary PH-violation evidence.
 
 **H2.** There exist scenarios in which an estimator's concordance is at or above
 that of a correctly specified reference while its nMISE is larger by an order of
@@ -68,7 +69,9 @@ magnitude.
 **H3.** Mechanisms that break proportional hazards structurally — a
 non-monotone hazard, and a survival plateau from a cured fraction — produce
 larger RMISE for proportional-hazards estimators than mechanisms that only
-change the baseline's shape.
+change the baseline's shape. The primary H3 contrast is restricted to
+$\beta>0$ and requires the complete structural and PH/baseline DGP sets at each
+matched support point.
 
 **H4.** Censoring degrades absolute probability recovery more than it degrades
 ranking. Operationally, the contrast between 70% and 10% target censoring is
@@ -197,7 +200,9 @@ macros. H2's correctly specified reference is `cox_ph` for `cphm`,
 estimators are `cox_ph` and `gradient_boosted`; its structural-violation DGPs
 are `aft_ln`, `aft_log_logistic` and `mixture_cure`, compared with the
 PH/baseline group `cphm`, `aft_weibull` and `piecewise_exponential` on common
-$(n,\text{censoring},\beta,\text{estimator})$ support. H4 is paired on common
+$(n,\text{censoring},\beta,\text{estimator})$ support only when all three
+structural and all three PH/baseline DGPs are present, with $\beta=0$ reserved
+as a negative-control arm. H4 is paired on common
 $(\text{DGP},n,\beta,\text{estimator})$ support for 10% versus 70% censoring;
 `mixture_cure` drops out of that contrast because it has no 10% support.
 
@@ -209,6 +214,10 @@ scenario-estimator cells by the latest processed cell-level loss summary, using
 at least 10 matched replications, with
 $|\mathrm{RMISE}_{51}-\mathrm{RMISE}_{801}| \le 0.002$ on the
 survival-probability scale.
+
+`scripts/freeze_experiment.py` consumes those two gate artifacts before writing
+the production lock, verifies that both criteria passed, and records each
+artifact hash and threshold/result summary inside the lock.
 
 No inferential test is used to declare an estimator superior. Conclusions are
 conditional on the mechanisms studied, and no claim of general superiority will
