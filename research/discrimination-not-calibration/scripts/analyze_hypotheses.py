@@ -47,6 +47,19 @@ def _write_macros(hypotheses: pd.DataFrame, path: Path, source: Path) -> None:
                 f"\\newcommand{{\\Hypothesis{stem}Decision}}{{{decision}}}",
             ]
         )
+        if (
+            hasattr(row, "estimate_se")
+            and pd.notna(row.estimate_se)
+            and pd.notna(row.estimate_ci_low)
+            and pd.notna(row.estimate_ci_high)
+        ):
+            lines.extend(
+                [
+                    f"\\newcommand{{\\Hypothesis{stem}SE}}{{{row.estimate_se:.4f}}}",
+                    f"\\newcommand{{\\Hypothesis{stem}CILow}}{{{row.estimate_ci_low:.4f}}}",
+                    f"\\newcommand{{\\Hypothesis{stem}CIHigh}}{{{row.estimate_ci_high:.4f}}}",
+                ]
+            )
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

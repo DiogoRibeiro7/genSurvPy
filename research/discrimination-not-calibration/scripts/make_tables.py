@@ -333,16 +333,27 @@ def table_hypotheses(hypotheses: pd.DataFrame, out: Path) -> None:
         r"\caption{Preregistered hypothesis estimands, computed by "
         r"\texttt{scripts/analyze\_hypotheses.py}.}",
         r"\label{tab:hypotheses}",
-        r"\begin{tabular}{llrl}",
+        r"\begin{tabular}{llll}",
         r"\toprule",
-        r"Hypothesis & Estimand & Estimate & Criterion \\",
+        r"Hypothesis & Estimand & Estimate (95\% CI) & Criterion \\",
         r"\midrule",
     ]
     for row in hypotheses.itertuples():
         decision = "supports" if row.supports_hypothesis else "does not support"
+        if (
+            hasattr(row, "estimate_ci_low")
+            and pd.notna(row.estimate_ci_low)
+            and pd.notna(row.estimate_ci_high)
+        ):
+            estimate = (
+                f"{row.estimate:.4f} "
+                f"[{row.estimate_ci_low:.4f}, {row.estimate_ci_high:.4f}]"
+            )
+        else:
+            estimate = f"{row.estimate:.4f}"
         body.append(
             f"{_escape(str(row.hypothesis))} & {_escape(str(row.estimand))} & "
-            f"{row.estimate:.4f} & {_escape(str(row.criterion))}; {decision} \\\\"
+            f"{estimate} & {_escape(str(row.criterion))}; {decision} \\\\"
         )
     body += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     _write(

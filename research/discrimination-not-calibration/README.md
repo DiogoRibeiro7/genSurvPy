@@ -64,13 +64,13 @@ without matching it:
 
 ```bash
 python scripts/make_config.py --production
-python scripts/freeze_experiment.py --out protocol/experiment_lock.json
 python scripts/check_ipcw_availability.py --minimum-availability 0.95
 python scripts/check_grid_convergence.py \
     --summary results/processed/summary.parquet \
     --top-cells 10 \
     --replications 10 \
     --rmise-epsilon 0.002
+python scripts/freeze_experiment.py --out protocol/experiment_lock.json
 python scripts/run_simulation.py \
     --out results/raw/production.parquet \
     --lock protocol/experiment_lock.json \
