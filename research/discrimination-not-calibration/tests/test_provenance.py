@@ -274,6 +274,16 @@ def test_lock_hash_includes_gate_evidence(tmp_path) -> None:
     assert first.lock_hash != second.lock_hash
 
 
+def test_strict_lock_verification_requires_passed_gate_evidence(tmp_path) -> None:
+    study = _study()
+    _write(tmp_path, study)
+
+    problems = verify_lock(tmp_path / "experiment_lock.json", study, strict_commit=True)
+
+    assert any("ipcw_availability gate evidence" in problem for problem in problems)
+    assert any("grid_convergence gate evidence" in problem for problem in problems)
+
+
 def test_lock_verification_requires_prepared_scenarios(tmp_path) -> None:
     study = _study()
     path = tmp_path / "experiment_lock.json"

@@ -96,9 +96,22 @@ predicted probabilities are uniformly far too high can attain the same
 concordance as one that is exactly right. That invariance is the formal reason
 the paper's question is not vacuous.
 
-Concordance is reported both on each model's native risk score and on
-$1 - \hat S_i(\tau)$. Under proportional hazards the two coincide; where they
-differ, the ranking itself depends on the horizon, which is worth seeing.
+The primary Harrell and Uno concordances use one transformation for every
+estimator:
+
+$$
+\hat r_i^{\mathrm{IH}}
+  = \int_0^\tau -\log \hat S_i(t)\,dt,
+$$
+
+computed by the same trapezoid rule used for every time integral. In result
+tables this is named `c_index_harrell_integrated_hazard`; the legacy
+`c_index_harrell` column is the same quantity for backward-compatible plotting.
+
+Concordance is also reported on each model's native risk score and on
+$1 - \hat S_i(\tau)$. Under proportional hazards these rankings usually agree;
+where they differ, the ranking itself depends on the horizon, which is worth
+seeing.
 
 ---
 
@@ -115,9 +128,10 @@ replication is observed.
 D-calibration is reported as a distributional diagnostic, not as a like-for-like
 comparative primary measure for all estimators. Haider et al.'s theorem assumes
 strictly decreasing survival curves, while the random survival forest and
-gradient-boosted estimators return flat step functions. Their D-calibration
-results must therefore be read with that non-comparability qualification unless
-an alternative such as A-calibration is added before the production lock.
+gradient-boosted estimators return flat step functions and Cox predictions
+inherit the Breslow baseline's step structure. Their D-calibration results must
+therefore be read with that non-comparability qualification unless an
+alternative such as A-calibration is added before the production lock.
 
 **These use only observed, censored data.** That is their role in the argument:
 they are what an analyst without access to the truth can compute. The

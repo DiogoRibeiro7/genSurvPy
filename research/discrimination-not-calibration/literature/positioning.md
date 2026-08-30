@@ -48,17 +48,17 @@ That is established, and recently and explicitly so. On the author's reading:
 
   **This study was doing the third.** Harrell's concordance was computed on each
   model's *native* risk: a partial hazard for Cox, a negative expected survival
-  time for the Weibull AFT, and scikit-survival's summed cumulative hazard for
+  time for the Weibull AFT, and scikit-survival's cumulative-hazard score for
   the forest and the boosted model. Three different mathematical objects
   compared with one measure, which is the comparison the paper calls virtually
   meaningless.
 
   Fixed by deriving the score from the predicted curve in one fixed way for
-  every model — expected mortality, the summed cumulative hazard over the
+  every model — the trapezoid-rule integral of cumulative hazard over the
   evaluation grid — so the only thing differing between estimators is the curve
   itself. The native scores are still reported, separately and under their own
   names, which the paper explicitly says is legitimate; only conflating them is
-  not. On the smoke case the change is nil for the parametric models and
+  not. On the smoke case the change is nil for the smooth/semiparametric models and
   −0.0067 for the forest, and it should matter more where hazards are not
   proportional.
 
@@ -206,11 +206,13 @@ survival curves are strictly monotonically decreasing.** Where a curve is flat,
 terms in the proof fail to cancel and buckets spanning the flat region take more
 than their share, inflating the statistic and over-rejecting. The random
 survival forest and gradient boosting predict step functions with exactly such
-flats, so part of their worse D-calibration in our results is an artefact of the
-measure rather than evidence about the model. The parametric estimators are
-unaffected. Censoring pushes the other way — it smooths the bucket proportions
-and raises the p-value — so the test is conservative under heavy censoring,
-which is also why Kaplan–Meier is only *asymptotically* D-calibrated.
+flats, and Cox predictions inherit the Breslow baseline's step structure. Part
+of their worse D-calibration in our results may therefore be an artefact of the
+measure rather than evidence about the model. Smooth parametric survival curves
+such as Weibull AFT are not affected in the same way. Censoring pushes the
+other way — it smooths the bucket proportions and raises the p-value — so the
+test is conservative under heavy censoring, which is also why Kaplan–Meier is
+only *asymptotically* D-calibrated.
 
 **A-calibration** (Simonsen & Waagepetersen 2025) is unread and unimplemented.
 Given the flat-region problem above it may be the better measure for the

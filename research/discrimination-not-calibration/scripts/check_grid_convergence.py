@@ -5,6 +5,8 @@
 The production config uses 51 time points. This diagnostic reruns matched cells
 at 51, 201 and 801 points and compares each with the 801-point value. The
 default acceptance threshold is 0.002 RMISE on the survival-probability scale.
+It also checks that the integrated-hazard Harrell C-index is numerically stable
+against the finest grid.
 The diagnostic only needs truth-loss metrics, so IPCW support-envelope
 preparation is disabled by default for speed.
 """
@@ -21,7 +23,9 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
+sys.path.insert(0, str(HERE))
 
+from gate_artifacts import add_metadata, file_sha256, study_metadata  # noqa: E402
 from survival_misspec.config import StudyConfig, load_study  # noqa: E402
 from survival_misspec.estimators import fit_estimator  # noqa: E402
 from survival_misspec.experiments import (  # noqa: E402
@@ -29,7 +33,11 @@ from survival_misspec.experiments import (  # noqa: E402
     PreparedScenario,
     prepare_scenario,
 )
-from survival_misspec.metrics import truth_recovery  # noqa: E402
+from survival_misspec.metrics import (  # noqa: E402
+    discrimination,
+    expected_mortality,
+    truth_recovery,
+)
 from survival_misspec.simulation import draw_replicate  # noqa: E402
 from survival_misspec.truth import true_survival  # noqa: E402
 
@@ -49,12 +57,35 @@ def maximum_rmise_difference(frame: pd.DataFrame, reference_grid: int) -> float:
     )
 
 
+def maximum_c_index_difference(frame: pd.DataFrame, reference_grid: int) -> float:
+    """Maximum absolute integrated-hazard C-index difference."""
+    comparisons = frame[frame["n_time_points"] != reference_grid]
+    if comparisons.empty:
+        return float("nan")
+    return float(
+        pd.to_numeric(
+            comparisons["c_index_harrell_integrated_hazard_absolute_difference"],
+            errors="coerce",
+        ).max()
+    )
+
+
 def grid_convergence_passes(
-    frame: pd.DataFrame, *, reference_grid: int, rmise_epsilon: float
+    frame: pd.DataFrame,
+    *,
+    reference_grid: int,
+    rmise_epsilon: float,
+    c_index_epsilon: float = 0.002,
 ) -> bool:
     """Return whether the pre-freeze grid-convergence criterion passes."""
-    maximum = maximum_rmise_difference(frame, reference_grid)
-    return bool(pd.notna(maximum) and maximum <= rmise_epsilon)
+    maximum_rmise = maximum_rmise_difference(frame, reference_grid)
+    maximum_c_index = maximum_c_index_difference(frame, reference_grid)
+    return bool(
+        pd.notna(maximum_rmise)
+        and maximum_rmise <= rmise_epsilon
+        and pd.notna(maximum_c_index)
+        and maximum_c_index <= c_index_epsilon
+    )
 
 
 def select_audit_cells(
@@ -144,12 +175,21 @@ def score_replicate_across_grids(
         grid = np.asarray(grid_prepared.time_grid, dtype=float)
         predicted = fitted.model.predict_survival(evaluation.covariates, grid)
         truth = true_survival(scenario.dgp, grid, evaluation.truth, prepared.params)
-        by_grid[points] = truth_recovery(
+        row = truth_recovery(
             predicted,
             truth,
             grid,
             grid_prepared.tau,
         )
+        row["c_index_harrell_integrated_hazard"] = discrimination(
+            expected_mortality(predicted, grid),
+            train.observed_time,
+            train.event,
+            evaluation.observed_time,
+            evaluation.event,
+            grid_prepared.tau,
+        )["c_index_harrell"]
+        by_grid[points] = row
     return by_grid
 
 
@@ -192,6 +232,15 @@ def main() -> int:
         default=0.002,
         help="maximum acceptable absolute RMISE difference versus the finest grid",
     )
+    parser.add_argument(
+        "--c-index-epsilon",
+        type=float,
+        default=0.002,
+        help=(
+            "maximum acceptable absolute integrated-hazard Harrell C-index "
+            "difference versus the finest grid"
+        ),
+    )
     arguments = parser.parse_args()
 
     study = load_study(arguments.config)
@@ -209,9 +258,8 @@ def main() -> int:
         if arguments.estimators is None
         or estimator.estimator_id in set(arguments.estimators)
     ]
-    summary = (
-        pd.read_parquet(arguments.summary) if arguments.summary is not None else None
-    )
+    summary_path = Path(arguments.summary) if arguments.summary is not None else None
+    summary = pd.read_parquet(summary_path) if summary_path is not None else None
     selected_cells = select_audit_cells(
         study,
         summary=summary,
@@ -222,6 +270,20 @@ def main() -> int:
         print(
             f"auditing top {len(selected_cells)} scenario-estimator cells", flush=True
         )
+
+    metadata = study_metadata(study)
+    metadata.update(
+        {
+            "audited_replications": arguments.replications,
+            "rmise_epsilon": arguments.rmise_epsilon,
+            "c_index_epsilon": arguments.c_index_epsilon,
+            "selected_summary_sha256": (
+                file_sha256(summary_path) if summary_path is not None else ""
+            ),
+            "top_cells": arguments.top_cells or 0,
+            "loss_column": arguments.loss_column or "",
+        }
+    )
 
     rows: list[dict[str, object]] = []
     for scenario in scenarios:
@@ -269,26 +331,41 @@ def main() -> int:
                 reference = by_grid[reference_grid]
                 for points, row in by_grid.items():
                     rows.append(
-                        {
-                            "scenario_id": scenario.scenario_id,
-                            "estimator_id": estimator.estimator_id,
-                            "replication_id": replication_id,
-                            "n_time_points": points,
-                            "reference_n_time_points": reference_grid,
-                            "mise": row["mise"],
-                            "rmise": row["root_mean_integrated_squared_error"],
-                            "mise_reference": reference["mise"],
-                            "rmise_reference": reference[
-                                "root_mean_integrated_squared_error"
-                            ],
-                            "mise_absolute_difference": abs(
-                                row["mise"] - reference["mise"]
-                            ),
-                            "rmise_absolute_difference": abs(
-                                row["root_mean_integrated_squared_error"]
-                                - reference["root_mean_integrated_squared_error"]
-                            ),
-                        }
+                        add_metadata(
+                            {
+                                "scenario_id": scenario.scenario_id,
+                                "scenario_hash": scenario.hash,
+                                "estimator_id": estimator.estimator_id,
+                                "estimator_hash": estimator.hash,
+                                "replication_id": replication_id,
+                                "n_time_points": points,
+                                "reference_n_time_points": reference_grid,
+                                "mise": row["mise"],
+                                "rmise": row["root_mean_integrated_squared_error"],
+                                "c_index_harrell_integrated_hazard": row[
+                                    "c_index_harrell_integrated_hazard"
+                                ],
+                                "mise_reference": reference["mise"],
+                                "rmise_reference": reference[
+                                    "root_mean_integrated_squared_error"
+                                ],
+                                "c_index_harrell_integrated_hazard_reference": reference[
+                                    "c_index_harrell_integrated_hazard"
+                                ],
+                                "mise_absolute_difference": abs(
+                                    row["mise"] - reference["mise"]
+                                ),
+                                "rmise_absolute_difference": abs(
+                                    row["root_mean_integrated_squared_error"]
+                                    - reference["root_mean_integrated_squared_error"]
+                                ),
+                                "c_index_harrell_integrated_hazard_absolute_difference": abs(
+                                    row["c_index_harrell_integrated_hazard"]
+                                    - reference["c_index_harrell_integrated_hazard"]
+                                ),
+                            },
+                            metadata,
+                        )
                     )
 
     if not rows:
@@ -303,23 +380,35 @@ def main() -> int:
     summary = (
         frame[frame["n_time_points"] != reference_grid]
         .groupby("n_time_points")[
-            ["mise_absolute_difference", "rmise_absolute_difference"]
+            [
+                "mise_absolute_difference",
+                "rmise_absolute_difference",
+                "c_index_harrell_integrated_hazard_absolute_difference",
+            ]
         ]
         .max()
     )
     print(summary.to_string())
-    maximum = maximum_rmise_difference(frame, reference_grid)
+    maximum_rmise = maximum_rmise_difference(frame, reference_grid)
+    maximum_c_index = maximum_c_index_difference(frame, reference_grid)
     if grid_convergence_passes(
-        frame, reference_grid=reference_grid, rmise_epsilon=arguments.rmise_epsilon
+        frame,
+        reference_grid=reference_grid,
+        rmise_epsilon=arguments.rmise_epsilon,
+        c_index_epsilon=arguments.c_index_epsilon,
     ):
         print(
             f"criterion pass: max |RMISE - RMISE_{reference_grid}| "
-            f"{maximum:.6f} <= {arguments.rmise_epsilon:.6f}"
+            f"{maximum_rmise:.6f} <= {arguments.rmise_epsilon:.6f}; "
+            f"max |C - C_{reference_grid}| "
+            f"{maximum_c_index:.6f} <= {arguments.c_index_epsilon:.6f}"
         )
         return 0
     print(
         f"criterion fail: max |RMISE - RMISE_{reference_grid}| "
-        f"{maximum:.6f} > {arguments.rmise_epsilon:.6f}"
+        f"{maximum_rmise:.6f} > {arguments.rmise_epsilon:.6f} or "
+        f"max |C - C_{reference_grid}| "
+        f"{maximum_c_index:.6f} > {arguments.c_index_epsilon:.6f}"
     )
     return 2
 

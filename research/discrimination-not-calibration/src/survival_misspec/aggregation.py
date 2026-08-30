@@ -56,10 +56,12 @@ METRIC_COLUMNS = (
     "mean_absolute_survival_error",
     "miae_p90",
     "c_index_harrell",
+    "c_index_harrell_integrated_hazard",
     "c_index_harrell_native",
     "c_index_uno_native",
     "antolini_tie_fraction",
     "c_index_uno",
+    "c_index_uno_integrated_hazard",
     "c_index_at_tau",
     "c_index_antolini",
     "d_calibration_p",
@@ -161,7 +163,13 @@ def aggregate(
 
         records.append(record)
 
-    return pd.DataFrame.from_records(records)
+    summary = pd.DataFrame.from_records(records)
+    for suffix in ("mean", "mcse", "n"):
+        legacy = f"c_index_harrell_{suffix}"
+        explicit = f"c_index_harrell_integrated_hazard_{suffix}"
+        if legacy in summary.columns and explicit not in summary.columns:
+            summary[explicit] = summary[legacy]
+    return summary
 
 
 def paired_differences(
@@ -238,7 +246,7 @@ def paired_differences(
 def headline_metric_gap(
     summary: pd.DataFrame,
     *,
-    conventional_metric: str = "c_index_harrell_mean",
+    conventional_metric: str = "c_index_harrell_integrated_hazard_mean",
     loss: str = "root_mean_integrated_squared_error_mean",
     bins: int = 10,
     quantile: float = 0.90,

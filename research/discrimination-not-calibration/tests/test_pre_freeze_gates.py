@@ -15,7 +15,9 @@ from survival_misspec.config import (
     MetricsConfig,
     ScenarioConfig,
     StudyConfig,
+    content_hash,
 )
+from survival_misspec.validation import capture_provenance
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -29,10 +31,29 @@ def _load_script(name: str):
     return module
 
 
+def _metadata(study: StudyConfig, **extra: object) -> dict[str, object]:
+    provenance = capture_provenance()
+    return {
+        "study_hash": study.hash,
+        "git_commit": provenance.git_commit,
+        "git_tree_clean": True,
+        "n_replications_planned": study.n_replications,
+        "scenario_design_hash": content_hash(
+            {scenario.scenario_id: scenario.hash for scenario in study.scenarios}
+        ),
+        "estimator_design_hash": content_hash(
+            {estimator.estimator_id: estimator.hash for estimator in study.estimators}
+        ),
+        "metrics_hash": study.metrics.hash,
+        **extra,
+    }
+
+
 def test_headline_bootstrap_is_deterministic_under_fixed_seed() -> None:
     summary = pd.DataFrame(
         {
             "c_index_harrell_mean": [0.60, 0.61, 0.70, 0.71],
+            "c_index_harrell_integrated_hazard_mean": [0.60, 0.61, 0.70, 0.71],
             "root_mean_integrated_squared_error_mean": [0.05, 0.20, 0.04, 0.30],
             "root_mean_integrated_squared_error_mcse": [0.002, 0.003, 0.002, 0.004],
         }
@@ -55,6 +76,7 @@ def test_headline_bootstrap_se_is_not_divided_by_number_of_draws() -> None:
     summary = pd.DataFrame(
         {
             "c_index_harrell_mean": [0.60, 0.61, 0.70, 0.71],
+            "c_index_harrell_integrated_hazard_mean": [0.60, 0.61, 0.70, 0.71],
             "root_mean_integrated_squared_error_mean": [0.05, 0.20, 0.04, 0.30],
             "root_mean_integrated_squared_error_mcse": [0.002, 0.003, 0.002, 0.004],
         }
@@ -127,6 +149,7 @@ def test_grid_convergence_pass_fail_uses_preregistered_rmise_tolerance() -> None
         {
             "n_time_points": [51, 801],
             "rmise_absolute_difference": [0.0021, 0.0],
+            "c_index_harrell_integrated_hazard_absolute_difference": [0.001, 0.0],
         }
     )
 
@@ -135,6 +158,7 @@ def test_grid_convergence_pass_fail_uses_preregistered_rmise_tolerance() -> None
     )
     assert grid.grid_convergence_passes(frame, reference_grid=801, rmise_epsilon=0.003)
     assert grid.maximum_rmise_difference(frame, 801) == pytest.approx(0.0021)
+    assert grid.maximum_c_index_difference(frame, 801) == pytest.approx(0.001)
 
 
 def test_grid_convergence_selects_worst_cells_from_summary() -> None:
@@ -171,29 +195,91 @@ def test_freeze_gate_evidence_records_passed_artifact_hashes(tmp_path) -> None:
     freeze = _load_script("freeze_experiment.py")
     ipcw = tmp_path / "ipcw.parquet"
     grid = tmp_path / "grid.parquet"
+    summary = tmp_path / "summary.parquet"
+    study = StudyConfig(
+        paper_id="p",
+        master_seed=1,
+        n_replications=10,
+        scenarios=(
+            ScenarioConfig("s1", "cphm", 100, 0.3, 0.5, {}),
+            ScenarioConfig("s2", "cphm", 100, 0.3, 0.5, {}),
+        ),
+        estimators=(EstimatorConfig("cox_ph", "cox_ph"),),
+        metrics=MetricsConfig(0.8, 11, (0.5,), ("mise",)),
+    )
+    ipcw_metadata = _metadata(
+        study,
+        audited_replications=10,
+        minimum_availability_threshold=0.95,
+    )
     pd.DataFrame(
-        {
-            "scenario_id": ["s1", "s2"],
-            "feasible": [True, False],
-            "availability": [0.96, np.nan],
-        }
+        [
+            {
+                "scenario_id": "s1",
+                "scenario_hash": study.scenarios[0].hash,
+                "feasible": True,
+                "availability": 0.96,
+                "attempted": 10,
+                **ipcw_metadata,
+            },
+            {
+                "scenario_id": "s2",
+                "scenario_hash": study.scenarios[1].hash,
+                "feasible": False,
+                "availability": np.nan,
+                "attempted": 0,
+                **ipcw_metadata,
+            },
+        ]
     ).to_parquet(ipcw, index=False)
     pd.DataFrame(
         {
-            "n_time_points": [51, 801],
-            "reference_n_time_points": [801, 801],
-            "rmise_absolute_difference": [0.001, 0.0],
+            "scenario_id": ["s1", "s2"],
+            "estimator_id": ["cox_ph", "cox_ph"],
+            "root_mean_integrated_squared_error_mean": [0.9, 0.1],
         }
-    ).to_parquet(grid, index=False)
+    ).to_parquet(summary, index=False)
+    grid_metadata = _metadata(
+        study,
+        audited_replications=10,
+        rmise_epsilon=0.002,
+        c_index_epsilon=0.002,
+        selected_summary_sha256=freeze.file_sha256(summary),
+        top_cells=1,
+        loss_column="",
+    )
+    grid_rows = []
+    for replication_id in range(10):
+        for points, rmise_difference in ((51, 0.001), (801, 0.0)):
+            grid_rows.append(
+                {
+                    "scenario_id": "s1",
+                    "scenario_hash": study.scenarios[0].hash,
+                    "estimator_id": "cox_ph",
+                    "estimator_hash": study.estimators[0].hash,
+                    "replication_id": replication_id,
+                    "n_time_points": points,
+                    "reference_n_time_points": 801,
+                    "rmise_absolute_difference": rmise_difference,
+                    "c_index_harrell_integrated_hazard_absolute_difference": (
+                        0.001 if points == 51 else 0.0
+                    ),
+                    **grid_metadata,
+                }
+            )
+    pd.DataFrame(grid_rows).to_parquet(grid, index=False)
 
-    ipcw_evidence = freeze._ipcw_gate_evidence(ipcw, 0.95)
-    grid_evidence = freeze._grid_gate_evidence(grid, 0.002)
+    ipcw_evidence = freeze._ipcw_gate_evidence(ipcw, 0.95, study)
+    grid_evidence = freeze._grid_gate_evidence(
+        grid, 0.002, 0.002, study, summary, 1, 10
+    )
 
     assert ipcw_evidence["status"] == "PASS"
     assert ipcw_evidence["minimum_availability"] == pytest.approx(0.96)
     assert len(ipcw_evidence["sha256"]) == 64
     assert grid_evidence["status"] == "PASS"
     assert grid_evidence["maximum_rmise_difference"] == pytest.approx(0.001)
+    assert grid_evidence["maximum_c_index_difference"] == pytest.approx(0.001)
     assert len(grid_evidence["sha256"]) == 64
 
 

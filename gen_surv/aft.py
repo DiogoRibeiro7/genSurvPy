@@ -104,7 +104,7 @@ def gen_aft_weibull(
     Simulate survival data under a Weibull Accelerated Failure Time (AFT) model.
 
     The Weibull AFT model has survival function:
-    S(t|X) = exp(-(t/scale)^shape * exp(-X*beta))
+    S(t|X) = exp(-(t/scale)^shape * exp(X*beta))
 
     Parameters
     ----------

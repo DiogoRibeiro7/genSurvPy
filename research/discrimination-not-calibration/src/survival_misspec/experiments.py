@@ -466,11 +466,6 @@ def run_cell(
         truth_surface = true_survival(
             scenario.dgp, grid, evaluation.truth, prepared.params
         )
-        survival_functions = None
-        predictor = getattr(fitted.model, "predict_survival_functions", None)
-        if predictor is not None:
-            survival_functions = predictor(evaluation.covariates)
-
         row.update(
             evaluate_all(
                 predicted=predicted,
@@ -483,7 +478,11 @@ def run_cell(
                 eval_time=evaluation.observed_time,
                 eval_event=evaluation.event,
                 prediction_error_times=np.asarray(prepared.ipcw_time_grid, dtype=float),
-                survival_functions=survival_functions,
+                survival_at_times=lambda requested_times: (
+                    fitted.model.predict_survival_at_times(
+                        evaluation.covariates, requested_times
+                    )
+                ),
             )
         )
         row["scored"] = True

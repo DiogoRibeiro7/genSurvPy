@@ -19,7 +19,9 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
+sys.path.insert(0, str(HERE))
 
+from gate_artifacts import add_metadata, study_metadata  # noqa: E402
 from survival_misspec.config import load_study  # noqa: E402
 from survival_misspec.experiments import EVALUATION_N, prepare_scenario  # noqa: E402
 from survival_misspec.simulation import draw_replicate  # noqa: E402
@@ -91,7 +93,12 @@ def main() -> int:
         "--out", default=str(HERE.parent / "results" / "ipcw_availability.parquet")
     )
     parser.add_argument("--calibration-n", type=int, default=20000)
-    parser.add_argument("--replications", type=int, default=50)
+    parser.add_argument(
+        "--replications",
+        type=int,
+        default=None,
+        help="replications to audit; defaults to the full planned production R",
+    )
     parser.add_argument("--max-scenarios", type=int, default=None)
     parser.add_argument(
         "--minimum-availability",
@@ -102,7 +109,15 @@ def main() -> int:
     arguments = parser.parse_args()
 
     study = load_study(arguments.config)
+    replications = arguments.replications or study.n_replications
     rows: list[dict[str, object]] = []
+    metadata = study_metadata(study)
+    metadata.update(
+        {
+            "audited_replications": replications,
+            "minimum_availability_threshold": arguments.minimum_availability,
+        }
+    )
     scenarios = list(study.scenarios)
     if arguments.max_scenarios is not None:
         scenarios = scenarios[: arguments.max_scenarios]
@@ -113,19 +128,23 @@ def main() -> int:
         )
         if not prepared.feasible:
             rows.append(
-                {
-                    "scenario_id": scenario.scenario_id,
-                    "dgp": scenario.dgp,
-                    "n": scenario.n,
-                    "target_censoring": scenario.target_censoring,
-                    "effect_size": scenario.effect_size,
-                    "feasible": False,
-                    "availability": float("nan"),
-                    "supported": 0,
-                    "attempted": 0,
-                    "passes": False,
-                    "reason": prepared.reason,
-                }
+                add_metadata(
+                    {
+                        "scenario_id": scenario.scenario_id,
+                        "scenario_hash": scenario.hash,
+                        "dgp": scenario.dgp,
+                        "n": scenario.n,
+                        "target_censoring": scenario.target_censoring,
+                        "effect_size": scenario.effect_size,
+                        "feasible": False,
+                        "availability": float("nan"),
+                        "supported": 0,
+                        "attempted": 0,
+                        "passes": False,
+                        "reason": prepared.reason,
+                    },
+                    metadata,
+                )
             )
             continue
 
@@ -133,22 +152,26 @@ def main() -> int:
             scenario,
             prepared,
             master_seed=study.master_seed,
-            replications=arguments.replications,
+            replications=replications,
         )
         rows.append(
-            {
-                "scenario_id": scenario.scenario_id,
-                "dgp": scenario.dgp,
-                "n": scenario.n,
-                "target_censoring": scenario.target_censoring,
-                "effect_size": scenario.effect_size,
-                "feasible": True,
-                "availability": availability,
-                "supported": supported,
-                "attempted": arguments.replications,
-                "passes": availability >= arguments.minimum_availability,
-                "reason": "",
-            }
+            add_metadata(
+                {
+                    "scenario_id": scenario.scenario_id,
+                    "scenario_hash": scenario.hash,
+                    "dgp": scenario.dgp,
+                    "n": scenario.n,
+                    "target_censoring": scenario.target_censoring,
+                    "effect_size": scenario.effect_size,
+                    "feasible": True,
+                    "availability": availability,
+                    "supported": supported,
+                    "attempted": replications,
+                    "passes": availability >= arguments.minimum_availability,
+                    "reason": "",
+                },
+                metadata,
+            )
         )
 
     frame = pd.DataFrame.from_records(rows)

@@ -21,12 +21,13 @@ CORRECTLY_SPECIFIED_REFERENCE = {
     "piecewise_exponential": "cox_ph",
 }
 PROPORTIONAL_HAZARDS_ESTIMATORS = ("cox_ph", "gradient_boosted")
-STRUCTURAL_VIOLATION_DGPS = ("aft_ln", "aft_log_logistic", "mixture_cure")
-PH_OR_BASELINE_DGPS = ("cphm", "aft_weibull", "piecewise_exponential")
+STRUCTURAL_VIOLATION_DGPS = ("aft_ln", "aft_log_logistic")
+PH_OR_BASELINE_DGPS = ("aft_weibull", "piecewise_exponential")
+H3B_STRUCTURAL_DGPS = ("mixture_cure",)
 
 RMISE = "root_mean_integrated_squared_error_mean"
 NMISE = "normalised_mise_mean"
-C_INDEX = "c_index_harrell_mean"
+C_INDEX = "c_index_harrell_integrated_hazard_mean"
 
 
 def _finite(frame: pd.DataFrame, columns: Sequence[str]) -> pd.DataFrame:
@@ -85,6 +86,7 @@ def _h1(summary: pd.DataFrame) -> dict[str, object]:
 
 def _h2(summary: pd.DataFrame) -> dict[str, object]:
     frame = _finite(summary, [C_INDEX, NMISE])
+    frame = frame[frame["effect_size"] > 0]
     records = []
     for dgp, reference in CORRECTLY_SPECIFIED_REFERENCE.items():
         block = frame[frame["dgp"] == dgp]
@@ -134,20 +136,27 @@ def _h2(summary: pd.DataFrame) -> dict[str, object]:
                 f"{dgp}:{estimator}"
                 for dgp, estimator in CORRECTLY_SPECIFIED_REFERENCE.items()
             )
+            + "; effect_size = 0 is a negative-control arm"
         ),
     )
 
 
-def _h3(summary: pd.DataFrame) -> dict[str, object]:
+def _h3_common_support(
+    summary: pd.DataFrame,
+    *,
+    hypothesis: str,
+    structural_dgps: Sequence[str],
+    baseline_dgps: Sequence[str],
+    note: str,
+) -> dict[str, object]:
     frame = _finite(summary, [RMISE])
     frame = frame[frame["effect_size"] > 0]
     frame = frame[frame["estimator_id"].isin(PROPORTIONAL_HAZARDS_ESTIMATORS)]
     frame = frame[
-        frame["dgp"].isin(STRUCTURAL_VIOLATION_DGPS)
-        | frame["dgp"].isin(PH_OR_BASELINE_DGPS)
+        frame["dgp"].isin(structural_dgps) | frame["dgp"].isin(baseline_dgps)
     ].copy()
     frame["group"] = np.where(
-        frame["dgp"].isin(STRUCTURAL_VIOLATION_DGPS), "structural", "ph_or_baseline"
+        frame["dgp"].isin(structural_dgps), "structural", "ph_or_baseline"
     )
 
     key = ["n", "target_censoring", "effect_size", "estimator_id"]
@@ -155,9 +164,7 @@ def _h3(summary: pd.DataFrame) -> dict[str, object]:
     for values, block in frame.groupby(key, dropna=False):
         structural = set(block.loc[block["group"] == "structural", "dgp"])
         ph_or_baseline = set(block.loc[block["group"] == "ph_or_baseline", "dgp"])
-        if structural == set(STRUCTURAL_VIOLATION_DGPS) and ph_or_baseline == set(
-            PH_OR_BASELINE_DGPS
-        ):
+        if structural == set(structural_dgps) and ph_or_baseline == set(baseline_dgps):
             means = block.groupby("group")[RMISE].mean()
             rows.append(
                 {
@@ -170,17 +177,16 @@ def _h3(summary: pd.DataFrame) -> dict[str, object]:
     paired = pd.DataFrame.from_records(rows)
     estimate = float(paired["difference"].mean()) if not paired.empty else float("nan")
     return _record(
-        "H3",
+        hypothesis,
         "complete_common_support_structural_minus_ph_or_baseline_rmise_beta_positive",
         estimate,
         supports=np.isfinite(estimate) and estimate > 0.0,
         n=len(paired),
         criterion="estimate > 0",
         note=(
-            "PH estimators: "
+            note
+            + "; PH estimators: "
             + ", ".join(PROPORTIONAL_HAZARDS_ESTIMATORS)
-            + "; structural DGPs: "
-            + ", ".join(STRUCTURAL_VIOLATION_DGPS)
             + "; complete structural and PH/baseline DGP sets required at each "
             + "(n, censoring, effect size, estimator) support point; "
             + "effect_size = 0 is a negative-control arm"
@@ -188,8 +194,38 @@ def _h3(summary: pd.DataFrame) -> dict[str, object]:
     )
 
 
+def _h3(summary: pd.DataFrame) -> dict[str, object]:
+    return _h3_common_support(
+        summary,
+        hypothesis="H3",
+        structural_dgps=STRUCTURAL_VIOLATION_DGPS,
+        baseline_dgps=PH_OR_BASELINE_DGPS,
+        note=(
+            "primary structural DGPs: "
+            + ", ".join(STRUCTURAL_VIOLATION_DGPS)
+            + "; primary PH/baseline DGPs: "
+            + ", ".join(PH_OR_BASELINE_DGPS)
+            + "; cphm is retained as a reference/validation DGP"
+        ),
+    )
+
+
+def _h3b(summary: pd.DataFrame) -> dict[str, object]:
+    return _h3_common_support(
+        summary,
+        hypothesis="H3b",
+        structural_dgps=H3B_STRUCTURAL_DGPS,
+        baseline_dgps=PH_OR_BASELINE_DGPS,
+        note=(
+            "sensitivity contrast for mixture_cure on its 50%/70% common support "
+            "against the shared two-normal PH/baseline DGPs"
+        ),
+    )
+
+
 def _h4(summary: pd.DataFrame) -> dict[str, object]:
     frame = _finite(summary, [RMISE, C_INDEX])
+    frame = frame[frame["effect_size"] > 0]
     low = frame[frame["target_censoring"] == 0.1]
     high = frame[frame["target_censoring"] == 0.7]
     key = ["dgp", "n", "effect_size", "estimator_id"]
@@ -219,7 +255,10 @@ def _h4(summary: pd.DataFrame) -> dict[str, object]:
         supports=np.isfinite(estimate) and estimate > 0.0,
         n=len(joined),
         criterion="estimate > 0",
-        note="paired on DGP, n, effect size and estimator; missing 10% cure cells drop out",
+        note=(
+            "paired on DGP, n, effect size and estimator; effect_size = 0 is a "
+            "negative-control arm; missing 10% cure cells drop out"
+        ),
     )
 
 
@@ -262,7 +301,13 @@ def _with_uncertainty(
     }
     for _ in range(uncertainty_draws):
         sampled = _metric_draw(summary, rng, (C_INDEX, RMISE, NMISE))
-        for record in (_h1(sampled), _h2(sampled), _h3(sampled), _h4(sampled)):
+        for record in (
+            _h1(sampled),
+            _h2(sampled),
+            _h3(sampled),
+            _h3b(sampled),
+            _h4(sampled),
+        ):
             draws[str(record["hypothesis"])].append(float(record["estimate"]))
 
     out = point.copy()
@@ -299,7 +344,7 @@ def analyse_hypotheses(
     if missing:
         raise ValueError(f"hypothesis analysis missing columns: {missing}")
     point = pd.DataFrame.from_records(
-        [_h1(summary), _h2(summary), _h3(summary), _h4(summary)]
+        [_h1(summary), _h2(summary), _h3(summary), _h3b(summary), _h4(summary)]
     )
     return _with_uncertainty(
         point,

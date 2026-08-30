@@ -30,6 +30,7 @@ HYPOTHESIS_WORDS = {
     "H1": "HOne",
     "H2": "HTwo",
     "H3": "HThree",
+    "H3b": "HThreeB",
     "H4": "HFour",
 }
 
