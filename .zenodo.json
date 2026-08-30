@@ -1,8 +1,8 @@
 {
   "title": "gen_surv: Survival Data Simulation in Python",
   "upload_type": "software",
-  "version": "3.1.1",
-  "publication_date": "2026-08-29",
+  "version": "3.1.2",
+  "publication_date": "2026-08-30",
   "description": "<p><strong>gen_surv</strong> generates synthetic time-to-event datasets from twelve models &mdash; proportional hazards, accelerated failure time, competing risks, cure fractions, piecewise hazards, recurrent events and two illness-death processes &mdash; so that an estimator can be tested against parameters the user chose. Alongside the data it can return the ground truth a real dataset could never contain: the coefficients actually used, latent event and censoring times, cure status and transition times. Inspired by the R package <a href=\"https://cran.r-project.org/package=genSurv\">genSurv</a> and extended well past it.</p>",
   "creators": [
     {

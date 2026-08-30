@@ -248,9 +248,9 @@ the subject back at the start of the curve:
 ## Stratum effects
 
 ```python
-df = generate(model="recurrent_events", n=20000, process="pwp_gt",
+df = generate(model="recurrent_events", n=3000, process="pwp_gt",
               baseline_params={"rate": 1.0}, betas=[0.0, 0.0],
-              stratum_effects=[1.0, 2.0], followup_time=20.0,
+              stratum_effects=[1.0, 2.0], followup_time=6.0,
               cens_par=1e9, seed=7)
 
 events = df[df["status"] == 1].assign(gap=lambda d: d["stop"] - d["start"])
@@ -259,8 +259,8 @@ events.groupby(events["enum"] > 1)["gap"].mean()
 
 ```text
 enum > 1
-False    0.982      # first events: mean gap 1 / 1.0
-True     0.488      # later events:  mean gap 1 / 2.0
+False    1.021      # first events: mean gap 1 / 1.0
+True     0.452      # later events:  mean gap 1 / 2.0
 ```
 
 Doubling the intensity halves the mean gap, as it should.
