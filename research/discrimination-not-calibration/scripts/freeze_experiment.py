@@ -22,9 +22,9 @@ sys.path.insert(0, str(HERE))
 from audit_ipcw_availability import availability_passes  # noqa: E402
 from check_grid_convergence import (  # noqa: E402
     grid_convergence_passes,
+    load_audit_cells,
     maximum_c_index_difference,
     maximum_rmise_difference,
-    select_audit_cells,
 )
 from gate_artifacts import file_sha256, metadata_problems  # noqa: E402
 from survival_misspec.config import StudyConfig, load_study  # noqa: E402
@@ -117,14 +117,14 @@ def _grid_gate_evidence(
     rmise_epsilon: float,
     c_index_epsilon: float,
     study: StudyConfig,
-    summary_path: Path,
+    audit_cells_path: Path,
     top_cells: int,
     minimum_replications: int,
 ) -> dict[str, object]:
     if not path.exists():
         raise SystemExit(f"missing grid-convergence gate artifact: {path}")
-    if not summary_path.exists():
-        raise SystemExit(f"missing grid-convergence selection summary: {summary_path}")
+    if not audit_cells_path.exists():
+        raise SystemExit(f"missing frozen grid-audit cell list: {audit_cells_path}")
     frame = pd.read_parquet(path)
     if frame.empty or "reference_n_time_points" not in frame.columns:
         raise SystemExit(f"grid-convergence gate artifact is incomplete: {path}")
@@ -134,12 +134,11 @@ def _grid_gate_evidence(
         expected={
             "rmise_epsilon": rmise_epsilon,
             "c_index_epsilon": c_index_epsilon,
-            "selected_summary_sha256": file_sha256(summary_path),
+            "audit_cells_sha256": file_sha256(audit_cells_path),
             "top_cells": top_cells,
         },
     )
-    summary = pd.read_parquet(summary_path)
-    selected = select_audit_cells(study, summary=summary, top_cells=top_cells)
+    selected = load_audit_cells(study, audit_cells_path, expected_count=top_cells)
     artifact_cells = {
         (str(row.scenario_id), str(row.estimator_id))
         for row in frame[["scenario_id", "estimator_id"]].drop_duplicates().itertuples()
@@ -195,7 +194,7 @@ def _grid_gate_evidence(
         "scenario_design_hash": str(frame["scenario_design_hash"].iloc[0]),
         "estimator_design_hash": str(frame["estimator_design_hash"].iloc[0]),
         "metrics_hash": str(frame["metrics_hash"].iloc[0]),
-        "selected_summary_sha256": file_sha256(summary_path),
+        "audit_cells_sha256": file_sha256(audit_cells_path),
         "top_cells": top_cells,
         "audited_replications": minimum_replications,
         "maximum_rmise_difference": float(maximum_rmise),
@@ -228,9 +227,9 @@ def main() -> int:
     parser.add_argument("--rmise-epsilon", type=float, default=0.002)
     parser.add_argument("--c-index-epsilon", type=float, default=0.002)
     parser.add_argument(
-        "--grid-summary",
-        default=str(HERE.parent / "results" / "processed" / "summary.parquet"),
-        help="summary parquet whose worst cells selected the grid gate",
+        "--grid-audit-cells",
+        default=str(HERE.parent / "protocol" / "grid_audit_cells.json"),
+        help="frozen scenario-estimator cells selected for the grid gate",
     )
     parser.add_argument("--grid-top-cells", type=int, default=10)
     parser.add_argument("--grid-minimum-replications", type=int, default=10)
@@ -258,7 +257,7 @@ def main() -> int:
                 arguments.rmise_epsilon,
                 arguments.c_index_epsilon,
                 study,
-                Path(arguments.grid_summary),
+                Path(arguments.grid_audit_cells),
                 arguments.grid_top_cells,
                 arguments.grid_minimum_replications,
             ),

@@ -14,6 +14,7 @@ preparation is disabled by default for speed.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -130,6 +131,62 @@ def select_audit_cells(
     }
 
 
+def load_audit_cells(
+    study: StudyConfig, path: Path, *, expected_count: int | None = None
+) -> set[tuple[str, str]]:
+    """Load the frozen grid-audit cell list and validate it against the design."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    cells = payload.get("cells") if isinstance(payload, dict) else payload
+    if not isinstance(cells, list):
+        raise ValueError("grid audit cell file must contain a 'cells' list")
+    if expected_count is not None and len(cells) != expected_count:
+        raise ValueError(
+            f"grid audit cell file contains {len(cells)} cells; "
+            f"expected {expected_count}"
+        )
+
+    scenarios = {scenario.scenario_id: scenario for scenario in study.scenarios}
+    estimators = {estimator.estimator_id: estimator for estimator in study.estimators}
+    selected: set[tuple[str, str]] = set()
+    for index, cell in enumerate(cells, start=1):
+        if not isinstance(cell, dict):
+            raise ValueError(f"grid audit cell {index} must be an object")
+        try:
+            scenario_id = str(cell["scenario_id"])
+            estimator_id = str(cell["estimator_id"])
+        except KeyError as exc:
+            raise ValueError(f"grid audit cell {index} missing {exc.args[0]}") from exc
+        if scenario_id not in scenarios:
+            raise ValueError(
+                f"grid audit cell {index} has unknown scenario {scenario_id}"
+            )
+        if estimator_id not in estimators:
+            raise ValueError(
+                f"grid audit cell {index} has unknown estimator {estimator_id}"
+            )
+        scenario_hash = cell.get("scenario_hash")
+        if (
+            scenario_hash is not None
+            and str(scenario_hash) != scenarios[scenario_id].hash
+        ):
+            raise ValueError(
+                f"grid audit cell {index} scenario_hash mismatch for {scenario_id}"
+            )
+        estimator_hash = cell.get("estimator_hash")
+        if (
+            estimator_hash is not None
+            and str(estimator_hash) != estimators[estimator_id].hash
+        ):
+            raise ValueError(
+                f"grid audit cell {index} estimator_hash mismatch for {estimator_id}"
+            )
+        key = (scenario_id, estimator_id)
+        if key in selected:
+            raise ValueError(f"duplicate grid audit cell: {scenario_id}/{estimator_id}")
+        selected.add(key)
+    return selected
+
+
 def score_replicate_across_grids(
     prepared_by_grid: dict[int, PreparedScenario],
     estimator,
@@ -227,6 +284,11 @@ def main() -> int:
         help="summary column used with --top-cells; defaults to RMISE then MISE",
     )
     parser.add_argument(
+        "--audit-cells",
+        default=None,
+        help="JSON file containing the frozen scenario-estimator cells to audit",
+    )
+    parser.add_argument(
         "--rmise-epsilon",
         type=float,
         default=0.002,
@@ -244,6 +306,8 @@ def main() -> int:
     arguments = parser.parse_args()
 
     study = load_study(arguments.config)
+    if arguments.audit_cells is not None and arguments.top_cells is not None:
+        raise SystemExit("--audit-cells and --top-cells are mutually exclusive")
     grid_points = sorted(set(arguments.grid_points))
     if len(grid_points) < 2:
         raise SystemExit("need at least two grid sizes")
@@ -260,18 +324,25 @@ def main() -> int:
     ]
     summary_path = Path(arguments.summary) if arguments.summary is not None else None
     summary = pd.read_parquet(summary_path) if summary_path is not None else None
-    selected_cells = select_audit_cells(
-        study,
-        summary=summary,
-        top_cells=arguments.top_cells,
-        loss_column=arguments.loss_column,
+    audit_cells_path = (
+        Path(arguments.audit_cells) if arguments.audit_cells is not None else None
     )
-    if selected_cells is not None:
-        print(
-            f"auditing top {len(selected_cells)} scenario-estimator cells", flush=True
+    if audit_cells_path is not None:
+        selected_cells = load_audit_cells(study, audit_cells_path)
+    else:
+        selected_cells = select_audit_cells(
+            study,
+            summary=summary,
+            top_cells=arguments.top_cells,
+            loss_column=arguments.loss_column,
         )
+    if selected_cells is not None:
+        print(f"auditing {len(selected_cells)} scenario-estimator cells", flush=True)
 
     metadata = study_metadata(study)
+    audited_cell_count = (
+        len(selected_cells) if selected_cells is not None else arguments.top_cells or 0
+    )
     metadata.update(
         {
             "audited_replications": arguments.replications,
@@ -280,7 +351,10 @@ def main() -> int:
             "selected_summary_sha256": (
                 file_sha256(summary_path) if summary_path is not None else ""
             ),
-            "top_cells": arguments.top_cells or 0,
+            "audit_cells_sha256": (
+                file_sha256(audit_cells_path) if audit_cells_path is not None else ""
+            ),
+            "top_cells": audited_cell_count,
             "loss_column": arguments.loss_column or "",
         }
     )

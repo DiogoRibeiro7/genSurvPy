@@ -90,13 +90,13 @@ def main() -> int:
             [
                 python,
                 "scripts/check_grid_convergence.py",
-                "--summary",
-                "results/processed/summary.parquet",
-                "--top-cells",
-                "10",
+                "--audit-cells",
+                "protocol/grid_audit_cells.json",
                 "--replications",
                 "10",
                 "--rmise-epsilon",
+                "0.002",
+                "--c-index-epsilon",
                 "0.002",
             ],
         )
