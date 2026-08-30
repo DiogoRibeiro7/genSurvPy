@@ -36,7 +36,7 @@ def _summary() -> pd.DataFrame:
                         "effect_size": 0.5,
                         "estimator_id": estimator,
                         "misspecification": misspecification,
-                        "c_index_harrell_mean": c_index,
+                        "c_index_harrell_integrated_hazard_mean": c_index,
                         "normalised_mise_mean": rmise**2,
                         "root_mean_integrated_squared_error_mean": rmise,
                     }
@@ -47,7 +47,7 @@ def _summary() -> pd.DataFrame:
 def test_hypotheses_are_machine_readable() -> None:
     hypotheses = analyse_hypotheses(_summary(), uncertainty_draws=20, seed=1)
 
-    assert set(hypotheses["hypothesis"]) == {"H1", "H2", "H3", "H4"}
+    assert set(hypotheses["hypothesis"]) == {"H1", "H2", "H3", "H3b", "H4"}
     assert hypotheses["estimand"].notna().all()
     assert hypotheses["criterion"].notna().all()
     assert {
@@ -80,7 +80,7 @@ def test_h1_uses_spearman_not_pearson() -> None:
             "effect_size": [0.5] * 4,
             "estimator_id": ["cox_ph"] * 4,
             "misspecification": ["non-proportional hazards"] * 4,
-            "c_index_harrell_mean": [0.60, 0.90, 0.70, 0.80],
+            "c_index_harrell_integrated_hazard_mean": [0.60, 0.90, 0.70, 0.80],
             "normalised_mise_mean": [0.01, 0.0121, 0.0144, 0.25],
             "root_mean_integrated_squared_error_mean": [0.10, 0.11, 0.12, 0.50],
         }
@@ -93,12 +93,12 @@ def test_h1_uses_spearman_not_pearson() -> None:
     )
 
     assert h1["estimate"] == pytest.approx(
-        summary["c_index_harrell_mean"].corr(
+        summary["c_index_harrell_integrated_hazard_mean"].corr(
             summary["root_mean_integrated_squared_error_mean"], method="spearman"
         )
     )
     assert h1["estimate"] != pytest.approx(
-        summary["c_index_harrell_mean"].corr(
+        summary["c_index_harrell_integrated_hazard_mean"].corr(
             summary["root_mean_integrated_squared_error_mean"], method="pearson"
         )
     )
@@ -109,7 +109,8 @@ def test_h3_and_h4_use_common_support() -> None:
         "hypothesis"
     )
 
-    assert hypotheses.loc["H3", "n"] == 4
+    assert hypotheses.loc["H3", "n"] == 6
+    assert hypotheses.loc["H3b", "n"] == 4
     assert hypotheses.loc["H4", "n"] == 15
     assert "common_support" in hypotheses.loc["H3", "estimand"]
     assert "common_support" in hypotheses.loc["H4", "estimand"]
@@ -144,10 +145,26 @@ def test_h1_excludes_null_effect_cells_from_misspecification_primary() -> None:
     assert "effect_size > 0" in h1["note"]
 
 
+def test_h2_and_h4_exclude_null_effect_cells_from_primary() -> None:
+    summary = _summary()
+    null_rows = summary.copy()
+    null_rows["scenario_id"] = null_rows["scenario_id"] + "__null"
+    null_rows["effect_size"] = 0.0
+    combined = pd.concat([summary, null_rows], ignore_index=True)
+    hypotheses = analyse_hypotheses(combined, uncertainty_draws=0).set_index(
+        "hypothesis"
+    )
+
+    assert hypotheses.loc["H2", "n"] == 18
+    assert hypotheses.loc["H4", "n"] == 15
+    assert "negative-control arm" in hypotheses.loc["H2", "note"]
+    assert "negative-control arm" in hypotheses.loc["H4", "note"]
+
+
 def test_h3_requires_complete_structural_and_baseline_support() -> None:
     summary = _summary()
     incomplete = summary[
-        ~((summary["dgp"] == "mixture_cure") & (summary["target_censoring"] == 0.5))
+        ~((summary["dgp"] == "aft_ln") & (summary["target_censoring"] == 0.5))
     ]
 
     h3 = (
@@ -156,5 +173,5 @@ def test_h3_requires_complete_structural_and_baseline_support() -> None:
         .loc["H3"]
     )
 
-    assert h3["n"] == 2
+    assert h3["n"] == 4
     assert "complete structural" in h3["note"]

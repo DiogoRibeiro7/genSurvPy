@@ -149,6 +149,33 @@ def test_d_calibration_can_use_native_step_functions() -> None:
     assert outcome["d_calibration_statistic"] == pytest.approx(statistic)
 
 
+def test_d_calibration_prefers_exact_time_callback() -> None:
+    grid = np.array([0.0, 1.0, 2.0])
+    predicted = np.array([[1.0, 0.2, 0.2]])
+    observed = np.array([0.5])
+    calls = []
+
+    def exact(times: np.ndarray) -> np.ndarray:
+        calls.append(times.copy())
+        return np.array([0.8])
+
+    outcome = d_calibration(
+        predicted,
+        grid,
+        observed,
+        np.ones(1, dtype=bool),
+        survival_at_times=exact,
+    )
+
+    expected = np.zeros(10)
+    expected[8] = 1.0
+    uniform = np.full(10, 0.1)
+    statistic = float(((expected - uniform) ** 2 / uniform).sum())
+    assert outcome["d_calibration_statistic"] == pytest.approx(statistic)
+    assert len(calls) == 1
+    np.testing.assert_allclose(calls[0], observed)
+
+
 def test_antolini_agrees_with_a_known_ranking_when_hazards_are_proportional() -> None:
     """Under proportional hazards the ranking does not depend on the horizon.
 
@@ -272,6 +299,34 @@ def test_antolini_can_use_native_step_functions() -> None:
 
     assert outcome["antolini_pairs"] == 1
     assert outcome["c_index_antolini"] == pytest.approx(1.0)
+
+
+def test_antolini_prefers_exact_time_callback() -> None:
+    grid = np.array([0.0, 1.0, 2.0])
+    predicted = np.array(
+        [
+            [1.0, 0.9, 0.9],
+            [1.0, 0.1, 0.1],
+        ]
+    )
+    calls = []
+
+    def exact(times: np.ndarray) -> np.ndarray:
+        calls.append(times.copy())
+        return np.array([0.2, 0.8])
+
+    outcome = antolini_concordance(
+        predicted,
+        grid,
+        np.array([0.5, 1.5]),
+        np.array([True, True]),
+        survival_at_times=exact,
+    )
+
+    assert outcome["antolini_pairs"] == 1
+    assert outcome["c_index_antolini"] == pytest.approx(1.0)
+    assert len(calls) == 1
+    np.testing.assert_allclose(calls[0], np.array([0.5, 0.5]))
 
 
 def test_truth_recovery_reports_horizon_normalised_squared_loss() -> None:

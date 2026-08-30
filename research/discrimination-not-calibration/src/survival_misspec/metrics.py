@@ -475,15 +475,17 @@ def _survival_from_functions(
 def expected_mortality(
     predicted: NDArray[np.float64], grid: NDArray[np.float64]
 ) -> NDArray[np.float64]:
-    r"""One risk score, computed the same way for every model.
+    r"""One integrated-hazard risk score, computed the same way for every model.
 
     .. math::
 
-        r_i = \sum_k \hat H(t_k \mid x_i)
-            = -\sum_k \log \hat S(t_k \mid x_i)
+        r_i = \int_0^\tau \hat H(t \mid x_i)\,dt
+            = \int_0^\tau -\log \hat S(t \mid x_i)\,dt
 
-    the summed cumulative hazard over the evaluation grid — the "expected
-    mortality" transformation of Ishwaran et al. (2008).
+    the trapezoid-rule integral of the cumulative hazard over the evaluation
+    grid. It is the same monotone-in-risk survival-curve transformation used
+    for every estimator, and is reported explicitly as the integrated-hazard
+    Harrell/Uno C-index.
 
     **Why this exists.** Sonabend et al. (2022) identify three forms of
     C-hacking, and the third is evaluating distribution predictions with a
@@ -516,6 +518,9 @@ def d_calibration(
     event: NDArray[np.bool_],
     n_bins: int = 10,
     survival_functions: Sequence[Callable[[float], float]] | None = None,
+    survival_at_times: (
+        Callable[[NDArray[np.float64]], NDArray[np.float64]] | None
+    ) = None,
 ) -> dict[str, float]:
     """Distributional calibration, after Haider et al. (2020).
 
@@ -548,11 +553,12 @@ def d_calibration(
     proof do not cancel and buckets spanning the flat region take a larger share
     than they should -- so the statistic is inflated and the test over-rejects.
     Two of this study's four estimators, the random survival forest and gradient
-    boosting, predict step functions with exactly such flat regions. Some part
-    of their poorer D-calibration is therefore an artefact of the measure rather
-    than evidence about the model, and the paper must say so rather than read
-    the rejection at face value. The parametric estimators are unaffected: their
-    curves are smooth and strictly decreasing.
+    boosting, predict step functions with exactly such flat regions. Cox curves
+    also inherit the Breslow baseline's step structure. Some part of a poorer
+    D-calibration score for these estimators is therefore an artefact of the
+    measure rather than evidence about the model, and the paper must say so
+    rather than read the rejection at face value. A smooth parametric survival
+    curve, such as Weibull AFT, is not affected in the same way.
 
     Censoring works the other way, smoothing the bucket proportions and raising
     the p-value, so the test is conservative under heavy censoring -- which is
@@ -573,7 +579,9 @@ def d_calibration(
     observed = np.where(beyond, horizon, observed)
     had_event = had_event & ~beyond
 
-    if survival_functions is None:
+    if survival_at_times is not None:
+        survival_at_observed = np.clip(survival_at_times(observed), 0.0, 1.0)
+    elif survival_functions is None:
         survival_at_observed = _survival_at(predicted, grid, observed)
     else:
         survival_at_observed = _survival_from_functions(survival_functions, observed)
@@ -622,6 +630,9 @@ def antolini_concordance(
     max_events: int = 800,
     seed: int = 0,
     survival_functions: Sequence[Callable[[float], float]] | None = None,
+    survival_at_times: (
+        Callable[[NDArray[np.float64]], NDArray[np.float64]] | None
+    ) = None,
 ) -> dict[str, float]:
     r"""Time-dependent concordance, after Antolini et al. (2005), Equation 11.
 
@@ -696,7 +707,11 @@ def antolini_concordance(
         if not later.any():
             continue
         event_time = float(observed[subject])
-        if survival_functions is None:
+        if survival_at_times is not None:
+            at_event = np.clip(
+                survival_at_times(np.full(observed.shape, event_time)), 0.0, 1.0
+            )
+        elif survival_functions is None:
             at_event = _survival_at_common_time(predicted, grid, event_time, step_like)
         else:
             at_event = _survival_from_functions(
@@ -735,6 +750,9 @@ def evaluate_all(
     eval_event: NDArray[np.bool_],
     prediction_error_times: NDArray[np.float64] | None = None,
     survival_functions: Sequence[Callable[[float], float]] | None = None,
+    survival_at_times: (
+        Callable[[NDArray[np.float64]], NDArray[np.float64]] | None
+    ) = None,
 ) -> dict[str, Any]:
     """Every metric for one fitted model, on an **independent** evaluation sample.
 
@@ -760,8 +778,13 @@ def evaluate_all(
     # risk is the third form of C-hacking in Sonabend et al. (2022): three
     # different mathematical objects compared with one measure.
     common = expected_mortality(predicted, grid)
-    results.update(
-        discrimination(common, train_time, train_event, eval_time, eval_event, tau)
+    integrated_hazard = discrimination(
+        common, train_time, train_event, eval_time, eval_event, tau
+    )
+    results.update(integrated_hazard)
+    results["c_index_harrell_integrated_hazard"] = integrated_hazard["c_index_harrell"]
+    results["c_index_uno_integrated_hazard"] = integrated_hazard.get(
+        "c_index_uno", float("nan")
     )
 
     # The native score, reported separately and named as such. Sonabend et al.
@@ -806,6 +829,7 @@ def evaluate_all(
             eval_time,
             eval_event,
             survival_functions=survival_functions,
+            survival_at_times=survival_at_times,
         )
     )
     results.update(
@@ -815,6 +839,7 @@ def evaluate_all(
             eval_time,
             eval_event,
             survival_functions=survival_functions,
+            survival_at_times=survival_at_times,
         )
     )
 

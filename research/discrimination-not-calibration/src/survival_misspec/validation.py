@@ -371,6 +371,29 @@ def verify_lock(
             "commit: " + ", ".join(current.git_dirty_files[:10])
         )
 
+    gate_evidence = lock.get("gate_evidence", {})
+    if strict_commit:
+        if not isinstance(gate_evidence, Mapping):
+            problems.append("lock gate_evidence is not a mapping")
+        else:
+            for gate in ("ipcw_availability", "grid_convergence"):
+                record = gate_evidence.get(gate)
+                if not isinstance(record, Mapping):
+                    problems.append(f"lock is missing {gate} gate evidence")
+                    continue
+                if record.get("status") != "PASS":
+                    problems.append(f"{gate} gate did not record status PASS")
+                if record.get("study_hash") != study.hash:
+                    problems.append(
+                        f"{gate} gate study_hash={record.get('study_hash')} "
+                        f"but current={study.hash}"
+                    )
+                if record.get("git_commit") != locked_provenance.get("git_commit"):
+                    problems.append(
+                        f"{gate} gate commit={record.get('git_commit')} "
+                        "does not match the lock commit"
+                    )
+
     if current.version_metadata_stale:
         problems.append(
             f"installed gen_surv metadata ({current.gen_surv_version}) disagrees "
