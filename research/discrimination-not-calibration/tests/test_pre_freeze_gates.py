@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -191,11 +192,94 @@ def test_grid_convergence_selects_worst_cells_from_summary() -> None:
     assert selected == {("s1", "weibull_aft"), ("s2", "cox_ph")}
 
 
+def test_grid_convergence_loads_frozen_audit_cells(tmp_path) -> None:
+    grid = _load_script("check_grid_convergence.py")
+    study = StudyConfig(
+        paper_id="p",
+        master_seed=1,
+        n_replications=1,
+        scenarios=(ScenarioConfig("s1", "cphm", 100, 0.3, 0.5, {}),),
+        estimators=(EstimatorConfig("cox_ph", "cox_ph"),),
+        metrics=MetricsConfig(0.8, 11, (0.5,), ("mise",)),
+    )
+    path = tmp_path / "grid_audit_cells.json"
+    path.write_text(
+        json.dumps(
+            {
+                "cells": [
+                    {
+                        "scenario_id": "s1",
+                        "scenario_hash": study.scenarios[0].hash,
+                        "estimator_id": "cox_ph",
+                        "estimator_hash": study.estimators[0].hash,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    selected = grid.load_audit_cells(study, path, expected_count=1)
+
+    assert selected == {("s1", "cox_ph")}
+
+
+def test_grid_convergence_rejects_stale_frozen_audit_cells(tmp_path) -> None:
+    grid = _load_script("check_grid_convergence.py")
+    study = StudyConfig(
+        paper_id="p",
+        master_seed=1,
+        n_replications=1,
+        scenarios=(ScenarioConfig("s1", "cphm", 100, 0.3, 0.5, {}),),
+        estimators=(EstimatorConfig("cox_ph", "cox_ph"),),
+        metrics=MetricsConfig(0.8, 11, (0.5,), ("mise",)),
+    )
+    path = tmp_path / "grid_audit_cells.json"
+    path.write_text(
+        json.dumps(
+            {
+                "cells": [
+                    {
+                        "scenario_id": "s1",
+                        "scenario_hash": "stale",
+                        "estimator_id": "cox_ph",
+                        "estimator_hash": study.estimators[0].hash,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="scenario_hash mismatch"):
+        grid.load_audit_cells(study, path, expected_count=1)
+
+
+def test_grid_convergence_requires_exact_frozen_cell_count(tmp_path) -> None:
+    grid = _load_script("check_grid_convergence.py")
+    study = StudyConfig(
+        paper_id="p",
+        master_seed=1,
+        n_replications=1,
+        scenarios=(ScenarioConfig("s1", "cphm", 100, 0.3, 0.5, {}),),
+        estimators=(EstimatorConfig("cox_ph", "cox_ph"),),
+        metrics=MetricsConfig(0.8, 11, (0.5,), ("mise",)),
+    )
+    path = tmp_path / "grid_audit_cells.json"
+    path.write_text(
+        json.dumps({"cells": [{"scenario_id": "s1", "estimator_id": "cox_ph"}]}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="contains 1 cells; expected 2"):
+        grid.load_audit_cells(study, path, expected_count=2)
+
+
 def test_freeze_gate_evidence_records_passed_artifact_hashes(tmp_path) -> None:
     freeze = _load_script("freeze_experiment.py")
     ipcw = tmp_path / "ipcw.parquet"
     grid = tmp_path / "grid.parquet"
-    summary = tmp_path / "summary.parquet"
+    audit_cells = tmp_path / "grid_audit_cells.json"
     study = StudyConfig(
         paper_id="p",
         master_seed=1,
@@ -232,19 +316,27 @@ def test_freeze_gate_evidence_records_passed_artifact_hashes(tmp_path) -> None:
             },
         ]
     ).to_parquet(ipcw, index=False)
-    pd.DataFrame(
-        {
-            "scenario_id": ["s1", "s2"],
-            "estimator_id": ["cox_ph", "cox_ph"],
-            "root_mean_integrated_squared_error_mean": [0.9, 0.1],
-        }
-    ).to_parquet(summary, index=False)
+    audit_cells.write_text(
+        json.dumps(
+            {
+                "cells": [
+                    {
+                        "scenario_id": "s1",
+                        "scenario_hash": study.scenarios[0].hash,
+                        "estimator_id": "cox_ph",
+                        "estimator_hash": study.estimators[0].hash,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
     grid_metadata = _metadata(
         study,
         audited_replications=10,
         rmise_epsilon=0.002,
         c_index_epsilon=0.002,
-        selected_summary_sha256=freeze.file_sha256(summary),
+        audit_cells_sha256=freeze.file_sha256(audit_cells),
         top_cells=1,
         loss_column="",
     )
@@ -271,7 +363,7 @@ def test_freeze_gate_evidence_records_passed_artifact_hashes(tmp_path) -> None:
 
     ipcw_evidence = freeze._ipcw_gate_evidence(ipcw, 0.95, study)
     grid_evidence = freeze._grid_gate_evidence(
-        grid, 0.002, 0.002, study, summary, 1, 10
+        grid, 0.002, 0.002, study, audit_cells, 1, 10
     )
 
     assert ipcw_evidence["status"] == "PASS"

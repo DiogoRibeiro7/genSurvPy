@@ -66,10 +66,10 @@ without matching it:
 python scripts/make_config.py --production
 python scripts/check_ipcw_availability.py --minimum-availability 0.95
 python scripts/check_grid_convergence.py \
-    --summary results/processed/summary.parquet \
-    --top-cells 10 \
+    --audit-cells protocol/grid_audit_cells.json \
     --replications 10 \
-    --rmise-epsilon 0.002
+    --rmise-epsilon 0.002 \
+    --c-index-epsilon 0.002
 python scripts/freeze_experiment.py --out protocol/experiment_lock.json
 python scripts/run_simulation.py \
     --out results/raw/production.parquet \
@@ -83,6 +83,9 @@ python scripts/analyze_hypotheses.py --macros paper/macros/hypotheses.tex
 source file. The lock records the commit that produced it; committing the lock
 would necessarily change the current commit and defeat strict commit
 verification.
+`protocol/grid_audit_cells.json` is committed because it is part of the frozen
+pre-production gate: it names the exact scenario-estimator cells used by the
+grid-convergence audit.
 
 ## Design decisions worth knowing before reading the code
 

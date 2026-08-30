@@ -45,9 +45,10 @@ survival curve — a quantity no evaluation on observed data can compute, becaus
 observed data do not contain the truth.
 
 The contribution is therefore a **measurement, not a phenomenon**: how much
-truth-error is consistent with an apparently acceptable value of each
-conventional metric. The unit of interest is the metric, not the estimator; an
-estimator ranking is a by-product.
+truth-error is consistent with apparently acceptable conventional survival
+metrics. The headline quantitative illustration is prespecified for
+integrated-hazard Harrell C-index; other conventional metrics are secondary
+descriptive checks unless explicitly tabulated.
 
 ## 2. Hypotheses
 
@@ -57,26 +58,37 @@ and H4 concern where it bites and how far it goes.
 
 **H1.** Concordance and recovery of the true survival function are weakly
 related across misspecified scenarios. Formally, the correlation between the
-C-index and RMISE across non-null misspecified cells has absolute Spearman rank
-correlation below 0.30. Pearson correlation is reported as a sensitivity
-summary, not as the decision rule. The $\beta=0$ cells are a negative-control
-arm rather than primary PH-violation evidence.
+integrated-hazard Harrell C-index and RMISE across non-null misspecified cells
+has absolute Spearman rank correlation below 0.30. Pearson correlation is
+reported as a sensitivity summary, not as the decision rule. The $\beta=0$
+cells are a negative-control arm rather than primary PH-violation evidence.
 
-**H2.** There exist scenarios in which an estimator's concordance is at or above
-that of a correctly specified reference while its nMISE is larger by an order of
-magnitude.
+**H2.** There exist non-null scenarios in which an estimator's integrated-hazard
+Harrell C-index is at or above that of a correctly specified reference
+while its nMISE is larger by an order of magnitude. The $\beta=0$ cells are a
+negative-control arm, not part of the primary H2 decision.
 
-**H3.** Mechanisms that break proportional hazards structurally — a
-non-monotone hazard, and a survival plateau from a cured fraction — produce
-larger RMISE for proportional-hazards estimators than mechanisms that only
-change the baseline's shape. The primary H3 contrast is restricted to
-$\beta>0$ and requires the complete structural and PH/baseline DGP sets at each
-matched support point.
+**H3.** Mechanisms that break proportional hazards structurally through
+non-monotone hazards produce larger RMISE for proportional-hazards estimators
+than mechanisms that only change the baseline's shape. The primary H3
+structural DGPs are `aft_ln` and `aft_log_logistic`; the PH/baseline DGPs are
+`aft_weibull` and `piecewise_exponential`; `cphm` is retained as a
+reference/validation DGP rather than pooled into the primary H3 contrast. The
+primary H3 contrast is restricted to $\beta>0$ and requires the complete
+structural and PH/baseline DGP sets at each matched support point.
+
+**H3b.** `mixture_cure` is analysed separately as a survival-plateau
+sensitivity contrast against `aft_weibull` and `piecewise_exponential` on its
+50%/70% common support, again restricted to $\beta>0$ and
+proportional-hazards estimators.
 
 **H4.** Censoring degrades absolute probability recovery more than it degrades
 ranking. Operationally, the contrast between 70% and 10% target censoring is
-larger on mean RMISE than on mean Harrell C-index after each metric is
-standardised by its across-cell standard deviation.
+larger on mean RMISE than on mean integrated-hazard Harrell C-index after each
+metric is standardised by its across-cell standard deviation. The primary H4
+contrast is restricted to $\beta>0$ and paired on common
+$(\text{DGP}, n, \beta, \text{estimator})$ support; `mixture_cure` drops out
+because it has no 10% support.
 
 These are directional statements, and the study may refute any of them. The
 pilot is consistent with H1 and H2 (see §7); that is a reason to run the
@@ -110,12 +122,13 @@ with the reason recorded: `mixture_cure` cannot reach 10% or 30% censoring
 because a 30% cure fraction puts a floor of about 31% on the censoring rate, so
 roughly 198 scenarios will run.
 
-**Replications.** $R = 500$, from inverting
+**Replications.** $R = 500$. The first sizing calculation inverted
 $\mathrm{MCSE} = s/\sqrt{R}$ on pilot variability at a target of $0.001$ on
-MISE. This covers the 90th percentile of cells. It does **not** cover the
-hardest: `aft_log_logistic` at $n = 250$ with 70% censoring needs about 5000.
-Those cells will be reported with their Monte Carlo error, and differences
-there described as indistinguishable rather than as findings.
+MISE, covering the 90th percentile of cells but not the hardest
+`aft_log_logistic` cells. Before freeze this was supplemented by a projected
+RMISE and hypothesis/headline precision audit at $R=500$. The production
+tables will report MCSEs, and differences whose Monte Carlo uncertainty is too
+large will be described as indistinguishable rather than as findings.
 
 ## 4. Primary and secondary outcomes
 
@@ -185,35 +198,42 @@ at a single threshold. $\epsilon$ is not presented as a universal constant; its
 interpretation is conditional on the loss, the mechanism, the horizon and the
 application.
 
-The headline number is the 90th percentile of RMISE conditional on bins of a
-conventional metric, primarily Harrell's C-index. This answers the operational
+The headline number is the 90th percentile of RMISE conditional on bins of the
+primary conventional metric, integrated-hazard Harrell C-index. This answers
+the operational
 question "how large can truth-error be among rows with similar conventional
 metric values?" without turning a correlation coefficient into the claim. It is
 computed over scenario-estimator cell means, and its Monte Carlo uncertainty is
-propagated from the cell MCSEs with fixed-bin parametric bootstrap draws.
+propagated from the cell MCSEs with fixed-bin parametric bootstrap draws. These
+intervals are MC-precision approximations based on independent cell-level
+normal uncertainty, not full replication-level sampling intervals preserving
+estimator pairing.
 
 The executable hypothesis analysis is `scripts/analyze_hypotheses.py`, which
 writes `results/processed/hypotheses.parquet`, `.json` and generated manuscript
 macros. H2's correctly specified reference is `cox_ph` for `cphm`,
 `aft_weibull` and `piecewise_exponential`; no exact comparator is claimed for
 `aft_ln`, `aft_log_logistic` or `mixture_cure`. H3's proportional-hazards
-estimators are `cox_ph` and `gradient_boosted`; its structural-violation DGPs
-are `aft_ln`, `aft_log_logistic` and `mixture_cure`, compared with the
-PH/baseline group `cphm`, `aft_weibull` and `piecewise_exponential` on common
-$(n,\text{censoring},\beta,\text{estimator})$ support only when all three
-structural and all three PH/baseline DGPs are present, with $\beta=0$ reserved
-as a negative-control arm. H4 is paired on common
+estimators are `cox_ph` and `gradient_boosted`; its primary structural
+violation DGPs are `aft_ln` and `aft_log_logistic`, compared with the
+PH/baseline group `aft_weibull` and `piecewise_exponential` on common
+$(n,\text{censoring},\beta,\text{estimator})$ support only when both structural
+and both PH/baseline DGPs are present, with $\beta=0$ reserved as a
+negative-control arm. H3b separately contrasts `mixture_cure` with
+`aft_weibull` and `piecewise_exponential` on its common support. H4 is paired
+on common
 $(\text{DGP},n,\beta,\text{estimator})$ support for 10% versus 70% censoring;
 `mixture_cure` drops out of that contrast because it has no 10% support.
 
 Before freezing, `scripts/check_ipcw_availability.py` must pass with a minimum
 availability rate of 0.95 among feasible scenarios. The implementation lives in
 `scripts/audit_ipcw_availability.py`, which records the scenario-level audit.
-`scripts/check_grid_convergence.py` must pass on the 10 worst
-scenario-estimator cells by the latest processed cell-level loss summary, using
-at least 10 matched replications, with
+`scripts/check_grid_convergence.py` must pass on the 10 frozen
+scenario-estimator cells listed in `protocol/grid_audit_cells.json`, using at
+least 10 matched replications, with
 $|\mathrm{RMISE}_{51}-\mathrm{RMISE}_{801}| \le 0.002$ on the
-survival-probability scale.
+survival-probability scale and
+$|C^{IH}_{51}-C^{IH}_{801}| \le 0.002$ for integrated-hazard Harrell C-index.
 
 `scripts/freeze_experiment.py` consumes those two gate artifacts before writing
 the production lock, verifies that both criteria passed, and records each
@@ -258,7 +278,8 @@ production row carries the lock hash; resumption refuses rows with a missing or
 different lock hash. If package code affecting simulation changes after the
 freeze, that is a new experiment version, not a continuation.
 
-**The freeze has not happened, and no production run has been executed.**
+**The final freeze has not happened, and no final production Monte Carlo has
+been accepted.**
 
 ## 9. Limitations to state in the paper
 
