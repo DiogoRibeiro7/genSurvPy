@@ -633,6 +633,9 @@ def antolini_concordance(
     survival_at_times: (
         Callable[[NDArray[np.float64]], NDArray[np.float64]] | None
     ) = None,
+    survival_matrix_at_times: (
+        Callable[[NDArray[np.float64]], NDArray[np.float64]] | None
+    ) = None,
 ) -> dict[str, float]:
     r"""Time-dependent concordance, after Antolini et al. (2005), Equation 11.
 
@@ -698,6 +701,13 @@ def antolini_concordance(
         rng = np.random.default_rng(seed)
         event_index = rng.choice(event_index, size=max_events, replace=False)
 
+    exact_matrix = None
+    exact_columns: dict[float, int] = {}
+    if survival_matrix_at_times is not None:
+        exact_times = np.unique(observed[event_index])
+        exact_matrix = np.clip(survival_matrix_at_times(exact_times), 0.0, 1.0)
+        exact_columns = {float(value): index for index, value in enumerate(exact_times)}
+
     concordant = 0.0
     tied = 0.0
     comparable = 0.0
@@ -707,7 +717,9 @@ def antolini_concordance(
         if not later.any():
             continue
         event_time = float(observed[subject])
-        if survival_at_times is not None:
+        if exact_matrix is not None:
+            at_event = exact_matrix[:, exact_columns[event_time]]
+        elif survival_at_times is not None:
             at_event = np.clip(
                 survival_at_times(np.full(observed.shape, event_time)), 0.0, 1.0
             )
@@ -751,6 +763,9 @@ def evaluate_all(
     prediction_error_times: NDArray[np.float64] | None = None,
     survival_functions: Sequence[Callable[[float], float]] | None = None,
     survival_at_times: (
+        Callable[[NDArray[np.float64]], NDArray[np.float64]] | None
+    ) = None,
+    survival_matrix_at_times: (
         Callable[[NDArray[np.float64]], NDArray[np.float64]] | None
     ) = None,
 ) -> dict[str, Any]:
@@ -840,6 +855,7 @@ def evaluate_all(
             eval_event,
             survival_functions=survival_functions,
             survival_at_times=survival_at_times,
+            survival_matrix_at_times=survival_matrix_at_times,
         )
     )
 

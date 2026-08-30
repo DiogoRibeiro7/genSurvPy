@@ -483,6 +483,11 @@ def run_cell(
                         evaluation.covariates, requested_times
                     )
                 ),
+                survival_matrix_at_times=lambda requested_times: (
+                    fitted.model.predict_survival(
+                        evaluation.covariates, requested_times
+                    )
+                ),
             )
         )
         row["scored"] = True
