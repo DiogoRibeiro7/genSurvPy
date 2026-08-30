@@ -329,6 +329,50 @@ def test_antolini_prefers_exact_time_callback() -> None:
     np.testing.assert_allclose(calls[0], np.array([0.5, 0.5]))
 
 
+def test_antolini_prefers_batched_exact_time_matrix() -> None:
+    grid = np.array([0.0, 1.0, 2.0])
+    predicted = np.array(
+        [
+            [1.0, 0.9, 0.9],
+            [1.0, 0.1, 0.1],
+            [1.0, 0.1, 0.1],
+        ]
+    )
+    time = np.array([0.5, 1.0, 1.5])
+    event = np.array([True, True, True])
+    matrix_calls = []
+    vector_calls = []
+
+    def matrix(times: np.ndarray) -> np.ndarray:
+        matrix_calls.append(times.copy())
+        return np.array(
+            [
+                [0.2, 0.2, 0.2],
+                [0.8, 0.2, 0.2],
+                [0.8, 0.8, 0.2],
+            ]
+        )
+
+    def vector(times: np.ndarray) -> np.ndarray:
+        vector_calls.append(times.copy())
+        return np.zeros_like(times, dtype=float)
+
+    outcome = antolini_concordance(
+        predicted,
+        grid,
+        time,
+        event,
+        survival_at_times=vector,
+        survival_matrix_at_times=matrix,
+    )
+
+    assert outcome["antolini_pairs"] == 3
+    assert outcome["c_index_antolini"] == pytest.approx(1.0)
+    assert len(matrix_calls) == 1
+    np.testing.assert_allclose(matrix_calls[0], time)
+    assert vector_calls == []
+
+
 def test_truth_recovery_reports_horizon_normalised_squared_loss() -> None:
     grid = np.linspace(0.0, 2.0, 21)
     truth = np.tile(np.exp(-grid), (1, 1))
