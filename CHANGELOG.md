@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## v3.1.2 (2026-08-30)
+
+Final pre-freeze corrections for the discrimination-not-calibration research
+study.
+
+### Research
+
+- Tightened the executable H1 and H3 estimands so the primary PH-violation
+  analyses exclude the null-effect arm; `effect_size = 0` is now treated as a
+  negative-control arm.
+- Required complete common support for H3: each matched support point must
+  contain all structural DGPs and all PH/baseline DGPs before contributing to
+  the primary contrast.
+- Corrected the headline bootstrap uncertainty: the reported quantile standard
+  error is now the bootstrap standard deviation, with bootstrap Monte Carlo
+  error stored separately.
+- Added bootstrap SE and percentile intervals for H1-H4 and propagated them to
+  generated manuscript macros and Table 6.
+- Made the IPCW availability gate audit the production evaluation sample size
+  instead of the scenario training size.
+- Made experiment freezing consume the IPCW and grid-convergence gate
+  artifacts, verify that both passed, and embed their hashes and result
+  summaries in the lock.
+- Included full environment metadata and gate evidence in the experiment lock
+  hash, and made strict verification reject locks created from dirty source.
+
 ## v3.1.1 (2026-08-29)
 
 R parity fixtures, and the maturity classifier returned to

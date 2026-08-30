@@ -44,6 +44,8 @@ from .truth import true_survival
 __all__ = [
     "PreparedScenario",
     "prepare_scenario",
+    "prepared_scenario_from_record",
+    "ipcw_support_grid",
     "PARAMETER_CORRESPONDENCE",
     "parameter_recovery",
     "run_cell",
@@ -59,6 +61,20 @@ EVALUATION_N = 4000
 #: replication seed, so preparation cannot correlate with the data it defines.
 PREPARATION_SEED = 314159265
 
+#: Number of preparation-only matched train/evaluation draws used to place the
+#: scenario-level IPCW grid inside ordinary observed follow-up support. These
+#: draws are not production replications and use a separate seed stream.
+IPCW_SUPPORT_REPLICATIONS = 100
+
+#: Preparation support envelope used when fixing the IPCW grid before
+#: production. The acceptance gate remains 0.95; using the strict envelope from
+#: preparation draws gives the audit room for finite-sample tail noise.
+IPCW_SUPPORT_TARGET = 1.0
+
+#: Additional guard against placing a fixed IPCW point exactly next to the
+#: prospective support boundary. Only applied when enough grid points remain.
+IPCW_SUPPORT_TRIM_POINTS = 1
+
 
 @dataclass(frozen=True)
 class PreparedScenario:
@@ -68,6 +84,7 @@ class PreparedScenario:
     params: Mapping[str, Any]
     tau: float
     time_grid: tuple[float, ...]
+    ipcw_time_grid: tuple[float, ...]
     censoring_achieved: float
     feasible: bool
     reason: str = ""
@@ -88,6 +105,8 @@ class PreparedScenario:
             "misspecification": self.config.misspecification,
             "tau": self.tau,
             "n_time_points": len(self.time_grid),
+            "time_grid": list(self.time_grid),
+            "ipcw_time_grid": list(self.ipcw_time_grid),
             "params": dict(self.params),
             "feasible": self.feasible,
             "reason": self.reason,
@@ -95,8 +114,82 @@ class PreparedScenario:
         }
 
 
+def ipcw_support_grid(
+    scenario: ScenarioConfig,
+    params: Mapping[str, Any],
+    grid: tuple[float, ...],
+    *,
+    support_replications: int = IPCW_SUPPORT_REPLICATIONS,
+    master_seed: int = PREPARATION_SEED,
+    evaluation_n: int = EVALUATION_N,
+    support_target: float = IPCW_SUPPORT_TARGET,
+    trim_points: int = IPCW_SUPPORT_TRIM_POINTS,
+) -> tuple[float, ...]:
+    """A fixed IPCW grid with prospective train/evaluation support.
+
+    Brier and time-dependent AUC require their time grid to lie inside the
+    observed support of both the training and evaluation samples. Instead of
+    taking the maximum observed time from a single large preparation draw, use
+    matched preparation-only draws to choose a conservative common-support
+    interval, then keep the ordinary tau-based grid points that fall inside it.
+    """
+    if support_replications <= 0:
+        return tuple(value for value in grid if value > 0.0)
+    if not 0.0 < support_target <= 1.0:
+        raise ValueError("support_target must be in (0, 1]")
+
+    lower_bounds = []
+    upper_bounds = []
+    for replication_id in range(support_replications):
+        train = draw_replicate(
+            scenario.dgp,
+            params,
+            scenario.n,
+            scenario.scenario_id,
+            replication_id,
+            master_seed,
+            stream="ipcw_train",
+        )
+        evaluation = draw_replicate(
+            scenario.dgp,
+            params,
+            evaluation_n,
+            scenario.scenario_id,
+            replication_id,
+            master_seed,
+            stream="ipcw_eval",
+        )
+        lower_bounds.append(
+            max(
+                float(np.min(train.observed_time)),
+                float(np.min(evaluation.observed_time)),
+            )
+        )
+        upper_bounds.append(
+            min(
+                float(np.max(train.observed_time)),
+                float(np.max(evaluation.observed_time)),
+            )
+        )
+
+    if support_target == 1.0:
+        lower = max(lower_bounds)
+        upper = min(upper_bounds)
+    else:
+        lower = float(np.quantile(lower_bounds, support_target))
+        upper = float(np.quantile(upper_bounds, 1.0 - support_target))
+    supported = tuple(value for value in grid if value > lower and value < upper)
+    if trim_points > 0 and len(supported) > 2 * trim_points:
+        return supported[trim_points:-trim_points]
+    return supported
+
+
 def prepare_scenario(
-    scenario: ScenarioConfig, metrics: MetricsConfig, *, calibration_n: int = 20000
+    scenario: ScenarioConfig,
+    metrics: MetricsConfig,
+    *,
+    calibration_n: int = 20000,
+    ipcw_support_replications: int = IPCW_SUPPORT_REPLICATIONS,
 ) -> PreparedScenario:
     """Resolve censoring and the evaluation horizon, once, before anything runs."""
     calibration = calibrate_censoring(
@@ -134,6 +227,7 @@ def prepare_scenario(
             params=params,
             tau=float("nan"),
             time_grid=(),
+            ipcw_time_grid=(),
             censoring_achieved=calibration.achieved,
             feasible=False,
             reason="no finite latent event times; tau is undefined",
@@ -151,6 +245,7 @@ def prepare_scenario(
             params=params,
             tau=tau,
             time_grid=(),
+            ipcw_time_grid=(),
             censoring_achieved=calibration.achieved,
             feasible=False,
             reason=(
@@ -161,15 +256,62 @@ def prepare_scenario(
         )
 
     grid = tuple(np.linspace(0.0, tau, metrics.n_time_points).tolist())
+    ipcw_grid = ipcw_support_grid(
+        scenario,
+        params,
+        grid,
+        support_replications=ipcw_support_replications,
+    )
 
     return PreparedScenario(
         config=scenario,
         params=params,
         tau=tau,
         time_grid=grid,
+        ipcw_time_grid=ipcw_grid,
         censoring_achieved=calibration.achieved,
         feasible=calibration.feasible,
         reason=calibration.reason,
+    )
+
+
+def prepared_scenario_from_record(
+    scenario: ScenarioConfig, record: Mapping[str, Any]
+) -> PreparedScenario:
+    """Rehydrate a prepared scenario from the experiment lock.
+
+    Production runs must not recalibrate censoring or recompute tau when they
+    resume. The lock contains the prepared values; this function turns them back
+    into the object `run_cell` expects and refuses stale or incomplete locks.
+    """
+    if record.get("scenario_id") != scenario.scenario_id:
+        raise ValueError(
+            f"lock record for {record.get('scenario_id')!r} cannot prepare "
+            f"scenario {scenario.scenario_id!r}"
+        )
+    if record.get("scenario_hash") != scenario.hash:
+        raise ValueError(
+            f"scenario {scenario.scenario_id!r} has changed since the lock was written"
+        )
+
+    required = ("params", "tau", "time_grid", "ipcw_time_grid", "feasible")
+    missing = [name for name in required if name not in record]
+    if missing:
+        raise ValueError(
+            f"prepared scenario {scenario.scenario_id!r} is missing {missing}"
+        )
+
+    return PreparedScenario(
+        config=scenario,
+        params=dict(record["params"]),
+        tau=float(record["tau"]),
+        time_grid=tuple(float(value) for value in record["time_grid"]),
+        ipcw_time_grid=tuple(float(value) for value in record["ipcw_time_grid"]),
+        censoring_achieved=float(
+            record.get("achieved_censoring", record.get("censoring_achieved", np.nan))
+        ),
+        feasible=bool(record["feasible"]),
+        reason=str(record.get("reason", "")),
     )
 
 
@@ -324,6 +466,10 @@ def run_cell(
         truth_surface = true_survival(
             scenario.dgp, grid, evaluation.truth, prepared.params
         )
+        survival_functions = None
+        predictor = getattr(fitted.model, "predict_survival_functions", None)
+        if predictor is not None:
+            survival_functions = predictor(evaluation.covariates)
 
         row.update(
             evaluate_all(
@@ -336,6 +482,8 @@ def run_cell(
                 train_event=train.event,
                 eval_time=evaluation.observed_time,
                 eval_event=evaluation.event,
+                prediction_error_times=np.asarray(prepared.ipcw_time_grid, dtype=float),
+                survival_functions=survival_functions,
             )
         )
         row["scored"] = True

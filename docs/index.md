@@ -148,7 +148,7 @@ Several models draw their coefficients for you when you omit them, and
   title   = {gen_surv: Survival Data Simulation in Python},
   author  = {Diogo Ribeiro},
   url     = {https://github.com/DiogoRibeiro7/genSurvPy},
-  version = {3.1.1}
+  version = {3.1.2}
 }
 ```
 

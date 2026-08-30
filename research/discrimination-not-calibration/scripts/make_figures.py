@@ -44,6 +44,10 @@ COLOURS = {
     "gradient_boosted": "#CC79A7",
     "royston_parmar": "#56B4E9",
 }
+TRUTH_LOSS = "root_mean_integrated_squared_error"
+TRUTH_LOSS_MEAN = f"{TRUTH_LOSS}_mean"
+TRUTH_LOSS_MCSE = f"{TRUTH_LOSS}_mcse"
+TRUTH_LOSS_LABEL = "RMISE against the true survival function"
 MARKERS = {
     "cox_ph": "o",
     "weibull_aft": "s",
@@ -109,8 +113,8 @@ def _summarise_factor(block: pd.DataFrame, factor: str) -> pd.DataFrame:
     """Average scenario means by factor with MCSEs propagated."""
     rows = []
     for value, factor_block in block.groupby(factor):
-        means = pd.to_numeric(factor_block["mise_mean"], errors="coerce")
-        mcse = pd.to_numeric(factor_block["mise_mcse"], errors="coerce")
+        means = pd.to_numeric(factor_block[TRUTH_LOSS_MEAN], errors="coerce")
+        mcse = pd.to_numeric(factor_block[TRUTH_LOSS_MCSE], errors="coerce")
         keep = means.notna()
         if not keep.any():
             continue
@@ -119,7 +123,7 @@ def _summarise_factor(block: pd.DataFrame, factor: str) -> pd.DataFrame:
         rows.append(
             {
                 factor: value,
-                "mise": float(means.mean()),
+                "truth_loss": float(means.mean()),
                 "mcse": float(math.sqrt(float((mcse**2).sum())) / len(means)),
             }
         )
@@ -141,28 +145,28 @@ def figure_discrimination_vs_truth(
     consistent with a wide range of distance from the truth, and the width of
     that range is the quantity the study reports.
     """
-    if not _require(summary, ["c_index_harrell_mean", "mise_mean"], "fig1"):
+    if not _require(summary, ["c_index_harrell_mean", TRUTH_LOSS_MEAN], "fig1"):
         return
 
     figure, axis = plt.subplots(figsize=(5.2, 4.0))
     for estimator, block in summary.groupby("estimator_id"):
         axis.plot(
-            block["c_index_harrell_mean"], block["mise_mean"], **_style(estimator)
+            block["c_index_harrell_mean"], block[TRUTH_LOSS_MEAN], **_style(estimator)
         )
 
     axis.set_yscale("log")
     axis.set_xlabel("Harrell C-index")
-    axis.set_ylabel("MISE against the true survival function (log scale)")
+    axis.set_ylabel(f"{TRUTH_LOSS_LABEL} (log scale)")
     axis.set_title("Discrimination and truth-recovery metrics")
     # Below the axes: the interesting part of this figure is the vertical
     # spread at a fixed C-index, and a legend sitting in it hides the argument.
     axis.legend(fontsize=7, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.13))
 
-    finite = summary[["c_index_harrell_mean", "mise_mean"]].dropna()
+    finite = summary[["c_index_harrell_mean", TRUTH_LOSS_MEAN]].dropna()
     if len(finite) > 2:
-        correlation = finite.corr().iloc[0, 1]
+        correlation = finite.corr(method="spearman").iloc[0, 1]
         axis.annotate(
-            f"r = {correlation:+.3f}",
+            f"Spearman rho = {correlation:+.3f}",
             xy=(0.03, 0.03),
             xycoords="axes fraction",
             fontsize=8,
@@ -213,7 +217,7 @@ def _factor_panel(
     exploratory: bool,
     logx: bool = False,
 ) -> None:
-    if not _require(summary, [factor, "mise_mean", "mise_mcse"], name):
+    if not _require(summary, [factor, TRUTH_LOSS_MEAN, TRUTH_LOSS_MCSE], name):
         return
 
     figure, axis = plt.subplots(figsize=(5.4, 4.0))
@@ -225,7 +229,7 @@ def _factor_panel(
         style["linestyle"] = "-"
         axis.errorbar(
             grouped[factor],
-            grouped["mise"],
+            grouped["truth_loss"],
             yerr=grouped["mcse"],
             capsize=2,
             linewidth=1.2,
@@ -236,7 +240,7 @@ def _factor_panel(
         axis.set_xscale("log")
     axis.set_yscale("log")
     axis.set_xlabel(xlabel)
-    axis.set_ylabel("MISE (log scale)")
+    axis.set_ylabel(f"{TRUTH_LOSS_LABEL} (log scale)")
     axis.set_title(f"Recovery of the truth against {xlabel.lower()}")
     axis.legend(fontsize=7, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.13))
     _save(figure, name, out, exploratory)
@@ -274,7 +278,7 @@ def figure_adequacy(adequacy: pd.DataFrame, out: Path, exploratory: bool) -> Non
         axis.plot(block["epsilon"], block["within_epsilon"], **style)
 
     axis.set_xscale("log")
-    axis.set_xlabel("$\\epsilon$ (tolerance on MISE)")
+    axis.set_xlabel("$\\epsilon$ (tolerance on RMISE)")
     axis.set_ylabel("Share of scenarios within $\\epsilon$ of the reference")
     axis.set_title("Adequacy region as the tolerance varies")
     axis.set_ylim(-0.02, 1.02)
@@ -288,13 +292,52 @@ def figure_adequacy(adequacy: pd.DataFrame, out: Path, exploratory: bool) -> Non
 
 
 def figure_illustrative_curves(raw: pd.DataFrame, out: Path, exploratory: bool) -> None:
-    """One scenario where discrimination looks fine and the curves are not.
+    """One scenario where discrimination looks fine and truth loss is high.
 
-    Chosen automatically as the cell with the highest MISE among those whose
-    C-index is at or above the median, so the choice is reproducible and cannot
-    be the most flattering example someone went looking for.
+    Chosen automatically as the cell with the highest median RMISE among those
+    whose C-index is at or above the median, so the choice is reproducible and
+    cannot be the most flattering example someone went looking for.
     """
-    print("  fig7: skipped, illustrative curve export is not implemented")
+    needed = ["scenario_id", "estimator_id", "c_index_harrell", TRUTH_LOSS, "scored"]
+    if not _require(raw, needed, "fig7"):
+        return
+
+    scored = raw[raw["scored"].fillna(False)].copy()
+    scored["c_index_harrell"] = pd.to_numeric(
+        scored["c_index_harrell"], errors="coerce"
+    )
+    scored[TRUTH_LOSS] = pd.to_numeric(scored[TRUTH_LOSS], errors="coerce")
+    scored = scored.dropna(subset=["c_index_harrell", TRUTH_LOSS])
+    if scored.empty:
+        print("  fig7: skipped, no scored rows with truth loss and C-index")
+        return
+
+    threshold = float(scored["c_index_harrell"].median())
+    candidates = scored[scored["c_index_harrell"] >= threshold]
+    cell_scores = (
+        candidates.groupby(["scenario_id", "estimator_id"])[TRUTH_LOSS]
+        .median()
+        .sort_values(ascending=False)
+    )
+    if cell_scores.empty:
+        print("  fig7: skipped, no high-discrimination candidate cell")
+        return
+
+    scenario_id, estimator_id = cell_scores.index[0]
+    block = scored[
+        (scored["scenario_id"] == scenario_id)
+        & (scored["estimator_id"] == estimator_id)
+    ]
+
+    figure, axis = plt.subplots(figsize=(5.2, 4.0))
+    style = _style(str(estimator_id))
+    axis.plot(block["c_index_harrell"], block[TRUTH_LOSS], **style)
+    axis.axvline(threshold, color="0.45", linewidth=0.8, linestyle="--")
+    axis.set_yscale("log")
+    axis.set_xlabel("Harrell C-index")
+    axis.set_ylabel(f"{TRUTH_LOSS_LABEL} (log scale)")
+    axis.set_title(f"Illustrative high-loss cell: {scenario_id}")
+    _save(figure, "fig7_illustrative_high_loss_cell", out, exploratory)
 
 
 # ---------------------------------------------------------------------------

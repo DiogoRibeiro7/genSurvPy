@@ -66,10 +66,26 @@ site/
 # this.
 papers/
 
-# Pilot artefacts from the research studies: exploratory, regenerable from the
-# config and seeds, and never to be confused with frozen production results.
+# Research artifacts: generated from committed config, seeds and lock files,
+# and never to be confused with source.
 # scripts/run_pilot.py refuses to read a file containing production rows for
-# the same reason. Production results are tracked; these are not.
+# the same reason.
 research/*/results/raw/pilot.parquet
+research/*/results/raw/production.parquet
+research/*/results/raw/production.parquet.compact.parquet
+research/*/results/raw/*.parts/
+research/*/results/grid_convergence.parquet
+research/*/results/ipcw_availability.parquet
 research/*/results/processed/
 research/*/results/figures/
+research/*/protocol/experiment_lock.json
+
+# LaTeX build byproducts from research manuscripts.
+research/*/paper/*.aux
+research/*/paper/*.bbl
+research/*/paper/*.blg
+research/*/paper/*.fdb_latexmk
+research/*/paper/*.fls
+research/*/paper/*.out
+research/*/paper/*.pdf
+research/*/paper/*.synctex.gz

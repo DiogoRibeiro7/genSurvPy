@@ -43,9 +43,9 @@ measures.
 ```
 config/          scenario, estimator and metric definitions (generated; see scripts/make_config.py)
 src/             the study package, survival_misspec
-scripts/         config generation, running, aggregation, figures
+scripts/         config generation, freezing, running, aggregation, figures
 tests/           validation suite, run by the repository's normal pytest
-protocol/        estimands, preregistration, experiment_lock.json
+protocol/        estimands, preregistration, local experiment_lock.json artifact
 literature/      our own notes and bibliography (never source PDFs)
 results/         raw replicate rows, processed tables, figures
 paper/           LaTeX manuscript
@@ -63,10 +63,26 @@ Production additionally requires a frozen experiment lock, and refuses to start
 without matching it:
 
 ```bash
+python scripts/make_config.py --production
+python scripts/check_ipcw_availability.py --minimum-availability 0.95
+python scripts/check_grid_convergence.py \
+    --summary results/processed/summary.parquet \
+    --top-cells 10 \
+    --replications 10 \
+    --rmise-epsilon 0.002
+python scripts/freeze_experiment.py --out protocol/experiment_lock.json
 python scripts/run_simulation.py \
     --out results/raw/production.parquet \
-    --lock protocol/experiment_lock.json
+    --lock protocol/experiment_lock.json \
+    --compact
+python scripts/aggregate_results.py --raw results/raw/production.parquet
+python scripts/analyze_hypotheses.py --macros paper/macros/hypotheses.tex
 ```
+
+`protocol/experiment_lock.json` is a local execution artifact, not a committed
+source file. The lock records the commit that produced it; committing the lock
+would necessarily change the current commit and defeat strict commit
+verification.
 
 ## Design decisions worth knowing before reading the code
 
@@ -123,9 +139,9 @@ result -> replication -> seed -> scenario -> DGP parameters
 ```
 
 Every result row carries its seeds, scenario and estimator hashes, the study
-hash, the `gen_surv` version and the commit. `protocol/experiment_lock.json`
-freezes the design and the environment, and the runner refuses to proceed
-against a mismatched lock.
+hash, the `gen_surv` version, the commit and the lock hash.
+`protocol/experiment_lock.json` freezes the design and the environment as a
+local artifact, and the runner refuses to proceed against a mismatched lock.
 
 Because `gen_surv` lives in this same repository, recording a version string is
 not sufficient — the generators can change while the version does not. The lock

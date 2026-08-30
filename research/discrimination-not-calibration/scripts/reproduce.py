@@ -73,6 +73,35 @@ def main() -> int:
         [python, "scripts/make_config.py", f"--{mode}"],
     )
 
+    step_number = 2
+    if arguments.production:
+        step(
+            f"{step_number}. Check IPCW grid availability",
+            [
+                python,
+                "scripts/check_ipcw_availability.py",
+                "--minimum-availability",
+                "0.95",
+            ],
+        )
+        step_number += 1
+        step(
+            f"{step_number}. Check evaluation-grid convergence",
+            [
+                python,
+                "scripts/check_grid_convergence.py",
+                "--summary",
+                "results/processed/summary.parquet",
+                "--top-cells",
+                "10",
+                "--replications",
+                "10",
+                "--rmise-epsilon",
+                "0.002",
+            ],
+        )
+        step_number += 1
+
     if not arguments.skip_simulation:
         command = [
             python,
@@ -84,23 +113,32 @@ def main() -> int:
         ]
         if arguments.lock:
             command += ["--lock", arguments.lock]
-        step("2. Run the Monte Carlo simulation", command)
+        step(f"{step_number}. Run the Monte Carlo simulation", command)
     else:
-        print("\n2. Simulation skipped (--skip-simulation)")
+        print(f"\n{step_number}. Simulation skipped (--skip-simulation)")
+    step_number += 1
 
     step(
-        "3. Aggregate, with Monte Carlo standard errors",
+        f"{step_number}. Aggregate, with Monte Carlo standard errors",
         [python, "scripts/aggregate_results.py", "--raw", raw],
     )
-    step("4. Generate the tables", [python, "scripts/make_tables.py"])
+    step_number += 1
     step(
-        "5. Generate the figures",
+        f"{step_number}. Analyse the preregistered hypotheses",
+        [python, "scripts/analyze_hypotheses.py"],
+    )
+    step_number += 1
+    step(f"{step_number}. Generate the tables", [python, "scripts/make_tables.py"])
+    step_number += 1
+    step(
+        f"{step_number}. Generate the figures",
         [python, "scripts/make_figures.py", "--raw", raw],
     )
+    step_number += 1
 
     if arguments.pilot:
         step(
-            "6. Report the pilot design analysis",
+            f"{step_number}. Report the pilot design analysis",
             [python, "scripts/run_pilot.py", "--raw", raw],
         )
 

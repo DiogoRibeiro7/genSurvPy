@@ -8,8 +8,8 @@ manuscript by hand.** Each file carries a generated-by header, and
 which is what stops a number being pasted in and then quietly diverging from
 the results it came from.
 
-Tables 1 and 2 describe the design and can be produced before any run. Tables
-3 to 5 need results and are skipped with a message when they are absent, rather
+Tables 1 and 2 describe the design and can be produced before any run. Later
+tables need results and are skipped with a message when they are absent, rather
 than emitting an empty table that looks finished.
 """
 
@@ -149,7 +149,12 @@ def table_main_results(summary: pd.DataFrame, out: Path) -> None:
     overlap are not distinguishable at this replication count, and the table is
     laid out so a reader can see that rather than having to be told.
     """
-    needed = ["dgp", "estimator_id", "mise_mean", "mise_mcse"]
+    needed = [
+        "dgp",
+        "estimator_id",
+        "root_mean_integrated_squared_error_mean",
+        "root_mean_integrated_squared_error_mcse",
+    ]
     missing = [c for c in needed if c not in summary.columns]
     if missing:
         print(f"  table3: skipped, missing {missing}")
@@ -159,7 +164,11 @@ def table_main_results(summary: pd.DataFrame, out: Path) -> None:
     for (dgp, estimator_id), block in summary.groupby(["dgp", "estimator_id"]):
         record = {"dgp": dgp, "estimator_id": estimator_id}
         for label, mean_column, mcse_column in (
-            ("mise", "mise_mean", "mise_mcse"),
+            (
+                "rmise",
+                "root_mean_integrated_squared_error_mean",
+                "root_mean_integrated_squared_error_mcse",
+            ),
             ("c_index", "c_index_harrell_mean", "c_index_harrell_mcse"),
             ("ibs", "integrated_brier_score_mean", "integrated_brier_score_mcse"),
             ("calib", "calibration_error_mean", "calibration_error_mcse"),
@@ -179,7 +188,7 @@ def table_main_results(summary: pd.DataFrame, out: Path) -> None:
         r"\label{tab:main}",
         r"\begin{tabular}{llrrrr}",
         r"\toprule",
-        r"Mechanism & Estimator & MISE & C-index & IBS & Calibration \\",
+        r"Mechanism & Estimator & RMISE & C-index & IBS & Calibration \\",
         r"\midrule",
     ]
     for dgp, block in grouped.groupby("dgp"):
@@ -187,7 +196,7 @@ def table_main_results(summary: pd.DataFrame, out: Path) -> None:
             label = f"\\texttt{{{_escape(dgp)}}}" if position == 0 else ""
             body.append(
                 f"{label} & \\texttt{{{_escape(row.estimator_id)}}} & "
-                f"{_pm(row.mise, row.mise_mcse, 5)} & "
+                f"{_pm(row.rmise, row.rmise_mcse, 4)} & "
                 f"{_pm(row.c_index, row.c_index_mcse, 3)} & "
                 f"{_pm(row.ibs, row.ibs_mcse, 3)} & "
                 f"{_pm(row.calib, row.calib_mcse, 3)} \\\\"
@@ -227,7 +236,7 @@ def table_parameter_recovery(summary: pd.DataFrame, out: Path) -> None:
         r"\label{tab:recovery}",
         r"\begin{tabular}{llrrr}",
         r"\toprule",
-        r"Mechanism & Estimator & Mean bias & Mean absolute bias & MISE \\",
+        r"Mechanism & Estimator & Mean bias & Mean absolute bias & RMISE \\",
         r"\midrule",
     ]
     for row in applicable.itertuples():
@@ -243,12 +252,17 @@ def table_parameter_recovery(summary: pd.DataFrame, out: Path) -> None:
             and not pd.isna(row.beta_bias_scalar_mcse)
             else row.beta_bias_mean_mcse
         )
+        rmise = _pm(
+            row.root_mean_integrated_squared_error_mean,
+            row.root_mean_integrated_squared_error_mcse,
+            4,
+        )
         body.append(
             f"\\texttt{{{_escape(str(row.dgp))}}} & "
             f"\\texttt{{{_escape(str(row.estimator_id))}}} & "
             f"{_pm(signed, signed_mcse, 4)} & "
             f"{_pm(row.beta_abs_bias_mean_mean, row.beta_abs_bias_mean_mcse, 4)} & "
-            f"{_pm(row.mise_mean, row.mise_mcse, 5)} \\\\"
+            f"{rmise} \\\\"
         )
     body += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     _write(
@@ -307,6 +321,48 @@ def table_failures(failures: pd.DataFrame, out: Path) -> None:
     )
 
 
+def table_hypotheses(hypotheses: pd.DataFrame, out: Path) -> None:
+    """The executable H1--H4 definitions and their support status."""
+    if hypotheses.empty:
+        print("  table6: skipped, no hypotheses table")
+        return
+
+    body = [
+        r"\begin{table}[t]",
+        r"\centering\small",
+        r"\caption{Preregistered hypothesis estimands, computed by "
+        r"\texttt{scripts/analyze\_hypotheses.py}.}",
+        r"\label{tab:hypotheses}",
+        r"\begin{tabular}{llll}",
+        r"\toprule",
+        r"Hypothesis & Estimand & Estimate (95\% CI) & Criterion \\",
+        r"\midrule",
+    ]
+    for row in hypotheses.itertuples():
+        decision = "supports" if row.supports_hypothesis else "does not support"
+        if (
+            hasattr(row, "estimate_ci_low")
+            and pd.notna(row.estimate_ci_low)
+            and pd.notna(row.estimate_ci_high)
+        ):
+            estimate = (
+                f"{row.estimate:.4f} "
+                f"[{row.estimate_ci_low:.4f}, {row.estimate_ci_high:.4f}]"
+            )
+        else:
+            estimate = f"{row.estimate:.4f}"
+        body.append(
+            f"{_escape(str(row.hypothesis))} & {_escape(str(row.estimand))} & "
+            f"{estimate} & {_escape(str(row.criterion))}; {decision} \\\\"
+        )
+    body += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
+    _write(
+        out / "table6_hypotheses.tex",
+        "\n".join(body),
+        "results/processed/hypotheses.parquet",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(HERE.parent / "config"))
@@ -335,11 +391,17 @@ def main() -> int:
         if (processed / "failures.parquet").exists()
         else pd.DataFrame()
     )
+    hypotheses = (
+        pd.read_parquet(processed / "hypotheses.parquet")
+        if (processed / "hypotheses.parquet").exists()
+        else pd.DataFrame()
+    )
 
     print("result tables:")
     table_main_results(summary, out)
     table_parameter_recovery(summary, out)
     table_failures(failures, out)
+    table_hypotheses(hypotheses, out)
 
     print(f"\nwritten to {out}")
     return 0

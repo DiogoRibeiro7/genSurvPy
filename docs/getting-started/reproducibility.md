@@ -117,7 +117,7 @@ times up front. Those two generators changed for every seed.
 **If a result must be reproducible for a paper, pin the version:**
 
 ```
-gen-surv==3.1.0
+gen-surv==3.1.2
 ```
 
 and record it alongside the seed. Record both in the artefact itself where you

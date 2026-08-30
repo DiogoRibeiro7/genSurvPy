@@ -36,11 +36,13 @@ __all__ = [
     "replications_for_precision",
     "aggregate",
     "paired_differences",
+    "headline_metric_gap",
     "failure_rates",
     "adequacy_region",
     "adequacy_region_from_pairs",
     "write_raw",
     "read_raw",
+    "compact_raw",
     "completed_cells",
 ]
 
@@ -48,6 +50,8 @@ __all__ = [
 #: identifier, a diagnostic string, or already a summary.
 METRIC_COLUMNS = (
     "mise",
+    "normalised_mise",
+    "root_mean_integrated_squared_error",
     "miae",
     "mean_absolute_survival_error",
     "miae_p90",
@@ -231,6 +235,86 @@ def paired_differences(
     return pd.DataFrame.from_records(records)
 
 
+def headline_metric_gap(
+    summary: pd.DataFrame,
+    *,
+    conventional_metric: str = "c_index_harrell_mean",
+    loss: str = "root_mean_integrated_squared_error_mean",
+    bins: int = 10,
+    quantile: float = 0.90,
+    uncertainty_draws: int = 1000,
+    seed: int = 20260829,
+) -> pd.DataFrame:
+    """Conditional upper-tail truth loss at comparable conventional metrics.
+
+    This is the operational headline for "how much truth-error is consistent
+    with a conventional metric": bin scenario-estimator cell means by the
+    conventional metric and report a high conditional quantile of the
+    normalised truth loss. Uncertainty is the Monte Carlo uncertainty induced by
+    the cell mean estimates, propagated by a fixed-bin parametric bootstrap.
+    """
+    needed = {conventional_metric, loss}
+    missing = sorted(needed - set(summary.columns))
+    if missing:
+        raise ValueError(f"headline table missing columns: {missing}")
+
+    frame = summary.copy()
+    frame[conventional_metric] = pd.to_numeric(
+        frame[conventional_metric], errors="coerce"
+    )
+    frame[loss] = pd.to_numeric(frame[loss], errors="coerce")
+    frame = frame.dropna(subset=[conventional_metric, loss])
+    if frame.empty:
+        return pd.DataFrame()
+
+    try:
+        frame["_metric_bin"] = pd.qcut(
+            frame[conventional_metric], q=bins, duplicates="drop"
+        )
+    except ValueError:
+        frame["_metric_bin"] = pd.cut(frame[conventional_metric], bins=bins)
+
+    loss_mcse_column = loss.removesuffix("_mean") + "_mcse"
+    rng = np.random.default_rng(seed)
+
+    records: list[dict[str, object]] = []
+    for interval, block in frame.groupby("_metric_bin", observed=True):
+        values = block[loss].to_numpy(dtype=float)
+        loss_mcse = (
+            pd.to_numeric(block[loss_mcse_column], errors="coerce")
+            .fillna(0.0)
+            .to_numpy(dtype=float)
+            if loss_mcse_column in block.columns
+            else np.zeros_like(values)
+        )
+        draws = np.empty(uncertainty_draws, dtype=float)
+        for draw in range(uncertainty_draws):
+            sampled = rng.normal(values, loss_mcse)
+            draws[draw] = float(np.quantile(sampled, quantile))
+        loss_quantile_se = (
+            float(np.std(draws, ddof=1)) if draws.size > 1 else float("nan")
+        )
+        records.append(
+            {
+                "metric": conventional_metric,
+                "loss": loss,
+                "quantile": quantile,
+                "metric_bin": str(interval),
+                "metric_min": float(block[conventional_metric].min()),
+                "metric_max": float(block[conventional_metric].max()),
+                "loss_quantile": float(np.quantile(values, quantile)),
+                "loss_quantile_se": loss_quantile_se,
+                "loss_quantile_ci_low": float(np.quantile(draws, 0.025)),
+                "loss_quantile_ci_high": float(np.quantile(draws, 0.975)),
+                "bootstrap_mc_error": mcse(draws),
+                "loss_median": float(np.median(values)),
+                "n": int(values.size),
+            }
+        )
+
+    return pd.DataFrame.from_records(records)
+
+
 def failure_rates(
     raw: pd.DataFrame, by: Sequence[str] = ("scenario_id", "estimator_id")
 ) -> pd.DataFrame:
@@ -406,16 +490,58 @@ def read_raw(path: Path | str) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True, sort=False)
 
 
-def completed_cells(path: Path | str) -> set[tuple[str, str, int]]:
+def compact_raw(path: Path | str, output: Path | str | None = None) -> Path:
+    """Write one deterministic Parquet file from all raw shards."""
+    target = Path(path)
+    frame = read_raw(target)
+    if frame.empty:
+        raise ValueError(f"no raw rows found in {target}")
+
+    sort_columns = [
+        column
+        for column in ("scenario_id", "estimator_id", "replication_id")
+        if column in frame.columns
+    ]
+    if sort_columns:
+        frame = frame.sort_values(sort_columns, kind="mergesort").reset_index(drop=True)
+
+    if output is None:
+        if target.is_dir():
+            output_path = target.parent / f"{target.name}.compact.parquet"
+        else:
+            output_path = target
+    else:
+        output_path = Path(output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    frame.to_parquet(output_path, index=False)
+    return output_path
+
+
+def completed_cells(
+    path: Path | str, *, lock_hash: str | None = None
+) -> set[tuple[str, str, int]]:
     """Which ``(scenario, estimator, replication)`` triples are already done.
 
     Resumption is by identity, not by count. Because seeds are derived from
     identifiers, a resumed run reproduces exactly the data an interrupted one
     would have produced, so a partially complete experiment is not tainted.
+    Production resumption also requires a matching lock hash; otherwise rows
+    from an exploratory or different frozen experiment cannot be reused.
     """
     frame = read_raw(path)
     if frame.empty:
         return set()
+    if lock_hash is not None:
+        if "lock_hash" not in frame.columns:
+            raise ValueError(
+                f"{path} contains rows without lock_hash; refusing production resume"
+            )
+        present = set(frame["lock_hash"].dropna().astype(str))
+        if present != {str(lock_hash)}:
+            raise ValueError(
+                f"{path} contains lock_hash values {sorted(present)}; "
+                f"expected {lock_hash}"
+            )
     return {
         (str(row.scenario_id), str(row.estimator_id), int(row.replication_id))
         for row in frame.itertuples()

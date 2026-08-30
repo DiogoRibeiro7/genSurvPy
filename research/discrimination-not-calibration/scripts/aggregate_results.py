@@ -20,6 +20,10 @@ Writes to ``results/processed/``:
     Excess loss of each estimator over the reference, across a range of
     epsilon, for the adequacy region, with paired MCSEs.
 
+``headline.parquet``
+    Conditional upper-tail normalised truth loss among cells with comparable
+    conventional metric values, with MCSEs propagated from cell means.
+
 Nothing here decides anything. It aggregates and reports uncertainty; the
 interpretation belongs in the paper, conditional on the DGPs studied.
 """
@@ -39,11 +43,12 @@ from survival_misspec.aggregation import (  # noqa: E402
     adequacy_region_from_pairs,
     aggregate,
     failure_rates,
+    headline_metric_gap,
     paired_differences,
     read_raw,
 )
 
-EPSILONS = (0.001, 0.005, 0.01, 0.025, 0.05)
+EPSILONS = (0.01, 0.025, 0.05, 0.10, 0.20)
 
 
 def main() -> int:
@@ -88,7 +93,13 @@ def main() -> int:
     frames = []
     for epsilon in EPSILONS:
         try:
-            frames.append(adequacy_region_from_pairs(paired, epsilon=epsilon))
+            frames.append(
+                adequacy_region_from_pairs(
+                    paired,
+                    loss="root_mean_integrated_squared_error",
+                    epsilon=epsilon,
+                )
+            )
         except ValueError as error:
             print(f"adequacy        skipped at epsilon={epsilon}: {error}")
             break
@@ -96,6 +107,17 @@ def main() -> int:
         adequacy = pd.concat(frames, ignore_index=True)
         adequacy.to_parquet(out / "adequacy.parquet", index=False)
         print(f"adequacy        {len(adequacy)} rows over {len(EPSILONS)} epsilons")
+
+    try:
+        headline = headline_metric_gap(summary)
+    except ValueError as error:
+        print(f"headline        skipped: {error}")
+    else:
+        if headline.empty:
+            print("headline        skipped: no scored rows")
+        else:
+            headline.to_parquet(out / "headline.parquet", index=False)
+            print(f"headline        {len(headline)} bins -> {out / 'headline.parquet'}")
 
     return 0
 

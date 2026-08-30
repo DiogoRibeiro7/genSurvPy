@@ -24,10 +24,11 @@ import json
 import platform
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from .config import StudyConfig, content_hash
 
@@ -163,6 +164,7 @@ class ExperimentLock:
     estimators: tuple[Mapping[str, Any], ...]
     metrics: Mapping[str, Any]
     provenance: Mapping[str, Any]
+    gate_evidence: Mapping[str, Any]
     frozen_at: str
     notes: str = ""
     _lock_hash: str = field(default="", compare=False)
@@ -176,8 +178,16 @@ class ExperimentLock:
             "study_hash": self.study_hash,
             "master_seed": self.master_seed,
             "n_replications": self.n_replications,
+            "scenarios": self.scenarios,
+            "estimators": self.estimators,
+            "metrics": self.metrics,
+            "gate_evidence": self.gate_evidence,
             "git_commit": self.provenance.get("git_commit"),
+            "git_tree_clean": self.provenance.get("git_tree_clean"),
             "gen_surv_version": self.provenance.get("gen_surv_version"),
+            "python_version": self.provenance.get("python_version"),
+            "platform": self.provenance.get("platform"),
+            "dependencies": self.provenance.get("dependencies", {}),
         }
         return content_hash(payload)
 
@@ -190,6 +200,7 @@ def write_lock(
     *,
     notes: str = "",
     allow_dirty_tree: bool = False,
+    gate_evidence: Mapping[str, Any] | None = None,
 ) -> ExperimentLock:
     """Freeze the experiment. Refuses a dirty tree unless told otherwise.
 
@@ -224,6 +235,7 @@ def write_lock(
         estimators=tuple(asdict(e) for e in study.estimators),
         metrics=asdict(study.metrics),
         provenance=provenance.as_dict(),
+        gate_evidence=gate_evidence or {},
         frozen_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         notes=notes,
     )
@@ -240,6 +252,27 @@ def write_lock(
 
 def read_lock(path: Path | str) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _expected_lock_hash(lock: Mapping[str, Any]) -> str:
+    payload = {
+        "paper_id": lock.get("paper_id"),
+        "protocol_version": lock.get("protocol_version"),
+        "study_hash": lock.get("study_hash"),
+        "master_seed": lock.get("master_seed"),
+        "n_replications": lock.get("n_replications"),
+        "scenarios": lock.get("scenarios", ()),
+        "estimators": lock.get("estimators", ()),
+        "metrics": lock.get("metrics", {}),
+        "gate_evidence": lock.get("gate_evidence", {}),
+        "git_commit": lock.get("provenance", {}).get("git_commit"),
+        "git_tree_clean": lock.get("provenance", {}).get("git_tree_clean"),
+        "gen_surv_version": lock.get("provenance", {}).get("gen_surv_version"),
+        "python_version": lock.get("provenance", {}).get("python_version"),
+        "platform": lock.get("provenance", {}).get("platform"),
+        "dependencies": lock.get("provenance", {}).get("dependencies", {}),
+    }
+    return content_hash(payload)
 
 
 def verify_lock(
@@ -260,6 +293,14 @@ def verify_lock(
     current = capture_provenance()
     problems: list[str] = []
 
+    stored_hash = lock.get("lock_hash")
+    expected_hash = _expected_lock_hash(lock)
+    if stored_hash != expected_hash:
+        problems.append(
+            f"lock hash changed: lock records {stored_hash or '<missing>'} "
+            f"but its contents hash to {expected_hash}"
+        )
+
     if lock.get("study_hash") != study.hash:
         problems.append(
             f"design changed: lock study_hash={lock.get('study_hash')} "
@@ -272,6 +313,44 @@ def verify_lock(
             f"master seed changed: {lock.get('master_seed')} -> {study.master_seed}"
         )
 
+    locked_scenarios = lock.get("scenarios", [])
+    if not isinstance(locked_scenarios, list) or not locked_scenarios:
+        problems.append("lock does not contain prepared scenarios")
+    else:
+        current_hashes = {
+            scenario.scenario_id: scenario.hash for scenario in study.scenarios
+        }
+        locked_hashes = {
+            str(record.get("scenario_id")): record.get("scenario_hash")
+            for record in locked_scenarios
+            if isinstance(record, Mapping)
+        }
+        missing = sorted(set(current_hashes) - set(locked_hashes))
+        extra = sorted(set(locked_hashes) - set(current_hashes))
+        if missing:
+            problems.append(f"lock is missing prepared scenarios: {missing[:10]}")
+        if extra:
+            problems.append(f"lock contains unknown prepared scenarios: {extra[:10]}")
+        for scenario_id, current_hash in current_hashes.items():
+            locked_hash = locked_hashes.get(scenario_id)
+            if locked_hash is not None and locked_hash != current_hash:
+                problems.append(
+                    f"scenario {scenario_id} changed: lock scenario_hash="
+                    f"{locked_hash} but current={current_hash}"
+                )
+
+        required_fields = {"params", "tau", "time_grid", "ipcw_time_grid", "feasible"}
+        for record in locked_scenarios:
+            if not isinstance(record, Mapping):
+                problems.append("lock contains a non-mapping prepared scenario")
+                continue
+            missing_fields = sorted(required_fields - set(record))
+            if missing_fields:
+                problems.append(
+                    f"prepared scenario {record.get('scenario_id', '?')} is missing "
+                    f"{missing_fields}"
+                )
+
     locked_provenance = lock.get("provenance", {})
 
     if strict_commit and locked_provenance.get("git_commit") != current.git_commit:
@@ -282,6 +361,9 @@ def verify_lock(
             f"repository, so a different commit may be a different simulation "
             f"engine. Treat this as a new experiment version."
         )
+
+    if strict_commit and not locked_provenance.get("git_tree_clean", False):
+        problems.append("experiment lock was created from a dirty working tree")
 
     if strict_commit and not current.git_tree_clean:
         problems.append(
@@ -301,5 +383,17 @@ def verify_lock(
         actual = current.dependencies.get(name, "not installed")
         if actual != locked_version:
             problems.append(f"{name}: locked {locked_version}, found {actual}")
+
+    if locked_provenance.get("python_version") != current.python_version:
+        problems.append(
+            f"python: locked {locked_provenance.get('python_version', '?')}, "
+            f"found {current.python_version}"
+        )
+
+    if locked_provenance.get("platform") != current.platform:
+        problems.append(
+            f"platform: locked {locked_provenance.get('platform', '?')}, "
+            f"found {current.platform}"
+        )
 
     return problems

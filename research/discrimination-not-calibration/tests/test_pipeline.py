@@ -21,8 +21,10 @@ import pytest
 from survival_misspec.aggregation import (
     adequacy_region_from_pairs,
     aggregate,
+    compact_raw,
     completed_cells,
     failure_rates,
+    headline_metric_gap,
     mcse,
     paired_differences,
     replications_for_precision,
@@ -317,6 +319,7 @@ def _raw() -> pd.DataFrame:
                 "fitted": True,
                 "scored": True,
                 "mise": 0.10,
+                "root_mean_integrated_squared_error": 0.20,
                 "dgp": "cphm",
             },
             {
@@ -326,6 +329,7 @@ def _raw() -> pd.DataFrame:
                 "fitted": True,
                 "scored": True,
                 "mise": 0.20,
+                "root_mean_integrated_squared_error": 0.30,
                 "dgp": "cphm",
             },
             {
@@ -335,6 +339,7 @@ def _raw() -> pd.DataFrame:
                 "fitted": False,
                 "scored": False,
                 "mise": np.nan,
+                "root_mean_integrated_squared_error": np.nan,
                 "dgp": "cphm",
             },
         ]
@@ -449,6 +454,26 @@ def test_completed_cells_supports_resumption(tmp_path) -> None:
     assert len(done) == 3
 
 
+def test_completed_cells_requires_the_matching_lock_for_production_resume(
+    tmp_path,
+) -> None:
+    path = tmp_path / "raw.parquet"
+    rows = _raw().assign(lock_hash="abc").to_dict("records")
+    write_raw(rows, path)
+
+    assert len(completed_cells(path, lock_hash="abc")) == 3
+    with pytest.raises(ValueError, match="expected xyz"):
+        completed_cells(path, lock_hash="xyz")
+
+
+def test_completed_cells_refuses_unlocked_rows_for_production_resume(tmp_path) -> None:
+    path = tmp_path / "raw.parquet"
+    write_raw(_raw().to_dict("records"), path)
+
+    with pytest.raises(ValueError, match="without lock_hash"):
+        completed_cells(path, lock_hash="abc")
+
+
 def test_write_raw_appends_parquet_shards_without_rewriting(tmp_path) -> None:
     path = tmp_path / "raw.parquet"
 
@@ -472,6 +497,38 @@ def test_write_raw_appends_parquet_shards_without_rewriting(tmp_path) -> None:
     done = completed_cells(path)
     assert ("s", "rsf", 0) in done
     assert len(done) == 4
+
+
+def test_compact_raw_writes_one_deterministic_file(tmp_path) -> None:
+    path = tmp_path / "raw.parquet"
+    write_raw(_raw().iloc[[1]].to_dict("records"), path)
+    write_raw(_raw().iloc[[0]].to_dict("records"), path)
+
+    compacted = compact_raw(path)
+    frame = pd.read_parquet(compacted)
+
+    assert compacted.name == "raw.parquet.compact.parquet"
+    assert frame["replication_id"].tolist() == [0, 1]
+
+
+def test_headline_metric_gap_operationalises_the_primary_claim() -> None:
+    summary = pd.DataFrame(
+        {
+            "c_index_harrell_mean": [0.6, 0.61, 0.7, 0.71],
+            "root_mean_integrated_squared_error_mean": [0.05, 0.20, 0.04, 0.30],
+            "root_mean_integrated_squared_error_mcse": [0.001] * 4,
+        }
+    )
+
+    headline = headline_metric_gap(summary, bins=2, quantile=0.9)
+
+    assert list(headline["metric"]) == [
+        "c_index_harrell_mean",
+        "c_index_harrell_mean",
+    ]
+    assert headline["loss_quantile"].max() == pytest.approx(0.274)
+    assert "loss_quantile_se" in headline.columns
+    assert "bootstrap_mc_error" in headline.columns
 
 
 # ---------------------------------------------------------------------------
@@ -513,6 +570,63 @@ def test_tau_excludes_cured_subjects() -> None:
         f"tau={prepared.tau} looks like the cured sentinel (max_time * 100), "
         "not a failure-time quantile"
     )
+    assert len(prepared.ipcw_time_grid) >= 2
+
+
+def test_prepared_scenario_rehydrates_from_lock_record() -> None:
+    from survival_misspec.config import MetricsConfig, ScenarioConfig
+    from survival_misspec.experiments import (
+        prepare_scenario,
+        prepared_scenario_from_record,
+    )
+
+    scenario = ScenarioConfig(
+        scenario_id="locked",
+        dgp="cphm",
+        n=100,
+        target_censoring=0.3,
+        effect_size=0.5,
+        params={"beta": 0.5, "covariate_range": 2.0, "model_cens": "uniform"},
+    )
+    prepared = prepare_scenario(
+        scenario, MetricsConfig(0.8, 21, (0.5,), ("mise",)), calibration_n=1000
+    )
+    loaded = prepared_scenario_from_record(scenario, prepared.as_record())
+
+    assert loaded.params == prepared.params
+    assert loaded.tau == prepared.tau
+    assert loaded.time_grid == prepared.time_grid
+    assert loaded.ipcw_time_grid == prepared.ipcw_time_grid
+
+
+def test_ipcw_grid_uses_preparation_support_envelope(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from survival_misspec import experiments
+    from survival_misspec.config import ScenarioConfig
+
+    def fake_draw_replicate(*args, **kwargs):
+        return SimpleNamespace(observed_time=np.array([1.5, 5.5]))
+
+    monkeypatch.setattr(experiments, "draw_replicate", fake_draw_replicate)
+    scenario = ScenarioConfig(
+        scenario_id="ipcw",
+        dgp="cphm",
+        n=100,
+        target_censoring=0.3,
+        effect_size=0.5,
+        params={},
+    )
+
+    grid = experiments.ipcw_support_grid(
+        scenario,
+        {"cens_par": 1.0},
+        (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0),
+        support_replications=3,
+        support_target=0.95,
+    )
+
+    assert grid == (3.0, 4.0)
 
 
 def test_cells_are_independent_of_the_order_they_are_run_in() -> None:

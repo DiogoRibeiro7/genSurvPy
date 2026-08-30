@@ -61,6 +61,10 @@ class SurvivalEstimator(Protocol):
         self, X: NDArray[np.float64], times: NDArray[np.float64]
     ) -> NDArray[np.float64]: ...
 
+    def predict_survival_at_times(
+        self, X: NDArray[np.float64], times: NDArray[np.float64]
+    ) -> NDArray[np.float64]: ...
+
     def predict_risk(self, X: NDArray[np.float64]) -> NDArray[np.float64]: ...
 
     def coefficients(self) -> dict[str, float] | None: ...
@@ -122,6 +126,12 @@ class CoxPHAdapter:
         # lifelines returns times as the index and subjects as columns.
         return _clip_survival(predicted.to_numpy().T)
 
+    def predict_survival_at_times(self, X, times):  # type: ignore[no-untyped-def]
+        grid = np.unique(np.asarray(times, dtype=float))
+        surface = self.predict_survival(X, grid)
+        columns = np.searchsorted(grid, np.asarray(times, dtype=float), side="left")
+        return surface[np.arange(surface.shape[0]), columns]
+
     def predict_risk(self, X):  # type: ignore[no-untyped-def]
         return np.asarray(
             self._model.predict_partial_hazard(_frame(X)), dtype=float
@@ -149,6 +159,12 @@ class WeibullAFTAdapter:
         grid = np.asarray(times, dtype=float)
         predicted = self._model.predict_survival_function(_frame(X), times=grid)
         return _clip_survival(predicted.to_numpy().T)
+
+    def predict_survival_at_times(self, X, times):  # type: ignore[no-untyped-def]
+        grid = np.unique(np.asarray(times, dtype=float))
+        surface = self.predict_survival(X, grid)
+        columns = np.searchsorted(grid, np.asarray(times, dtype=float), side="left")
+        return surface[np.arange(surface.shape[0]), columns]
 
     def predict_risk(self, X):  # type: ignore[no-untyped-def]
         # Higher risk must mean earlier failure, so negate the expected time.
@@ -191,6 +207,22 @@ class _SksurvAdapter:
             surface[row][grid < function.x[0]] = 1.0
 
         return _clip_survival(surface)
+
+    def predict_survival_functions(self, X):  # type: ignore[no-untyped-def]
+        """Native scikit-survival step functions for exact-time metrics."""
+        return self._model.predict_survival_function(_frame(X).to_numpy())
+
+    def predict_survival_at_times(self, X, times):  # type: ignore[no-untyped-def]
+        functions = self.predict_survival_functions(X)
+        out = np.empty(len(functions), dtype=float)
+        for row, (function, time) in enumerate(
+            zip(functions, np.asarray(times, float))
+        ):
+            if time < function.x[0]:
+                out[row] = 1.0
+            else:
+                out[row] = float(function(min(float(time), float(function.x[-1]))))
+        return np.clip(out, 0.0, 1.0)
 
     def predict_risk(self, X):  # type: ignore[no-untyped-def]
         return np.asarray(
