@@ -10,6 +10,11 @@
 
     Setting up, running the checks, and how releases are cut.
 
+-   :material-map: **[Roadmap](roadmap.md)**
+
+    Current priorities, research next steps, and work deliberately out of
+    scope.
+
 -   :material-lifebuoy: **[Troubleshooting](troubleshooting.md)**
 
     Common errors and what they mean.
