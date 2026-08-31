@@ -275,7 +275,7 @@ On Debian and Ubuntu, building scikit-survival may need
 `build-essential gfortran libopenblas-dev`.
 
 Work happens on `develop`; `main` carries releases. See
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) and [ROADMAP.md](ROADMAP.md).
 
 ## Citation
 
