@@ -114,21 +114,22 @@ proportionality, functional form, parametric baseline — not to lengthen a
 table. No neural models: there is no methodological question here they would
 answer.
 
-**Factors.** $n \in \{250, 1000, 5000\}$; target censoring
-$\in \{10\%, 30\%, 50\%, 70\%\}$; effect size $\in \{0, 0.5, 1.0\}$.
+**Factors.** $n \in \{250, 1000\}$; target censoring
+$\in \{10\%, 50\%, 70\%\}$; effect size $\in \{0, 0.5\}$.
 
-216 scenarios declared. Cells that are infeasible are dropped automatically
-with the reason recorded: `mixture_cure` cannot reach 10% or 30% censoring
-because a 30% cure fraction puts a floor of about 31% on the censoring rate, so
-roughly 198 scenarios will run.
+72 scenarios declared. Cells that are infeasible are dropped automatically with
+the reason recorded: `mixture_cure` cannot reach 10% censoring because a 30%
+cure fraction puts a floor of about 31% on the censoring rate, so 68 scenarios
+are expected to run.
 
-**Replications.** $R = 500$. The first sizing calculation inverted
-$\mathrm{MCSE} = s/\sqrt{R}$ on pilot variability at a target of $0.001$ on
-MISE, covering the 90th percentile of cells but not the hardest
-`aft_log_logistic` cells. Before freeze this was supplemented by a projected
-RMISE and hypothesis/headline precision audit at $R=500$. The production
-tables will report MCSEs, and differences whose Monte Carlo uncertainty is too
-large will be described as indistinguishable rather than as findings.
+**Replications.** $R = 50$. This is a compact experiment version chosen after
+the frozen $R=500$ design proved operationally too large for the available
+workstation. The original sizing calculation and $R=500$ precision audit remain
+documented as design history, but they no longer define this executable
+production run. The compact run treats Monte Carlo uncertainty as part of the
+result: all production tables report MCSEs, and differences whose Monte Carlo
+uncertainty is too large will be described as indistinguishable rather than as
+findings.
 
 ## 4. Primary and secondary outcomes
 
@@ -262,7 +263,24 @@ production rows.
 The last two are consistent with H1 and H2. They are pilot numbers from 10
 replications and are reported here as design evidence, not as results.
 
-## 8. Reproducibility
+## 8. Runtime reduction before freeze
+
+The first freeze-ready design used $n \in \{250,1000,5000\}$, four censoring
+levels, three effect levels and $R=500$, for about 402,000 feasible
+scenario-estimator-replication cells. A locked smoke/early production attempt
+showed that this was computationally unrealistic on the available workstation:
+after roughly 15 hours it had completed about 23,000 cells, implying a
+multi-week run once the slower scenarios were included.
+
+The design was therefore reduced before accepting a final production run. The
+compact version keeps the estimands and hypotheses, but removes the most
+expensive breadth: $n=5000$ is out of scope, 30% censoring is dropped, the
+70%/10% endpoints plus 50% midpoint are retained, effect size 1.0 is dropped,
+and $R$ is set to 50. This is a new experiment version with a new study hash,
+new gate artifacts and a new lock; no rows from the abandoned $R=500$ run are
+pooled with it.
+
+## 9. Reproducibility
 
 Seeds derive from `(master_seed, scenario_id, replication_id, stream)`, so a
 run with eight workers is the same experiment as a run with one. Verified: a
@@ -281,7 +299,7 @@ freeze, that is a new experiment version, not a continuation.
 **The final freeze has not happened, and no final production Monte Carlo has
 been accepted.**
 
-## 9. Limitations to state in the paper
+## 10. Limitations to state in the paper
 
 - Censoring is independent of covariates in every mechanism. Informative
   censoring is a separate study.
@@ -289,6 +307,9 @@ been accepted.**
   processes are out of scope by design.
 - Covariates are low-dimensional and independent. High dimension and
   correlation are not investigated.
+- The compact production version does not include $n=5000$, 30% censoring or
+  effect size 1.0; conclusions are correspondingly limited to the retained
+  design support.
 - Estimators are used at default settings, without tuning. The study is about
   misspecification, not about how well a practitioner can tune a forest.
 - Conclusions hold for the six mechanisms studied and do not generalise to

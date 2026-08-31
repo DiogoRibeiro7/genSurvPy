@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "selection_rationale": "Frozen before production from the latest processed pilot cell-level loss summary available before freeze. Cells are the ten largest finite mise_mean scenario-estimator cells in the production design support; the committed list is the gate input, not the generated summary file.",
+  "selection_rationale": "Frozen before compact production from the latest processed pilot cell-level loss summary available before freeze. Cells are the ten largest finite mise_mean scenario-estimator cells that remain in the compact production design support; the committed list is the gate input, not the generated summary file.",
   "selection_metric": "mise_mean",
   "source_summary": "results/processed/summary.parquet",
-  "source_summary_role": "pre-freeze pilot selection record only; not required to reproduce the production gate",
+  "source_summary_role": "pre-freeze pilot selection record only; not required to reproduce the compact production gate",
   "cells": [
     {
       "scenario_id": "aft_log_logistic__n250__c70__b0p50",
@@ -43,16 +43,6 @@
       "dgp": "aft_log_logistic",
       "n": 250,
       "target_censoring": 0.7,
-      "effect_size": 0.5
-    },
-    {
-      "scenario_id": "aft_log_logistic__n250__c30__b0p50",
-      "scenario_hash": "cd8afdef6c4fd984",
-      "estimator_id": "gradient_boosted",
-      "estimator_hash": "6bb21fdf3800258c",
-      "dgp": "aft_log_logistic",
-      "n": 250,
-      "target_censoring": 0.3,
       "effect_size": 0.5
     },
     {
@@ -100,6 +90,16 @@
       "scenario_hash": "8b9501a8fde967a4",
       "estimator_id": "gradient_boosted",
       "estimator_hash": "6bb21fdf3800258c",
+      "dgp": "aft_weibull",
+      "n": 250,
+      "target_censoring": 0.7,
+      "effect_size": 0.5
+    },
+    {
+      "scenario_id": "aft_weibull__n250__c70__b0p50",
+      "scenario_hash": "8b9501a8fde967a4",
+      "estimator_id": "random_survival_forest",
+      "estimator_hash": "f37d5950d3aaeac4",
       "dgp": "aft_weibull",
       "n": 250,
       "target_censoring": 0.7,

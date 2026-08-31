@@ -59,8 +59,8 @@ python scripts/run_simulation.py --out results/raw/pilot.parquet
 python scripts/run_pilot.py --raw results/raw/pilot.parquet
 ```
 
-Production additionally requires a frozen experiment lock, and refuses to start
-without matching it:
+Compact production additionally requires a frozen experiment lock, and refuses
+to start without matching it:
 
 ```bash
 python scripts/make_config.py --production
@@ -86,6 +86,12 @@ verification.
 `protocol/grid_audit_cells.json` is committed because it is part of the frozen
 pre-production gate: it names the exact scenario-estimator cells used by the
 grid-convergence audit.
+
+The current production design is the compact pre-freeze version: 72 declared
+scenarios, 4 estimators and 50 replications, with infeasible `mixture_cure`
+10% censoring cells recorded as skipped. It replaces the abandoned R=500 design
+that was too large for the available workstation; rows from that attempt are
+not pooled with compact production results.
 
 ## Design decisions worth knowing before reading the code
 

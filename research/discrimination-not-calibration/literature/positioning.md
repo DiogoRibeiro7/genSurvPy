@@ -191,7 +191,8 @@ none has been applied.
 between the rigid parametric and the fully non-parametric estimators, which is
 the interesting middle of the misspecification axis. `lifelines.CRCSplineFitter`
 is available and is the same family Austin et al. used. Adding a fifth
-estimator raises the production run from 432,000 to 540,000 cells.
+estimator raises the compact declared production run from 14,400 to 18,000
+scenario-estimator-replication cells.
 
 **D-calibration** is implemented and has now been **verified against Haider et
 al. (2020)**. The censoring weights match the proof of Theorem B.3 exactly: the
