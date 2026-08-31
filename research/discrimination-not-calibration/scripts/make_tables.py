@@ -288,6 +288,9 @@ def table_failures(failures: pd.DataFrame, out: Path) -> None:
         .reset_index()
     )
     grouped["rate"] = grouped["fit_failures"] / grouped["attempted"]
+    grouped["rate_se"] = (
+        grouped["rate"] * (1.0 - grouped["rate"]) / grouped["attempted"]
+    ).map(math.sqrt)
     intervals = [
         _wilson_interval(int(row.fit_failures), int(row.attempted))
         for row in grouped.itertuples()
@@ -304,14 +307,15 @@ def table_failures(failures: pd.DataFrame, out: Path) -> None:
         r"\label{tab:failures}",
         r"\begin{tabular}{lrrrr}",
         r"\toprule",
-        r"Estimator & Attempted & Fit failures & Scoring failures & Rate (95\% CI) \\",
+        r"Estimator & Attempted & Fit failures & Scoring failures & Rate (SE; 95\% CI) \\",
         r"\midrule",
     ]
     for row in grouped.itertuples():
         body.append(
             f"\\texttt{{{_escape(str(row.estimator_id))}}} & {int(row.attempted)} & "
             f"{int(row.fit_failures)} & {int(row.score_failures)} & "
-            f"{row.rate:.4f} [{row.rate_low:.4f}, {row.rate_high:.4f}] \\\\"
+            f"{row.rate:.4f} \\;({row.rate_se:.4f}) "
+            f"[{row.rate_low:.4f}, {row.rate_high:.4f}] \\\\"
         )
     body += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     _write(
