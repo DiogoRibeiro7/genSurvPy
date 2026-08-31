@@ -226,43 +226,66 @@ def table_parameter_recovery(summary: pd.DataFrame, out: Path) -> None:
         print("  table4: skipped, no cell had a corresponding parameter")
         return
 
+    rows = []
+    for (dgp, estimator_id), block in applicable.groupby(["dgp", "estimator_id"]):
+        signed_column = (
+            "beta_bias_scalar_mean"
+            if "beta_bias_scalar_mean" in block.columns
+            and block["beta_bias_scalar_mean"].notna().any()
+            else "beta_bias_mean_mean"
+        )
+        signed_mcse_column = (
+            "beta_bias_scalar_mcse"
+            if "beta_bias_scalar_mcse" in block.columns
+            and block["beta_bias_scalar_mcse"].notna().any()
+            else "beta_bias_mean_mcse"
+        )
+        signed = _mean_and_mcse(block, signed_column, signed_mcse_column)
+        absolute = _mean_and_mcse(
+            block, "beta_abs_bias_mean_mean", "beta_abs_bias_mean_mcse"
+        )
+        rmise = _mean_and_mcse(
+            block,
+            "root_mean_integrated_squared_error_mean",
+            "root_mean_integrated_squared_error_mcse",
+        )
+        rows.append(
+            {
+                "dgp": dgp,
+                "estimator_id": estimator_id,
+                "signed": signed["mean"],
+                "signed_mcse": signed["mcse"],
+                "absolute": absolute["mean"],
+                "absolute_mcse": absolute["mcse"],
+                "rmise": rmise["mean"],
+                "rmise_mcse": rmise["mcse"],
+                "n_cells": len(block),
+            }
+        )
+    grouped = pd.DataFrame.from_records(rows)
+
     body = [
         r"\begin{table}[t]",
         r"\centering\small",
         r"\caption{Parameter recovery, for the mechanism-estimator pairs where "
-        r"a fitted coefficient estimates a generating parameter. Reported "
-        r"nowhere else: elsewhere the estimands differ and a difference would "
-        r"not be a bias.}",
+        r"a fitted coefficient estimates a generating parameter, averaged over "
+        r"applicable production cells. Reported nowhere else: elsewhere the "
+        r"estimands differ and a difference would not be a bias. Monte Carlo "
+        r"standard errors in parentheses.}",
         r"\label{tab:recovery}",
-        r"\begin{tabular}{llrrr}",
+        r"\begin{tabular}{llrrrr}",
         r"\toprule",
-        r"Mechanism & Estimator & Mean bias & Mean absolute bias & RMISE \\",
+        r"Mechanism & Estimator & Cells & Mean bias & Mean absolute bias & RMISE \\",
         r"\midrule",
     ]
-    for row in applicable.itertuples():
-        signed = (
-            row.beta_bias_scalar_mean
-            if hasattr(row, "beta_bias_scalar_mean")
-            and not pd.isna(row.beta_bias_scalar_mean)
-            else row.beta_bias_mean_mean
-        )
-        signed_mcse = (
-            row.beta_bias_scalar_mcse
-            if hasattr(row, "beta_bias_scalar_mcse")
-            and not pd.isna(row.beta_bias_scalar_mcse)
-            else row.beta_bias_mean_mcse
-        )
-        rmise = _pm(
-            row.root_mean_integrated_squared_error_mean,
-            row.root_mean_integrated_squared_error_mcse,
-            4,
-        )
+    for row in grouped.itertuples():
         body.append(
             f"\\texttt{{{_escape(str(row.dgp))}}} & "
             f"\\texttt{{{_escape(str(row.estimator_id))}}} & "
-            f"{_pm(signed, signed_mcse, 4)} & "
-            f"{_pm(row.beta_abs_bias_mean_mean, row.beta_abs_bias_mean_mcse, 4)} & "
-            f"{rmise} \\\\"
+            f"{int(row.n_cells)} & "
+            f"{_pm(row.signed, row.signed_mcse, 4)} & "
+            f"{_pm(row.absolute, row.absolute_mcse, 4)} & "
+            f"{_pm(row.rmise, row.rmise_mcse, 4)} \\\\"
         )
     body += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     _write(
