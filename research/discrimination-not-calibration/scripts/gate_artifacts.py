@@ -7,13 +7,14 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+from survival_misspec.artifact_io import read_bytes
 from survival_misspec.config import StudyConfig, content_hash
 from survival_misspec.validation import capture_provenance
 
 
 def file_sha256(path: Path) -> str:
     """SHA-256 digest of an artifact exactly as written."""
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashlib.sha256(read_bytes(path)).hexdigest()
 
 
 def scenario_design_hash(study: StudyConfig) -> str:

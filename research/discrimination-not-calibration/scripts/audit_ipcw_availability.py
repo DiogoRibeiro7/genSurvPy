@@ -22,6 +22,7 @@ sys.path.insert(0, str(HERE.parent / "src"))
 sys.path.insert(0, str(HERE))
 
 from gate_artifacts import add_metadata, study_metadata  # noqa: E402
+from survival_misspec.artifact_io import make_directory, write_parquet  # noqa: E402
 from survival_misspec.config import load_study  # noqa: E402
 from survival_misspec.experiments import EVALUATION_N, prepare_scenario  # noqa: E402
 from survival_misspec.simulation import draw_replicate  # noqa: E402
@@ -176,8 +177,8 @@ def main() -> int:
 
     frame = pd.DataFrame.from_records(rows)
     out = Path(arguments.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_parquet(out, index=False)
+    make_directory(out.parent)
+    write_parquet(frame, out)
     feasible = frame[frame["feasible"]]
     failures = availability_failures(
         frame, minimum_availability=arguments.minimum_availability

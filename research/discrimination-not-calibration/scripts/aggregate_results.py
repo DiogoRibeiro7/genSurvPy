@@ -47,6 +47,7 @@ from survival_misspec.aggregation import (  # noqa: E402
     paired_differences,
     read_raw,
 )
+from survival_misspec.artifact_io import make_directory, write_parquet  # noqa: E402
 
 EPSILONS = (0.01, 0.025, 0.05, 0.10, 0.20)
 
@@ -64,7 +65,7 @@ def main() -> int:
         return 1
 
     out = Path(arguments.out)
-    out.mkdir(parents=True, exist_ok=True)
+    make_directory(out)
 
     print(f"raw rows        {len(raw):,}")
     print(f"scenarios       {raw['scenario_id'].nunique()}")
@@ -76,15 +77,15 @@ def main() -> int:
             print("                (exploratory run: not for publication)")
 
     summary = aggregate(raw)
-    summary.to_parquet(out / "summary.parquet", index=False)
+    write_parquet(summary, out / "summary.parquet")
     print(f"summary         {len(summary)} cells -> {out / 'summary.parquet'}")
 
     paired = paired_differences(raw, arguments.reference)
-    paired.to_parquet(out / "paired_differences.parquet", index=False)
+    write_parquet(paired, out / "paired_differences.parquet")
     print(f"paired diffs    {len(paired)} rows -> {out / 'paired_differences.parquet'}")
 
     failures = failure_rates(raw)
-    failures.to_parquet(out / "failures.parquet", index=False)
+    write_parquet(failures, out / "failures.parquet")
     total_failures = int(
         failures["fit_failures"].sum() + failures["score_failures"].sum()
     )
@@ -105,7 +106,7 @@ def main() -> int:
             break
     if frames:
         adequacy = pd.concat(frames, ignore_index=True)
-        adequacy.to_parquet(out / "adequacy.parquet", index=False)
+        write_parquet(adequacy, out / "adequacy.parquet")
         print(f"adequacy        {len(adequacy)} rows over {len(EPSILONS)} epsilons")
 
     try:
@@ -116,7 +117,7 @@ def main() -> int:
         if headline.empty:
             print("headline        skipped: no scored rows")
         else:
-            headline.to_parquet(out / "headline.parquet", index=False)
+            write_parquet(headline, out / "headline.parquet")
             print(f"headline        {len(headline)} bins -> {out / 'headline.parquet'}")
 
     return 0

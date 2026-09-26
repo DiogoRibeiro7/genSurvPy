@@ -18,12 +18,17 @@ than approximating them.
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / "src"))
+
+from survival_misspec.artifact_io import make_directory, write_text  # noqa: E402
+
 CONFIG = HERE.parent / "config"
 
 #: How each generator's parameters are built from a scalar effect size, so that
@@ -200,7 +205,7 @@ METRICS = {
 
 
 def write(grid: dict[str, Any], paper_id: str, master_seed: int) -> None:
-    CONFIG.mkdir(parents=True, exist_ok=True)
+    make_directory(CONFIG)
     scenarios = build_scenarios(grid)
 
     header = (
@@ -215,15 +220,15 @@ def write(grid: dict[str, Any], paper_id: str, master_seed: int) -> None:
         "n_replications": grid["replications"],
         "scenarios": scenarios,
     }
-    (CONFIG / "simulation.yaml").write_text(
-        header + yaml.safe_dump(simulation, sort_keys=False), encoding="utf-8"
+    write_text(
+        CONFIG / "simulation.yaml", header + yaml.safe_dump(simulation, sort_keys=False)
     )
-    (CONFIG / "estimators.yaml").write_text(
+    write_text(
+        CONFIG / "estimators.yaml",
         header + yaml.safe_dump({"estimators": ESTIMATORS}, sort_keys=False),
-        encoding="utf-8",
     )
-    (CONFIG / "metrics.yaml").write_text(
-        header + yaml.safe_dump(METRICS, sort_keys=False), encoding="utf-8"
+    write_text(
+        CONFIG / "metrics.yaml", header + yaml.safe_dump(METRICS, sort_keys=False)
     )
 
     cells = len(scenarios) * len(ESTIMATORS) * grid["replications"]

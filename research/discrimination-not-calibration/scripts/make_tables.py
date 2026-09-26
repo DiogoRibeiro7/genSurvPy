@@ -25,6 +25,11 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
 
+from survival_misspec.artifact_io import (  # noqa: E402
+    make_directory,
+    read_parquet,
+    write_text,
+)
 from survival_misspec.config import load_study  # noqa: E402
 
 HEADER = (
@@ -41,8 +46,8 @@ def _escape(text: str) -> str:
 
 
 def _write(path: Path, body: str, source: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(HEADER.format(source=source) + body, encoding="utf-8")
+    make_directory(path.parent)
+    write_text(path, HEADER.format(source=source) + body)
     print(f"  {path.name}")
 
 
@@ -412,14 +417,14 @@ def main() -> int:
         print(f"\nno results at {summary_path}; tables 3-5 skipped")
         return 0
 
-    summary = pd.read_parquet(summary_path)
+    summary = read_parquet(summary_path)
     failures = (
-        pd.read_parquet(processed / "failures.parquet")
+        read_parquet(processed / "failures.parquet")
         if (processed / "failures.parquet").exists()
         else pd.DataFrame()
     )
     hypotheses = (
-        pd.read_parquet(processed / "hypotheses.parquet")
+        read_parquet(processed / "hypotheses.parquet")
         if (processed / "hypotheses.parquet").exists()
         else pd.DataFrame()
     )
