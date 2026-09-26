@@ -7,12 +7,32 @@ using the gen_surv package.
 
 from typing import Any, Dict, List, TypeVar, cast
 
+import pandas as pd
 import typer
+from dataexcept import DataLoadingError, FileWriteError, SchemaMismatchError
 
+from gen_surv.export import export_dataset
 from gen_surv.interface import generate
 from gen_surv.validation import ValidationError
 
 app = typer.Typer(help="Generate synthetic survival datasets.")
+
+
+def _load_csv(path: str) -> pd.DataFrame:
+    """Load external CSV data and retain the original parsing or I/O failure."""
+    try:
+        return pd.read_csv(path)
+    except (OSError, pd.errors.ParserError, UnicodeError) as exc:
+        raise DataLoadingError(path, exc) from exc
+
+
+def _require_column(data: pd.DataFrame, column: str, role: str) -> None:
+    """Report a missing external column with its expected and observed schema."""
+    if column not in data.columns:
+        raise SchemaMismatchError(
+            expected=f"{role} column {column!r}",
+            found=f"columns {list(data.columns)!r}",
+        )
 
 
 def _first_rate(values: List[float], default: float = 1.0) -> float:
@@ -264,7 +284,11 @@ def dataset(
 
     # Output the data
     if output:
-        df.to_csv(output, index=False)
+        try:
+            export_dataset(df, output, fmt="csv")
+        except FileWriteError as exc:
+            typer.echo(f"Error writing CSV file: {exc}")
+            raise typer.Exit(1) from exc
         typer.echo(f"Saved dataset to {output}")
     else:
         typer.echo(df.to_csv(index=False))
@@ -293,7 +317,6 @@ def visualize(
     """
     try:
         import matplotlib.pyplot as plt
-        import pandas as pd
 
         from gen_surv.visualization import plot_survival_curve
     except ImportError:
@@ -305,23 +328,24 @@ def visualize(
 
     # Load the data
     try:
-        data = pd.read_csv(input_file)
-    except Exception as e:
-        typer.echo(f"Error loading CSV file: {str(e)}")
-        raise typer.Exit(1)
+        data = _load_csv(input_file)
+    except DataLoadingError as exc:
+        typer.echo(f"Error loading CSV file: {exc.original}")
+        raise typer.Exit(1) from exc
 
     # Check required columns
-    if time_col not in data.columns:
-        typer.echo(f"Error: Time column '{time_col}' not found in data")
-        raise typer.Exit(1)
-
-    if status_col not in data.columns:
-        typer.echo(f"Error: Status column '{status_col}' not found in data")
-        raise typer.Exit(1)
-
-    if group_col is not None and group_col not in data.columns:
-        typer.echo(f"Error: Group column '{group_col}' not found in data")
-        raise typer.Exit(1)
+    for role, column in (
+        ("Time", time_col),
+        ("Status", status_col),
+        ("Group", group_col),
+    ):
+        if column is None:
+            continue
+        try:
+            _require_column(data, column, role)
+        except SchemaMismatchError as exc:
+            typer.echo(f"Error: {role} column '{column}' not found in data")
+            raise typer.Exit(1) from exc
 
     # Create the plot
     fig, ax = plot_survival_curve(
@@ -329,8 +353,14 @@ def visualize(
     )
 
     # Save the plot
-    plt.savefig(output, dpi=300, bbox_inches="tight")
-    plt.close(fig)
+    try:
+        plt.savefig(output, dpi=300, bbox_inches="tight")
+    except OSError as exc:
+        write_error = FileWriteError(output, original=exc)
+        typer.echo(f"Error writing plot: {write_error}")
+        raise typer.Exit(1) from write_error
+    finally:
+        plt.close(fig)
     typer.echo(f"Plot saved to {output}")
 
 

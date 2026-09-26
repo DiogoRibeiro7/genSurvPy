@@ -6,6 +6,7 @@ pytest.importorskip("gen_surv")
 
 import pandas as pd
 import typer
+from dataexcept import DataLoadingError
 
 from gen_surv import generate
 from gen_surv.cli import visualize
@@ -183,11 +184,13 @@ def test_cli_visualize_import_error(monkeypatch, tmp_path, capsys):
 def test_cli_visualize_read_error(monkeypatch, tmp_path, capsys):
     """visualize handles CSV read failures gracefully."""
     monkeypatch.setattr(
-        "pandas.read_csv", lambda *a, **k: (_ for _ in ()).throw(Exception("boom"))
+        "pandas.read_csv",
+        lambda *a, **k: (_ for _ in ()).throw(pd.errors.ParserError("boom")),
     )
     csv_path = tmp_path / "x.csv"
     csv_path.write_text("time,status\n1,1\n")
-    with pytest.raises(typer.Exit):
+    with pytest.raises(typer.Exit) as captured:
         visualize(str(csv_path))
+    assert isinstance(captured.value.__cause__, DataLoadingError)
     captured = capsys.readouterr()
     assert "Error loading CSV file" in captured.out

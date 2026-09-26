@@ -142,6 +142,11 @@ Reads a CSV and writes a Kaplan-Meier plot:
 gen_surv visualize data.csv --output km.png
 ```
 
+The CLI prints a short error and exits with status 1 when it cannot read the
+input CSV or write a dataset or plot. In Python, the chained cause identifies
+the failure as DataExcept's `DataLoadingError`, `FileWriteError`, or
+`SchemaMismatchError` (for a missing input column).
+
 | Option | Default | Meaning |
 |---|---|---|
 | `--time-col` | `time` | column with the observed times |
