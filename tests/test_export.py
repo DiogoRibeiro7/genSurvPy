@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from dataexcept import FileWriteError
 
 from gen_surv.export import export_dataset
 from gen_surv.validation import ChoiceError
@@ -78,3 +79,14 @@ def test_export_dataset_invalid_format(tmp_path):
     df = pd.DataFrame({"time": [1.0, 2.0], "status": [1, 0]})
     with pytest.raises(ChoiceError):
         export_dataset(df, tmp_path / "data.xxx", fmt="txt")
+
+
+def test_export_dataset_write_error_preserves_path_and_cause(tmp_path):
+    df = pd.DataFrame({"time": [1.0], "status": [1]})
+    path = tmp_path / "missing-directory" / "data.csv"
+
+    with pytest.raises(FileWriteError) as captured:
+        export_dataset(df, path)
+
+    assert captured.value.path == str(path)
+    assert isinstance(captured.value.__cause__, OSError)

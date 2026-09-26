@@ -35,6 +35,9 @@ ChoiceError: Argument 'fmt' must be one of 'csv', 'feather', 'ft', 'json',
 'rds'; got 'parquet' of type str. Choose a valid option.
 ```
 
+File write failures raise DataExcept's `FileWriteError`. Its `path` identifies
+the output file, and `__cause__` retains the original `OSError` for debugging.
+
 !!! tip "Parquet is not in the list, but pandas is right there"
 
     ```python
