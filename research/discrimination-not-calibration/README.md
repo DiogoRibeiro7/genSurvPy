@@ -93,6 +93,12 @@ scenarios, 4 estimators and 50 replications, with infeasible `mixture_cure`
 that was too large for the available workstation; rows from that attempt are
 not pooled with compact production results.
 
+The study's configuration loader, experiment lock, and Parquet artifact helpers
+raise `DataLoadingError` for unreadable inputs and `FileWriteError` for failed
+outputs. Both errors identify the path and retain the underlying exception as
+their cause. Invalid study design and incompatible locks retain their own
+validation errors.
+
 ## Design decisions worth knowing before reading the code
 
 **Fitting and evaluation use independent samples.** The first version of this
