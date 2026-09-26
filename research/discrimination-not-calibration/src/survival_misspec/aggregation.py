@@ -31,6 +31,8 @@ from typing import Iterable, Sequence
 import numpy as np
 import pandas as pd
 
+from .artifact_io import make_directory, read_parquet, write_parquet
+
 __all__ = [
     "mcse",
     "replications_for_precision",
@@ -459,18 +461,18 @@ def _parts_directory(target: Path) -> Path:
 def write_raw(rows: list[dict[str, object]], path: Path | str) -> Path:
     """Append replicate rows as a Parquet shard, creating a dataset if absent."""
     target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
+    make_directory(target.parent)
     frame = _normalise_raw_frame(rows)
 
     if target.exists() and target.is_file():
         directory = _parts_directory(target)
-        directory.mkdir(parents=True, exist_ok=True)
+        make_directory(directory)
     else:
-        target.mkdir(parents=True, exist_ok=True)
+        make_directory(target)
         directory = target
 
     shard = directory / f"part-{uuid.uuid4().hex}.parquet"
-    frame.to_parquet(shard, index=False)
+    write_parquet(frame, shard)
     return target
 
 
@@ -479,10 +481,10 @@ def read_raw(path: Path | str) -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
 
     if target.exists() and target.is_file():
-        frames.append(pd.read_parquet(target))
+        frames.append(read_parquet(target))
     elif target.exists() and target.is_dir():
         parts = sorted(target.glob("*.parquet"))
-        frames.extend(pd.read_parquet(part) for part in parts)
+        frames.extend(read_parquet(part) for part in parts)
 
     parts_directory = _parts_directory(target)
     if (
@@ -491,7 +493,7 @@ def read_raw(path: Path | str) -> pd.DataFrame:
         and parts_directory != target
     ):
         parts = sorted(parts_directory.glob("*.parquet"))
-        frames.extend(pd.read_parquet(part) for part in parts)
+        frames.extend(read_parquet(part) for part in parts)
 
     if not frames:
         return pd.DataFrame()
@@ -520,8 +522,8 @@ def compact_raw(path: Path | str, output: Path | str | None = None) -> Path:
             output_path = target
     else:
         output_path = Path(output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_parquet(output_path, index=False)
+    make_directory(output_path.parent)
+    write_parquet(frame, output_path)
     return output_path
 
 

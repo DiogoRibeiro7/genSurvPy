@@ -30,6 +30,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from dataexcept import DataLoadingError, FileWriteError
+
 from .config import StudyConfig, content_hash
 
 __all__ = [
@@ -245,13 +247,22 @@ def write_lock(
     payload["lock_hash"] = lock.lock_hash
 
     target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+    rendered = json.dumps(payload, indent=2, default=str)
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(rendered, encoding="utf-8")
+    except OSError as exc:
+        raise FileWriteError(str(target), original=exc) from exc
     return lock
 
 
 def read_lock(path: Path | str) -> dict[str, Any]:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    """Read a frozen experiment lock and retain corrupt-file causes."""
+    target = Path(path)
+    try:
+        return json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise DataLoadingError(str(target), exc) from exc
 
 
 def _expected_lock_hash(lock: Mapping[str, Any]) -> str:

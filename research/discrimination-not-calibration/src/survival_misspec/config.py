@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import yaml
+from dataexcept import DataLoadingError
 
 from .truth import SUPPORTED_DGPS, unsupported_reason
 
@@ -174,8 +175,11 @@ class StudyConfig:
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as handle:
-        loaded = yaml.safe_load(handle)
+    try:
+        with path.open(encoding="utf-8") as handle:
+            loaded = yaml.safe_load(handle)
+    except (OSError, UnicodeError, yaml.YAMLError) as exc:
+        raise DataLoadingError(str(path), exc) from exc
     if not isinstance(loaded, dict):
         raise ValueError(f"{path} must contain a mapping at the top level")
     return loaded
