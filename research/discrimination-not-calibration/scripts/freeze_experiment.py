@@ -27,6 +27,7 @@ from check_grid_convergence import (  # noqa: E402
     maximum_rmise_difference,
 )
 from gate_artifacts import file_sha256, metadata_problems  # noqa: E402
+from survival_misspec.artifact_io import read_parquet  # noqa: E402
 from survival_misspec.config import StudyConfig, load_study  # noqa: E402
 from survival_misspec.experiments import prepare_scenario  # noqa: E402
 from survival_misspec.validation import write_lock  # noqa: E402
@@ -45,7 +46,7 @@ def _ipcw_gate_evidence(
 ) -> dict[str, object]:
     if not path.exists():
         raise SystemExit(f"missing IPCW gate artifact: {path}")
-    frame = pd.read_parquet(path)
+    frame = read_parquet(path)
     problems = metadata_problems(
         frame,
         study,
@@ -125,7 +126,7 @@ def _grid_gate_evidence(
         raise SystemExit(f"missing grid-convergence gate artifact: {path}")
     if not audit_cells_path.exists():
         raise SystemExit(f"missing frozen grid-audit cell list: {audit_cells_path}")
-    frame = pd.read_parquet(path)
+    frame = read_parquet(path)
     if frame.empty or "reference_n_time_points" not in frame.columns:
         raise SystemExit(f"grid-convergence gate artifact is incomplete: {path}")
     problems = metadata_problems(

@@ -42,6 +42,11 @@ from survival_misspec.aggregation import (  # noqa: E402
     read_raw,
     replications_for_precision,
 )
+from survival_misspec.artifact_io import (  # noqa: E402
+    make_directory,
+    write_parquet,
+    write_text,
+)
 from survival_misspec.hypotheses import analyse_hypotheses  # noqa: E402
 
 #: Historical MISE-scale pilot diagnostic. The freeze decision is supported by
@@ -102,7 +107,7 @@ def main() -> int:
         return 1
 
     out = Path(arguments.out)
-    out.mkdir(parents=True, exist_ok=True)
+    make_directory(out)
 
     section("Pilot coverage")
     print(f"  rows            {len(raw):,}")
@@ -124,7 +129,7 @@ def main() -> int:
             )
             if row.fit_error_types:
                 print(f"      {row.fit_error_types[:120]}")
-    failures.to_parquet(out / "pilot_failures.parquet", index=False)
+    write_parquet(failures, out / "pilot_failures.parquet")
 
     # ------------------------------------------------------- censoring control
     section("Censoring: target against realised")
@@ -211,7 +216,7 @@ def main() -> int:
             }
         )
     requirement = pd.DataFrame(required)
-    requirement.to_parquet(out / "pilot_replications.parquet", index=False)
+    write_parquet(requirement, out / "pilot_replications.parquet")
 
     print(f"  median required R   {requirement['required_R'].median():.0f}")
     print(f"  90th percentile     {requirement['required_R'].quantile(0.90):.0f}")
@@ -242,7 +247,7 @@ def main() -> int:
             }
         )
     precision = pd.DataFrame.from_records(precision_rows)
-    precision.to_parquet(out / "pilot_precision.parquet", index=False)
+    write_parquet(precision, out / "pilot_precision.parquet")
 
     projected_summary = _project_summary_mcse(summary, PRODUCTION_REPLICATIONS)
     hypotheses = analyse_hypotheses(
@@ -280,9 +285,7 @@ def main() -> int:
             "rows": int(len(headline)),
         },
     }
-    (out / "pilot_precision_report.json").write_text(
-        json.dumps(report, indent=2), encoding="utf-8"
-    )
+    write_text(out / "pilot_precision_report.json", json.dumps(report, indent=2))
     print(
         "  expected RMISE MCSE "
         f"median {report['rmise_mcse']['median']:.6f}, "

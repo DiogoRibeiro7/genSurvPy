@@ -19,6 +19,12 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
 
+from survival_misspec.artifact_io import (  # noqa: E402
+    make_directory,
+    read_parquet,
+    write_parquet,
+    write_text,
+)
 from survival_misspec.hypotheses import analyse_hypotheses  # noqa: E402
 
 HEADER = (
@@ -62,8 +68,8 @@ def _write_macros(hypotheses: pd.DataFrame, path: Path, source: Path) -> None:
                 ]
             )
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    make_directory(path.parent)
+    write_text(path, "\n".join(lines) + "\n")
 
 
 def main() -> int:
@@ -82,14 +88,12 @@ def main() -> int:
         print(f"no summary at {summary_path}; run aggregate_results.py first")
         return 1
 
-    hypotheses = analyse_hypotheses(pd.read_parquet(summary_path))
+    hypotheses = analyse_hypotheses(read_parquet(summary_path))
     parquet_path = processed / "hypotheses.parquet"
     json_path = processed / "hypotheses.json"
     macros_path = Path(arguments.macros)
-    hypotheses.to_parquet(parquet_path, index=False)
-    json_path.write_text(
-        json.dumps(hypotheses.to_dict("records"), indent=2), encoding="utf-8"
-    )
+    write_parquet(hypotheses, parquet_path)
+    write_text(json_path, json.dumps(hypotheses.to_dict("records"), indent=2))
     _write_macros(hypotheses, macros_path, parquet_path)
     print(f"hypotheses     {len(hypotheses)} rows -> {parquet_path}")
     print(f"json           {json_path}")

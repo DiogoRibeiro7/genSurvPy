@@ -14,7 +14,6 @@ preparation is disabled by default for speed.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -27,6 +26,12 @@ sys.path.insert(0, str(HERE.parent / "src"))
 sys.path.insert(0, str(HERE))
 
 from gate_artifacts import add_metadata, file_sha256, study_metadata  # noqa: E402
+from survival_misspec.artifact_io import (  # noqa: E402
+    make_directory,
+    read_json,
+    read_parquet,
+    write_parquet,
+)
 from survival_misspec.config import StudyConfig, load_study  # noqa: E402
 from survival_misspec.estimators import fit_estimator  # noqa: E402
 from survival_misspec.experiments import (  # noqa: E402
@@ -135,7 +140,7 @@ def load_audit_cells(
     study: StudyConfig, path: Path, *, expected_count: int | None = None
 ) -> set[tuple[str, str]]:
     """Load the frozen grid-audit cell list and validate it against the design."""
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = read_json(path)
     cells = payload.get("cells") if isinstance(payload, dict) else payload
     if not isinstance(cells, list):
         raise ValueError("grid audit cell file must contain a 'cells' list")
@@ -323,7 +328,7 @@ def main() -> int:
         or estimator.estimator_id in set(arguments.estimators)
     ]
     summary_path = Path(arguments.summary) if arguments.summary is not None else None
-    summary = pd.read_parquet(summary_path) if summary_path is not None else None
+    summary = read_parquet(summary_path) if summary_path is not None else None
     audit_cells_path = (
         Path(arguments.audit_cells) if arguments.audit_cells is not None else None
     )
@@ -447,9 +452,9 @@ def main() -> int:
         return 1
 
     out = Path(arguments.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
+    make_directory(out.parent)
     frame = pd.DataFrame.from_records(rows)
-    frame.to_parquet(out, index=False)
+    write_parquet(frame, out)
     print(f"written {len(frame)} rows -> {out}")
     summary = (
         frame[frame["n_time_points"] != reference_grid]

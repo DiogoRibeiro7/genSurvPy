@@ -34,7 +34,9 @@ import pandas as pd  # noqa: E402
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
 
+from dataexcept import FileWriteError  # noqa: E402
 from survival_misspec.aggregation import read_raw  # noqa: E402
+from survival_misspec.artifact_io import make_directory, read_parquet  # noqa: E402
 
 # A restrained, colour-blind-safe palette; the paper is likely to be printed.
 COLOURS = {
@@ -94,10 +96,16 @@ def _save(figure: plt.Figure, name: str, out: Path, exploratory: bool) -> None:
             rotation=30,
             zorder=-1,
         )
-    out.mkdir(parents=True, exist_ok=True)
-    for suffix in ("pdf", "png"):
-        figure.savefig(out / f"{name}.{suffix}", bbox_inches="tight")
-    plt.close(figure)
+    try:
+        make_directory(out)
+        for suffix in ("pdf", "png"):
+            target = out / f"{name}.{suffix}"
+            try:
+                figure.savefig(target, bbox_inches="tight")
+            except OSError as exc:
+                raise FileWriteError(str(target), original=exc) from exc
+    finally:
+        plt.close(figure)
     print(f"  {name}")
 
 
@@ -391,14 +399,14 @@ def main() -> int:
         print(f"no summary at {summary_path}; run aggregate_results.py first")
         return 1
 
-    summary = pd.read_parquet(summary_path)
+    summary = read_parquet(summary_path)
     failures = (
-        pd.read_parquet(processed / "failures.parquet")
+        read_parquet(processed / "failures.parquet")
         if (processed / "failures.parquet").exists()
         else pd.DataFrame()
     )
     adequacy = (
-        pd.read_parquet(processed / "adequacy.parquet")
+        read_parquet(processed / "adequacy.parquet")
         if (processed / "adequacy.parquet").exists()
         else pd.DataFrame()
     )
