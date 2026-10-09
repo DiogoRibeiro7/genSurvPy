@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/project-logo.png" alt="genSurvPy project logo" width="160" height="160">
+</p>
+
 # gen_surv
 
 **Simulate survival data with a known truth.**

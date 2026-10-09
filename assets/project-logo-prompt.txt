@@ -1,0 +1,7 @@
+Tool: built-in image generation
+
+Use case: logo-brand.
+Asset type: square README project logo for genSurvPy.
+Project purpose: Simulate survival data with a known truth: twelve models spanning proportional hazards, accelerated failure time, competing risks, cure fractions, recurrent events and multi-state processes. Docs: https://diogoribeiro7.github.io/genSurvPy/
+Design direction: A botanical copperplate-style seedling branches into several curved life-history paths, some ending in open seed pods and others continuing as fresh leaves. Aubergine ink and muted olive on pale flax paper. Elegant scientific natural-history engraving with a bold overall silhouette and restrained hatching.
+Composition: create one finished square artwork with a strong silhouette, readable at 160 pixels, and comfortable margins. This is the logo itself, not a presentation or product mockup. No text, words, letters, numbers, captions or watermark anywhere in the image. Do not use a generic navy-and-gold metallic badge.
